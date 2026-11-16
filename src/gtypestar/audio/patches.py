@@ -124,15 +124,6 @@ BASS_REESE = Patch(
     amplitude=Envelope(0.006, 0.2, 0.95, 0.1), glide=0.06, stereo=0.35, gain_db=1.0,
 )  # fmt: skip
 
-# The middle part of a dubstep bass: bright, hard, made for a filter that an LFO moves.
-BASS_WOBBLE = Patch(
-    "bass wobble",
-    (Osc("saw", voices=3, spread=18.0), Osc("pulse", semitones=12, width=0.35, level=0.6),
-     Osc("saw", semitones=-12, level=0.6)),
-    filter="none", amplitude=Envelope(0.003, 0.1, 1.0, 0.05), glide=0.04, stereo=0.5,
-    drift_cents=2.0, gain_db=0.0,
-)  # fmt: skip
-
 # ------------------------------------------------------------------ FM
 
 # An electric piano with tines, in the manner of the Yamaha DX7.
@@ -161,22 +152,11 @@ BELL_FM = FMPatch(
     velocity_index=1.2, gain_db=0.0,
 )  # fmt: skip
 
-# A hard bass with a voice-like growl: the modulator has feedback.
-BASS_GROWL = FMPatch(
-    "bass growl",
-    (
-        Operators(ratio=1.0, index=3.2, index_decay=0.5, index_sustain=0.8, feedback=0.55,
-                  level=1.0, amplitude=Envelope(0.003, 0.2, 1.0, 0.05), pan=0.5),
-        Operators(ratio=2.0, carrier_ratio=1.0, index=2.0, index_decay=0.3, index_sustain=0.7,
-                  feedback=0.3, level=0.6, amplitude=Envelope(0.003, 0.2, 1.0, 0.05), cents=9.0,
-                  pan=0.5),
-    ),
-    velocity_index=1.0, range_db=14.0, gain_db=0.0,
-)  # fmt: skip
+# The bass sounds of the dubstep passage are in `dubstep.py`.
 
 SUBTRACTIVE = {
     patch.name: patch
     for patch in (LEAD_MOOG, LEAD_SQUARE, LEAD_WIND, SUPERSAW, PLUCK, PAD_WARM, PAD_GLASS,
-                  SYNTH_BRASS, BASS_MOOG, BASS_SUB, BASS_REESE, BASS_WOBBLE)
+                  SYNTH_BRASS, BASS_MOOG, BASS_SUB, BASS_REESE)
 }  # fmt: skip
-FM = {patch.name: patch for patch in (EPIANO_FM, BELL_FM, BASS_GROWL)}
+FM = {patch.name: patch for patch in (EPIANO_FM, BELL_FM)}

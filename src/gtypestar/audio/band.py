@@ -22,11 +22,11 @@ import numpy as np
 from scipy import signal
 
 from ..perform.feel import Event
-from . import amp, banks, drumsynth, dsp, effects, kernels, patches, synth
+from . import amp, banks, drumsynth, dsp, dubstep, effects, kernels, patches, synth
 
 RATE = dsp.RATE
 CACHE_DIR = Path(".cache/render")
-VERSION = 1  # a change of this number makes all kept stems invalid
+VERSION = 3  # a change of this number makes all kept stems invalid
 PHRASE_GAP = 0.03  # a line with a rest longer than this starts a new phrase (seconds)
 
 
@@ -104,8 +104,14 @@ def render_patch(events: list[Event], seconds: float, player: str) -> np.ndarray
     """Play the events of a synthesizer player. Each event names its patch."""
     canvas = Canvas(seconds)
     by_patch: dict[str, list[Event]] = {}
+    # The bass sounds of dubstep take turns from note to note above one sub tone: one
+    # function plays all of them.
+    heavy = [event for event in events if event.note.instrument in dubstep.SOUNDS]
+    if heavy:
+        canvas.add(0.0, dubstep.render(heavy, seconds, player))
     for event in events:
-        by_patch.setdefault(event.note.instrument, []).append(event)
+        if event.note.instrument not in dubstep.SOUNDS:
+            by_patch.setdefault(event.note.instrument, []).append(event)
     for name, group in by_patch.items():
         if name in patches.FM:
             patch = patches.FM[name]
@@ -114,8 +120,6 @@ def render_patch(events: list[Event], seconds: float, player: str) -> np.ndarray
                 sound = synth.render_fm(patch, event.midi, sounding(event), level,
                                         seed=(player, number))  # fmt: skip
                 canvas.add(event.start, sound)
-        elif name in ("bass wobble", "bass growl"):
-            canvas.add(0.0, moving_bass(group, seconds, name, player))
         elif name in patches.SUBTRACTIVE:
             patch = patches.SUBTRACTIVE[name]
             if patch.glide > 0:
@@ -170,74 +174,6 @@ def _lines(canvas: Canvas, patch: synth.Patch, events: list[Event], player: str)
                 flush()
         phrase.append(event)
     flush()
-
-
-def moving_bass(events: list[Event], seconds: float, name: str, player: str) -> np.ndarray:
-    """The bass sounds of dubstep: a filter moves one time in each note.
-
-    "bass wobble": a low-pass filter opens and closes in each note. The
-    rhythm of the notes is the rhythm of the wobble: eighth notes, triplets,
-    or sixteenth notes. "bass growl": two resonances move between two vowels
-    in each note, as a voice that says "yoi" or "wow". Under the two sounds, a
-    sine tone gives the lowest octave with no change.
-    """
-    total = int(seconds * RATE) + RATE
-    canvas = Canvas(seconds)
-    ordered = sorted(events, key=lambda event: event.start)
-    source_canvas = Canvas(seconds)
-    if name == "bass wobble":
-        _lines(source_canvas, patches.BASS_WOBBLE, ordered, player)
-    else:
-        for number, event in enumerate(ordered):
-            level, _end = accent_level(event)
-            sound = synth.render_fm(patches.BASS_GROWL, event.midi, sounding(event), level,
-                                    seed=(player, number))  # fmt: skip
-            source_canvas.add(event.start, sound)
-    source = source_canvas.data.astype(np.float64)
-    first_curve = np.full(total, 110.0)
-    second_curve = np.full(total, 900.0)
-    vowels = [("u", "a"), ("o", "i"), ("a", "e"), ("e", "u"), ("i", "o")]
-    for number, event in enumerate(ordered):
-        begin = int(event.start * RATE)
-        length = max(64, int(event.seconds * RATE))
-        stop = min(total, begin + length)
-        if begin >= total:
-            continue
-        share = np.arange(stop - begin) / length
-        level, _end = accent_level(event)
-        if name == "bass wobble":
-            # One cycle of the filter in the note: closed, open, closed.
-            shape = np.sin(np.pi * np.clip(share / 0.92, 0.0, 1.0)) ** 1.5
-            first_curve[begin:stop] = 110.0 * (2600.0 * (0.4 + 0.9 * level) / 110.0) ** shape
-        else:
-            start_vowel, end_vowel = vowels[(number + int(event.midi)) % len(vowels)]
-            move = np.clip(share / 0.7, 0.0, 1.0) ** 0.8
-            low = VOWELS[start_vowel][0] * (VOWELS[end_vowel][0] / VOWELS[start_vowel][0]) ** move
-            high = VOWELS[start_vowel][1] * (VOWELS[end_vowel][1] / VOWELS[start_vowel][1]) ** move
-            first_curve[begin:stop] = low
-            second_curve[begin:stop] = high
-    out = np.zeros_like(source)
-    for channel in range(2):
-        signal_in = source[:, channel]
-        if name == "bass wobble":
-            moved = kernels.ladder(signal_in * 3.0, first_curve, 0.55, 2.2, float(RATE))
-            out[:, channel] = effects.saturate(moved * 2.5, 10.0, bias=0.2)
-        else:
-            quality = np.full(total, 6.0)
-            first = kernels.state_variable(signal_in, first_curve, quality, float(RATE), 1)
-            second = kernels.state_variable(signal_in, second_curve, quality, float(RATE), 1)
-            mixed = 2.2 * first + 1.6 * second + 0.25 * signal_in
-            out[:, channel] = effects.fold(mixed * 1.4, 4.0) * 0.5
-    # The sound of the middle: no low octave (the sine tone has it), and strong compression.
-    out = signal.sosfilt(dsp.highpass(140.0, 2), out, axis=0)
-    out = effects.compress(out, -24.0, 8.0, 0.002, 0.06, makeup_db=10.0)
-    canvas.add(0.0, out * 0.28)
-    for number, event in enumerate(ordered):
-        level, level_end = accent_level(event)
-        sub = synth.render_note(patches.BASS_SUB, event.midi, sounding(event), 0.9 * level,
-                                0.9 * level_end, seed=("sub", player, number))  # fmt: skip
-        canvas.add(event.start, sub)
-    return canvas.data
 
 
 VOWELS = {"a": (850.0, 1610.0, 2700.0), "o": (360.0, 640.0, 2500.0), "u": (250.0, 595.0, 2400.0),
@@ -324,6 +260,15 @@ def render_machine(events: list[Event], seconds: float) -> np.ndarray:
         length = event.seconds
         if midi == 36:
             sound = drumsynth.kick(level, number)
+        elif midi == 35:
+            sound = drumsynth.hard_kick(level, number) * 1.5
+        elif midi == 40:
+            sound = drumsynth.heavy_snare(level, number) * 1.8
+        elif midi == 41:
+            # In a roll with a crescendo, the pitch of the drum rises with the loudness.
+            sound = drumsynth.roll_snare(level, number, pitch=140.0 * 2.0 ** (1.5 * level))
+        elif midi == 32:
+            sound = drumsynth.reverse_cymbal(max(0.2, length), level, number)
         elif midi == 38:
             sound = drumsynth.snare(level, number, pitch=205.0, decay=0.14)
         elif midi == 39:
@@ -353,7 +298,9 @@ def render_machine(events: list[Event], seconds: float) -> np.ndarray:
         else:
             continue
         # Wide sounds for the long effects; the drums stay in the centre.
-        if midi in (28, 29, 31):
+        if sound.ndim == 2:
+            canvas.add(event.start, sound)
+        elif midi in (28, 29, 31):
             delayed = np.concatenate([np.zeros(211), sound[:-211]]) if len(sound) > 211 else sound
             canvas.add(event.start, np.stack([sound, delayed], axis=1))
         else:

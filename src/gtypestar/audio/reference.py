@@ -216,10 +216,10 @@ def matching_filter(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return a linear-phase filter that moves the tone balance of a mix to the target.
 
-    The filter changes only the bands from 50 Hz to 8 kHz: the references are
-    not reliable outside these bands. The change in one band is not more than
-    `limit_db`. The function also returns the centres of the bands and the
-    change of each band in dB.
+    The filter changes the bands from 30 Hz to 16 kHz (the references are
+    files with no lossy compression: their highest bands are reliable). The
+    change in one band is not more than `limit_db`. The function also returns
+    the centres of the bands and the change of each band in dB.
     """
     centres, mean, _low, _high = target_balance()
     _centres, measured = tone_balance(audio)
@@ -227,7 +227,7 @@ def matching_filter(
     # A smooth curve: each band with a part of its two adjacent bands.
     weights = np.array([0.25, 0.5, 0.25])
     smooth = np.convolve(np.pad(difference, 1, mode="edge"), weights, mode="valid")
-    smooth[(centres < 48) | (centres > 8200)] = 0.0
+    smooth[(centres < 28) | (centres > 16500)] = 0.0
     frequencies = np.concatenate(([0.0], centres, [dsp.RATE / 2]))
     gains = np.concatenate(([smooth[0]], smooth, [smooth[-1]]))
     grid = np.linspace(0.0, dsp.RATE / 2, 2049)

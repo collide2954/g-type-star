@@ -1,0 +1,83 @@
+# G-Type Star: design brief.
+#
+# This file records the decisions of the owner of the project.
+# Do not change a decision in this file without the agreement of the owner.
+# The words in quotation marks are the words of the owner.
+
+[work]
+title = "G-Type Star"
+form = "one piece in eight linked parts: the life of a star like the Sun"
+duration_minutes = 13
+decided = 2026-11-15
+
+[style]
+model = "Sungazer; the instruments of the track 'Cool 7'"
+sources = [
+    "Sungazer (the album 'Against the Fall of Night' is the measured reference)",
+    "Snarky Puppy",
+    "live-electronic fusion",
+    "progressive and djent fusion",
+    "the lineage of cosmic jazz",
+    "the beat scene and IDM",
+]
+profiles = "research/tables/profiles.csv"
+method = "Study every aspect of the style and write it down as hard values, as the study of Night Music for Orchestra did."
+# The work uses the sources; it does not copy a riff or a melody of them.
+
+[character]
+never_the_same = "this style of music is basically NEVER the same thing twice"
+dirty = "There is always some flare and authenticity, it feels dirty. It should not feel square and computational."
+motifs = "consider motivic development"
+virtuosic_lines = "Virtuosic lines are also an element of Sun Gazer and Snarky puppy that I like."
+
+[rhythm]
+plan = "escalating: the complexity of the rhythm grows through the work"
+
+[dubstep]
+rule = "Find a way to incorporate dubstep somewhere in this but only do it once and briefly, like 30 seconds max"
+longest_seconds = 30
+times = 1
+
+[mixed_media]
+selected = ["public-domain audio of space missions and of space", "self-sampling and glitch", "chip and game timbres", "voice"]
+
+[sound]
+method = "hybrid: samples of real instruments where free ones exist, code for the rest; look for sources online where needed"
+listening = "Use whatever tools you need to use to help you really understand what Sun Gazer /SOUNDS/ like."
+transcription = "Try to transcribe the reference audio; approximations are fine."
+
+[deliverables]
+audio = "master, stems, and MIDI"
+score = "conductor score and one part for each player"
+video = "score video, wide and for a telephone"
+build = "CI builds and releases all assets"
+repository = "public, a clean start from the engine of Night Music for Orchestra"
+
+[reference_recordings]
+# The owner has the files. They are not in the repository; only measured numbers are.
+album = "Sungazer, Against the Fall of Night"
+tracks_measured = 6  # of 9: tracks 1, 7 and 9 were not in the folder
+
+[licence]
+music_and_documents = "CC BY 4.0"
+code = "MIT"
+
+# Decisions of the owner for the second version (2026-11-16).
+# The owner listened to the first full render and gave these items.
+[second_version]
+saxophone_range = "I wish the saxophone would explore more of its range when reprieving the melody. Look at how to alter the melody to push the range."
+transitions = "The transitions between sections could be better developed. A sudden pause is fine, but only once in the piece."
+flares = "K 6:20 flares sounds too... hard to understand? Maybe lean into a rock groove or something, double pedal kick drum."
+dubstep = "The dub step passage would really lean more into the dubstep, it needs more texture, it needs more grit, it needs more arrival."
+equalization = "The EQ is also a problem"
+drive = "It also needs a really blood pumping section somewhere"
+ending = "the ending should be that blood pumping section that like falls apart, strong gravity from the dwarf star"
+guitar = "heavy guitar somewhere too"
+# What the second version does with them:
+# - The one sudden pause of the work is the silence before the dubstep drop.
+# - The flares are a rock groove in plain time with double pedal kick drum and heavy guitar.
+# - The last burning is the most driving music of the work; then the gravity of the white
+#   dwarf pulls it down: tempo, pitch and register fall.
+# - Measured against the reference tracks, the first master had 9 dB too much level above
+#   11 kHz, a guitar tone with no body, a bass with too much middle, and an electric piano
+#   that was 19 dB under the saxophone. See docs/audio.md.

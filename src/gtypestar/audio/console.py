@@ -23,7 +23,10 @@ class Strip:
     """The settings of one stem in the mix."""
 
     gain_db: float = 0.0
-    bus: str = "music"  # drums, bass, music, or space (no group processing)
+    # The group: drums (kick, snare, toms: with strong compression), cymbals (the
+    # microphones of the cymbals: a part of the drum group, with no compression),
+    # bass, music, or space (no group processing).
+    bus: str = "music"
     pan: float = 0.0  # moves the stem between left (-1) and right (+1)
     width: float = 1.0
     # Filters: ("highpass", hertz), ("lowpass", hertz), ("bell", hertz, dB, quality),
@@ -138,7 +141,9 @@ class Mix:
     hall_db: float = -9.0
     echo_db: float = -8.0
     # The drum group: a part of it gets strong compression and comes back under the drums.
+    # That part has no high frequencies: it must not make the cymbals louder.
     drum_crush_db: float = -7.0
+    drum_crush_lowpass: float = 4500.0
     drum_drive_db: float = 3.0
     bus_gain_db: dict[str, float] = field(default_factory=dict)
     # The loudness of each group relative to the full mix, in LU. The mixer sets the
@@ -170,26 +175,40 @@ def balance_gains(groups: dict[str, np.ndarray], settings: Mix) -> dict[str, flo
     return gains
 
 
-def mix(
+# The stems that the project gives to other people: the name of each stem of the mix
+# that is not in the list goes to "synthesizers".
+EXPORT_NAMES = {"gtr": "guitar", "keys": "keys", "tsax": "saxophone", "horns": "horns",
+                "strings": "strings", "tape": "recorded-sounds"}  # fmt: skip
+
+
+def export_name(name: str) -> str:
+    """Return the name of the exported stem for a stem of the music or the space group."""
+    return EXPORT_NAMES.get(name, "synthesizers")
+
+
+def group_buses(
     stems: dict[str, np.ndarray],
     settings: Mix,
     kicks: np.ndarray | None = None,
-    gains: dict[str, float] | None = None,
-) -> tuple[np.ndarray, dict[str, float]]:
-    """Mix the stems. Return the mix (two channels) before the master, and the group gains.
+    parts: dict[str, np.ndarray] | None = None,
+) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+    """Apply the channel strips and make the groups. Return the groups and the effect sends.
 
-    `gains` are the gains of the groups in dB. If they are not given, the
-    function finds them from the balance of the reference tracks.
+    If `parts` is given, the function puts the stems of the music group and
+    of the space group into it, each after its channel strip (see `export_name`).
     """
     length = max(len(stem) for stem in stems.values())
     buses = {name: np.zeros((length, 2), dtype=np.float32)
-             for name in ("drums", "bass", "music", "space")}  # fmt: skip
+             for name in ("drums", "cymbals", "bass", "music", "space")}  # fmt: skip
     sends = {name: np.zeros((length, 2), dtype=np.float32)
              for name in ("room", "plate", "hall", "echo")}  # fmt: skip
     for name, stem in stems.items():
         strip = settings.strips.get(name, Strip())
         out = channel(stem, strip, kicks)
         buses[strip.bus][: len(out)] += out
+        if parts is not None and strip.bus in ("music", "space"):
+            target = parts.setdefault(export_name(name), np.zeros((length, 2), dtype=np.float32))
+            target[: len(out)] += out
         for send in sends:
             share = getattr(strip, send)
             if share:
@@ -199,16 +218,46 @@ def mix(
     if np.any(drums):
         crushed = effects.compress(drums, -30.0, 8.0, 0.003, 0.09, makeup_db=14.0)
         crushed = effects.each(crushed, lambda part: effects.saturate(part, 6.0))
+        crushed = signal.sosfilt(dsp.lowpass(settings.drum_crush_lowpass, 2), crushed, axis=0)
         drums = drums + crushed * dsp.db(settings.drum_crush_db)
         drums = effects.each(drums, lambda part: effects.saturate(part, settings.drum_drive_db))
-        drums = drums.astype(np.float32)
+    drums = (drums + buses["cymbals"]).astype(np.float32)
     groups = {"drums": drums, "bass": buses["bass"], "music": buses["music"],
               "space": buses["space"]}  # fmt: skip
+    return groups, sends
+
+
+def mix(
+    stems: dict[str, np.ndarray],
+    settings: Mix,
+    kicks: np.ndarray | None = None,
+    gains: dict[str, float] | None = None,
+    parts: dict[str, np.ndarray] | None = None,
+) -> tuple[np.ndarray, dict[str, float]]:
+    """Mix the stems. Return the mix (two channels) before the master, and the group gains.
+
+    `gains` are the gains of the groups in dB. If they are not given, the
+    function finds them from the balance of the reference tracks.
+
+    If `parts` is given, the function fills it with the stems for export:
+    drums, bass, one stem for each instrument group of the music, the
+    recorded sounds, and the reverberation. Their sum is the mix.
+    """
+    groups, sends = group_buses(stems, settings, kicks, parts)
+    length = len(groups["drums"])
     if gains is None:
         gains = balance_gains(groups, settings)
     total = np.zeros((length, 2), dtype=np.float32)
     for name, bus in groups.items():
         total += bus * np.float32(dsp.db(gains.get(name, 0.0)))
+    if parts is not None:
+        music_gain = np.float32(dsp.db(gains.get("music", 0.0)))
+        space_gain = np.float32(dsp.db(gains.get("space", 0.0)))
+        for name in parts:
+            parts[name] *= space_gain if name == "recorded-sounds" else music_gain
+        for name in ("drums", "bass"):
+            parts[name] = groups[name] * np.float32(dsp.db(gains.get(name, 0.0)))
+        dry = total.copy()
 
     spaces = [
         ("room", effects.room(settings.room_seconds, 0.6, 0.004, 0.4, seed=3), settings.room_db),
@@ -225,6 +274,8 @@ def mix(
         echoes = effects.delay(sends["echo"], settings.echo_seconds, settings.echo_feedback)
         echoes = signal.sosfilt(dsp.highpass(250.0, 2), echoes, axis=0)
         total += (echoes[:length] * dsp.db(settings.echo_db)).astype(np.float32)
+    if parts is not None:
+        parts["reverb"] = total - dry
     return total, gains
 
 

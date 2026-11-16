@@ -67,12 +67,20 @@ def write_audio(audio, directory: Path, name: str) -> list[Path]:
     return [flac, mp3]
 
 
-def build_audio(bars: tuple[int, int] | None, muse: bool | None, name: str | None) -> Path:
-    """Render the audio master, or an excerpt of it. Return the path of the FLAC file."""
+def build_audio(
+    bars: tuple[int, int] | None, muse: bool | None, name: str | None, export: bool = False
+) -> Path:
+    """Render the audio master, or an excerpt of it. Return the path of the FLAC file.
+
+    `export`: write the stems of the full work into the directory `build/stems` too.
+    """
     from .audio import render
     from .work import build
 
-    audio, report = render.render(build(), bars, muse=muse)
+    export_to = BUILD_DIR / "stems" if export and bars is None else None
+    audio, report = render.render(build(), bars, muse=muse, export_to=export_to)
+    if export_to is not None:
+        print(f"stems: {export_to}")
     name = name or (NAME if bars is None else f"excerpt-{bars[0]}-{bars[1]}")
     paths = write_audio(audio, BUILD_DIR / "audio", name)
     for path in paths:
@@ -101,9 +109,9 @@ def compare(path: Path) -> None:
     outside = [
         f"{centre:.0f} Hz {value - (high if value > high else low):+.1f} dB"
         for centre, value, low, high in zip(centres, measured.balance, lowest, highest, strict=True)
-        if 40.0 < centre < 12000.0 and (value > high + 1.0 or value < low - 1.0)
+        if 28.0 < centre < 16500.0 and (value > high + 1.0 or value < low - 1.0)
     ]
-    text = ", ".join(outside) if outside else "all bands from 40 Hz to 12 kHz are in the range"
+    text = ", ".join(outside) if outside else "all bands from 31 Hz to 16 kHz are in the range"
     print(f"compare: tone balance: {text}")
     del mean
 
@@ -201,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "command",
         choices=["check", "stats", "ly", "score", "parts", "audio", "stems", "levels", "compare",
-                 "midi", "video", "docs", "all"],
+                 "midi", "video", "docs", "fetch", "fetch-audio", "publish-audio", "all"],
     )  # fmt: skip
     parser.add_argument("file", nargs="?", help="an audio file (command: compare)")
     parser.add_argument("--bars", metavar="FIRST-LAST", help="render only these bars")
@@ -210,6 +218,16 @@ def main(argv: list[str] | None = None) -> int:
         "--no-muse",
         action="store_true",
         help="do not use MuseScore: synthesizer patches play the wind and string parts",
+    )
+    parser.add_argument(
+        "--export-stems",
+        action="store_true",
+        help="write the stems of the full work into build/stems (command: audio)",
+    )
+    parser.add_argument(
+        "--small",
+        action="store_true",
+        help="get the smaller drum kit, for a build server (command: fetch)",
     )
     parser.add_argument(
         "--mobile",
@@ -224,6 +242,22 @@ def main(argv: list[str] | None = None) -> int:
     muse = False if args.no_muse else None
     if args.command == "check":
         return 1 if check_work() else 0
+    if args.command == "fetch":
+        from .audio import assets
+
+        assets.fetch_all(small=args.small)
+        return 0
+    if args.command in ("fetch-audio", "publish-audio"):
+        from . import release
+        from .work import build
+
+        directory = BUILD_DIR / "audio"
+        if args.command == "fetch-audio":
+            # The exit code 1 says: the release has no master for this music.
+            return 0 if release.fetch(build(), directory) else 1
+        release.publish(build(), directory, "Muse Sounds for the saxophone, horns and strings")
+        print("publish-audio: the release 'audio' has the new master")
+        return 0
     if args.command == "stats":
         show_stats()
     elif args.command == "docs":
@@ -236,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "parts":
         build_pdfs(parts=True)
     elif args.command == "audio":
-        build_audio(bars, muse, args.name)
+        build_audio(bars, muse, args.name, args.export_stems)
     elif args.command in ("stems", "levels"):
         write_stems(bars, muse, show_only=args.command == "levels")
     elif args.command == "compare":
@@ -247,7 +281,7 @@ def main(argv: list[str] | None = None) -> int:
         build_video(args.mobile)
     else:
         build_pdfs(parts=True)
-        build_audio(None, muse, None)
+        build_audio(None, muse, None, export=True)
         write_midi()
         build_video()
         build_video(mobile=True)

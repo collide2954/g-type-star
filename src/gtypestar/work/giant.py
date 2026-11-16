@@ -13,6 +13,7 @@ Style profile: "Large" (see research/tables/profiles.csv).
 
 from __future__ import annotations
 
+from ..audio.glitch import Edit
 from ..audio.tape import Cue
 from ..compose import chords, patterns, tools
 from ..notation import drums
@@ -23,6 +24,15 @@ from .material import Bars
 COMMON = (4, 4, ())
 HALVES = (4, 4)  # two half notes, in eighth notes
 BEATS = (2, 2, 2, 2)
+
+# The countdown in the recording of Mercury 3: the start of the words "fire three, two,
+# one", and the start of the last word "fire", in seconds.
+COUNT_START, COUNT_FIRE = 356.78, 359.08
+# The stems of the players, for the changes of the recording before the helium flash.
+# (Without MuseScore, each horn and each string group has its own stem.)
+LOW_STEMS = ("drums", "eperc", "bass", "sbass", "gtr", "keys")
+ALL_PLAYERS = (*LOW_STEMS, "tsax", "lead", "pad", "chip", "horns", "strings", "tpt", "asax",
+               "tbn", "bsax", "vn", "va", "vc")  # fmt: skip
 
 # The theme as a chorale in E-flat, in bars of four beats (16 bars).
 CHORALE = [
@@ -245,34 +255,82 @@ def write(work: Work) -> None:
     s.set("eperc", [claps] * 8, r"\mf")
     s.close()
 
-    # ------------------------------------------------- the tension rises on D
-    s = Bars(work, 8, COMMON)
+    # ------------------------------------------------- the tension rises on D: the build-up
+    # Ten bars lead to the helium flash (`flash.py`). All sounds become faster, higher and
+    # brighter: the snare drum goes from quarter notes to thirty-second notes, noise rises,
+    # the chords of the synthesizer open, the lines climb, and in the last bars the low
+    # sounds go away. On the third beat of the last bar all players stop. In the silence
+    # (one and a half beats: the only sudden pause of the work) the voice of the recording
+    # says "one"; the word "fire" is on the first beat of the next part.
+    s = Bars(work, 10, COMMON)
     structure.mark(s.bar(1), "Q")
-    symbols = ["D13sus", "D13sus", "D13b9", "D13b9", "D7alt", "D7alt", "D7alt", "D7alt"]
+    edits: list[Edit] = work.extras.setdefault("edits", [])  # type: ignore[assignment]
+    symbols = ["D13sus", "D13sus", "D13b9", "D13b9"] + ["D7alt"] * 6
+    stop = "A_------"  # the last stroke: an eighth note on the third beat, then silence
     rolls = [
         "sn ---- ---- o--- ----\nbd x--- ---- ---- ----\nhh x-x- x-x- x-x- x-x-",
         "sn ---- o--- ---- o---\nbd x--- ---- x--- ----\nhh x-x- x-x- x-x- x-x-",
-        "sn o--- o--- o--- o---\nbd x--- x--- x--- x---",
+        "sn ---- o--- ---- o---\nbd x--- x--- x--- x---\nhh x-x- x-x- x-x- x-x-",
+        "sn o--- o--- o--- o---\nbd x--- x--- x--- x---\nhh x-x- x-x- x-x- x-x-",
         "sn o-o- o-o- o-o- o-o-\nbd x--- x--- x--- x---",
+        "sn o-o- o-o- o-o- o-oo\nbd x--- x--- x--- x---",
         "sn o-o- o-o- oooo oooo\nbd x--- x--- x--- x---",
         "sn oooo oooo oooo oooo\nbd x--- x--- x-x- x-x-",
-        "sn oooooo oooooo oooooo OOOOOO\nbd x----- x----- x--x-- x--x--",
-        "sn OOOOOOOO OOOOOOOO O--- ----\nbd x---x--- x---x--- x--- ----\ncy -------- -------- c--- ----",
+        "cy c----- ------ ------ ------\nsn oooooo oooooo oooooo OOOOOO\nbd x----- x----- x--x-- x--x--",
+        "sn OOOOOOOO OOOOOOOO O--- ----\nbd x---x--- x---x--- x--- ----\ncy -------- -------- C--- ----",
     ]
-    s.set("drums", [drums.steps(rows, BEATS) for rows in rolls], r"\mf\<")
-    s.set("bass", m.roots(symbols, "a_a_ a_a_", HALVES), r"\f\<")
-    s.set("sbass", m.roots(symbols, "a___ ____", HALVES), r"\f")
-    s.set("keys.rh", chord_bars(symbols, "a_a_ a_a_"), r"\mf\<")
-    s.set("gtr", [patterns.pitched("aaaa aaaa", HALVES, {"a": r"d, \pm"})] * 7
-          + [r"<d, a, d>2\ff\pmoff r2"], r"\f\<\highgain")  # fmt: skip
-    strings = m.layers(symbols, ["a___ ____"], m.STRINGS, "strings", HALVES)
+    kit = [drums.steps(rows, BEATS) for rows in rolls]
+    kit[9] = tools.first(kit[9], r"\fff", note=True)
+    s.set("drums", kit, r"\mf\<")
+    # The drum machine: the kick on each beat, a roll whose pitch rises with the loudness,
+    # and noise that rises for five and a half bars.
+    roll = ["r-r- r-r- r-r- r-r-", "r-r- r-r- r-r- r-rr", "r-r- r-r- rrrr rrrr",
+            "rrrr rrrr rrrr rrrr", "rrrrrr rrrrrr rrrrrr RRRRRR", "RRRRRRRR RRRRRRRR s--- ----"]  # fmt: skip
+    feet = ["h--- h--- h--- h---"] * 6 + ["h-h- h-h- h-h- h-h-", "h-h- h-h- h--- ----"]
+    hands = ["R1"] * 4 + [drums.steps(f"ms {row}", BEATS) for row in roll]
+    hands[4] = tools.first(hands[4], r"\mp\<", note=True)
+    hands[9] = tools.first(hands[9], r"\fff", note=True)
+    lower = ["R1"] * 2 + [drums.steps(f"mk {row}", BEATS) for row in feet]
+    lower[2] = tools.first(lower[2], r"\mf\<", note=True)
+    lower[9] = tools.first(lower[9], r"\fff", note=True)
+    noise = r"R1*4 | e,,1\mf\< ~ | e,,1 ~ | e,,1 ~ | e,,1 ~ | e,,1 ~ | e,,2\fff r2"
+    s.set("eperc", "<< { " + " | ".join(hands) + r" } \\ { " + " | ".join(lower) + r" } \\ { "
+          + noise + " } >> |")  # fmt: skip
+
+    low = m.roots(symbols[:4], "a_a_ a_a_", HALVES) + m.roots(symbols[4:8], "aaaa aaaa", HALVES)
+    low += m.roots(symbols[8:9], "aaaaaaaa aaaaaaaa", HALVES)
+    low += m.roots(symbols[9:], "aaaaaaaa " + stop, HALVES)
+    s.set("bass", low, r"\f\<")
+    s.set("sbass", m.roots(symbols[:9], "a___ ____", HALVES) + [r"d,2 d,8-> r8 r4"], r"\f")
+    keys = chord_bars(symbols[:8], "a_a_ a_a_") + chord_bars(symbols[8:9], "aaaa aaaa")
+    keys += chord_bars(symbols[9:], "a_a_a_a_ " + stop)
+    s.set("keys.rh", keys, r"\mf\<")
+    chug = {"a": r"d, \pm", "b": r"<d, a, d> \pmoff"}
+    guitar = [patterns.pitched("aaaa aaaa", HALVES, chug)] * 6
+    guitar += [patterns.pitched("aaaaaaaa aaaaaaaa", HALVES, chug)] * 3
+    guitar.append(patterns.pitched("aaaaaaaa B_------", HALVES, chug))
+    s.set("gtr", guitar, r"\f\<\highgain")
+    held = ["a___ ____"] * 9 + ["a___ A---"]
+    strings = m.layers(symbols, held, m.STRINGS, "strings", HALVES)
     for player, bars in strings.items():
+        bars[9] = tools.first(bars[9], r"\fff", note=True)
         s.set(player, tools.first(patterns.join(bars), r"\mf\<", note=True))
-    horns = m.layers([None] * 4 + symbols[4:], ["a___ ____"], m.HORNS, "horns", HALVES)
+    horns = m.layers([None] * 4 + symbols[4:], held, m.HORNS, "horns", HALVES)
     for player, bars in horns.items():
+        bars[9] = tools.first(bars[9], r"\fff", note=True)
         s.set(player, bars, r"\mf\<")
-    s.set("tsax", [None] * 4 + [r"a'1\mf\<( ~", r"a'2 c''2 ~", r"c''2 es''2 ~", r"es''2\ff) r2"])
-    s.set("eperc", r"R1*4 | e,,1\mf\< ~ | e,,1 ~ | e,,1 ~ | e,,2\ff r2 |")
+    # The saxophone climbs through the notes of the chord to its highest note.
+    s.set("tsax", [None] * 4 + [r"a'1\mf\<( ~", r"a'2 c''2 ~", r"c''2 es''2 ~", r"es''2 f''2",
+                                r"fis''2 a''2 ~", r"a''2 c'''8->\fff) r8 r4"])  # fmt: skip
+    # Chords of the synthesizer in eighth notes: a filter opens from bar 5 to the stop.
+    pulse = chord_bars(symbols[4:9], "aaaa aaaa", low=60, high=84)
+    pulse += chord_bars(symbols[9:], "a_a_a_a_ " + stop, low=60, high=84)
+    s.set("pad.rh", [None] * 4 + pulse, r"\mf\<", r'\switch "supersaw"')
+    # The lead synthesizer rises by a semitone on each beat of the last two bars.
+    climb = " ".join(f"{name}16 {name} {name} {name}" for name in ("d''", "es''", "e''", "f''"))
+    last = r"fis''16 fis'' fis'' fis'' g'' g'' g'' g'' a''8->\fff r8 r4"
+    s.set("lead", [None] * 8 + [climb, last], r"\f\<", r'\switch "lead square"')
+
     # The force on the pilot goes up: "one and a half G", "two G", "two and a half G", "five G".
     cues += [
         Cue(
@@ -320,17 +378,20 @@ def write(work: Work) -> None:
             pan=0.4,
         ),
     ]
-    s.close()
-
-    # ------------------------------------------------- the countdown
-    s = Bars(work, 2, COMMON)
-    # "Three, two, one, fire": the word "fire" is on the first beat of the next part.
-    fire = 2.15  # seconds from the start of the part of the recording to the word "fire"
+    # The countdown: "Fire three, two, one, fire". The recording has the last word 2.30
+    # seconds after the start of this part of it: that word is on the first beat of the
+    # next part of the work.
+    fire = COUNT_FIRE - COUNT_START
     beat = 1 + 8 - fire * m.GIANT / 60.0
-    cues.append(Cue("mercury3-548", s.bar(1), beat, offset=356.6, text="Fire three, two, one, fire.", seconds=2.6, gain_db=-3.0,
-                    radio=True))  # fmt: skip
-    cues.append(Cue("static", s.bar(1), 1, seconds=3.6, gain_db=-22.0, seed=9))
-    s.set("eperc", r"<< { e,,1\p\< ~ | e,,1 } \\ { es,,1\mf | R1 } >> |")
-    s.set("sbass", r"d,,1\mp\> ~ | d,,2 r2\! |")
+    cues.append(Cue("mercury3-548", s.bar(9), beat, offset=COUNT_START, seconds=fire + 0.34,
+                    text="Fire three, two, one, fire.", gain_db=3.0, radio=True, fade=0.01))  # fmt: skip
+    edits += [
+        # The filter of the synthesizer chords opens.
+        Edit("lowpass", s.bar(5), 1, length=22.0, stems=("pad",), start=220.0, end=15000.0),
+        # In the last six beats before the stop, the low sounds go away.
+        Edit("highpass", s.bar(9), 1, length=6.0, stems=LOW_STEMS, start=30.0, end=420.0),
+        # The silence before the helium flash: all players, but not the recorded voice.
+        Edit("mute", s.bar(10), 3.5, length=1.5, stems=ALL_PLAYERS),
+    ]
     s.close()
     structure.double_bar(s.section.last_bar)

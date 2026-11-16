@@ -170,8 +170,12 @@ def mix_bars(
     muse_full: dict[str, np.ndarray] | None = None,
     gains: dict[str, float] | None = None,
     stems_to: Path | None = None,
+    parts: dict[str, np.ndarray] | None = None,
 ) -> tuple[np.ndarray, dict[str, float]]:
-    """Render and mix the work or some bars. Return the mix before the master, and the gains."""
+    """Render and mix the work or some bars. Return the mix before the master, and the gains.
+
+    `parts`: a dictionary that gets the stems for export (see `console.mix`).
+    """
     from . import glitch
 
     stems, kicks, seconds = render_stems(work, bars, muse=muse, muse_full=muse_full)
@@ -186,7 +190,7 @@ def mix_bars(
         stems_to.mkdir(parents=True, exist_ok=True)
         for name, sound in stems.items():
             soundfile.write(str(stems_to / f"{name}.flac"), sound, RATE, subtype="PCM_24")
-    return console.mix(stems, settings, kicks, gains)
+    return console.mix(stems, settings, kicks, gains, parts)
 
 
 CHUNK_SECONDS = 40.0  # the full work is rendered in parts of about this length
@@ -219,15 +223,21 @@ def chunks(work: Work) -> list[tuple[int, int]]:
     return result
 
 
-def _chunk(bars: tuple[int, int]) -> tuple[int, np.ndarray]:
-    """Render one part of the work. Return its first sample in the work, and its mix."""
+def _chunk(bars: tuple[int, int]) -> tuple[int, np.ndarray, dict[str, np.ndarray] | None]:
+    """Render one part of the work.
+
+    Return its first sample in the work, its mix, and its stems for export
+    (if the job asks for them).
+    """
     work = _JOB["work"]
+    parts: dict[str, np.ndarray] | None = {} if _JOB.get("export") else None
     mixed, _gains = mix_bars(
-        work, bars, muse=_JOB["muse"], muse_full=_JOB["muse_full"], gains=_JOB["gains"]
-    )
+        work, bars, muse=_JOB["muse"], muse_full=_JOB["muse_full"], gains=_JOB["gains"],
+        parts=parts,
+    )  # fmt: skip
     begin, _end = window(work, bars)
     lead = LEAD_SECONDS if begin > 0 else 0.0
-    return int(round((begin - lead) * RATE)), mixed
+    return int(round((begin - lead) * RATE)), mixed, parts
 
 
 def reference_bars(work: Work) -> tuple[int, int]:
@@ -273,12 +283,19 @@ def render(
     muse: bool | None = None,
     stems_to: Path | None = None,
     workers: int = WORKERS,
+    export_to: Path | None = None,
 ) -> tuple[np.ndarray, console.MasterReport]:
     """Render the work or an excerpt. Return the master and its report.
 
     The full work is rendered in parts, some at the same time. The levels of
     the groups (drums, bass, music) come from one passage with all players:
     all parts use the same levels.
+
+    `export_to`: a directory for the stems of the full work (drums, bass,
+    guitar, keys, saxophone, horns, strings, synthesizers, recorded sounds,
+    reverberation). The sum of the stems is the mix before the master. All
+    stems get the same gain: the gain of the master, or less if a stem
+    would be too loud for the file.
     """
     import multiprocessing
 
@@ -298,7 +315,9 @@ def render(
         muse_full = musestems.render(work, None, list(MUSE_PLAYERS), seconds, 0.0)
     total = int((work.structure.duration_seconds + TAIL_SECONDS) * RATE) + RATE
     full = np.zeros((total, 2), dtype=np.float32)
-    _JOB.update(work=work, muse=muse, muse_full=muse_full, gains=gains)
+    _JOB.update(work=work, muse=muse, muse_full=muse_full, gains=gains,
+                export=export_to is not None)  # fmt: skip
+    exports: dict[str, np.memmap] = {}
     try:
         parts = chunks(work)
         if workers <= 1:
@@ -306,17 +325,51 @@ def render(
         else:
             pool = multiprocessing.get_context("fork").Pool(workers)
             results = pool.imap_unordered(_chunk, parts)
-        for first, mixed in results:
-            if first < 0:
-                mixed, first = mixed[-first:], 0
-            last = min(total, first + len(mixed))
-            full[first:last] += mixed[: last - first]
+        for first, mixed, stems in results:
+            cut = -first if first < 0 else 0
+            first = max(first, 0)
+            last = min(total, first + len(mixed) - cut)
+            full[first:last] += mixed[cut : cut + last - first]
+            for name, sound in (stems or {}).items():
+                if name not in exports:
+                    # A stem of the full work is large: it stays in a file, not in memory.
+                    export_to.mkdir(parents=True, exist_ok=True)
+                    exports[name] = np.memmap(export_to / f".{name}.f32", dtype=np.float32,
+                                              mode="w+", shape=(total, 2))  # fmt: skip
+                exports[name][first:last] += sound[cut : cut + last - first]
         if workers > 1:
             pool.close()
             pool.join()
     finally:
         _JOB.clear()
-    return console.master(full)
+    final, report = console.master(full)
+    if exports:
+        _write_exports(exports, export_to, report.limiter_drive_db)
+    return final, report
+
+
+def _write_exports(exports: dict[str, np.memmap], directory: Path, drive_db: float) -> None:
+    """Write the stems of the full work as FLAC files, all with the same gain."""
+    block = 1 << 20
+    peak = 0.0
+    for sound in exports.values():
+        for start in range(0, len(sound), block):
+            peak = max(peak, float(np.max(np.abs(sound[start : start + block]))))
+    gain = min(dsp.db(drive_db), 0.94 / max(peak, 1e-9))
+    for name, sound in exports.items():
+        with soundfile.SoundFile(str(directory / f"{name}.flac"), "w", RATE, 2, "PCM_24") as file:
+            for start in range(0, len(sound), block):
+                file.write(np.asarray(sound[start : start + block]) * np.float32(gain))
+        path = Path(sound.filename)
+        del sound
+        path.unlink()
+    exports.clear()
+    (directory / "README.txt").write_text(
+        "The stems of G-Type Star before the master. Their sum is the mix. All stems have\n"
+        f"the same gain ({dsp.to_db(gain):+.1f} dB). The master has, after this sum, a filter for\n"
+        "the tone balance, a compressor, and a limiter (see docs/audio.md).\n",
+        encoding="utf-8",
+    )
 
 
 def position_seconds(work: Work, bar: int, beat: Fraction | float = 1) -> float:

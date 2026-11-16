@@ -1,7 +1,10 @@
 """Part 2: the ignition. The fusion of hydrogen starts.
 
 The riff of the work comes in softly, with a filter that opens (eight bars).
-A voice counts: "two, one, fire". On "fire", all players start (eight bars).
+A voice counts: "two, one, fire". The band does not stop for the voice: the
+snare drum rolls and the noise rises to the first beat (the work has only
+one sudden pause, before the helium flash). On "fire", all players start
+(eight bars).
 The riff has the notes G, B-flat, C, D, F: there is no major third yet. The
 major third comes with the theme, at the start of the main sequence.
 
@@ -12,10 +15,11 @@ from __future__ import annotations
 
 from ..audio.glitch import Edit
 from ..audio.tape import Cue
-from ..compose import patterns
+from ..compose import patterns, tools
 from ..notation import drums
 from ..notation.work import Work
 from . import material as m
+from . import nebula
 from .material import Bars
 
 # The riff, in sixteenth notes. a = G, b = B-flat, c = C, d = D, f = F, g = G one octave higher.
@@ -25,7 +29,6 @@ RIFF = [
     "a__a-x -bc_d_ f_g_ --g__f d_c_bc",
     "a_xa-b c_d_f_ g_f_ d_c_b_ a_bc_d",
 ]
-STOP = "a_xa-b c_d_f_ g_f_ d_c_b_ ------"  # the last pulse is silent: the voice counts
 BASS_NOTES = {"a": "g,,", "b": "bes,,", "c": "c,", "d": "d,", "f": "f,", "g": "g,", "x": "g,, -+"}
 GUITAR_NOTES = {"a": "g,", "b": "bes,", "c": "c", "d": "d", "f": "f", "g": "g", "x": "g, -!"}
 STABS = ["---A__ ------ ---- a__--- ------", "------ ---A__ a___ ------ ---a__",
@@ -44,15 +47,12 @@ def write(work: Work) -> None:
     order = [0, 1, 0, 1, 0, 2, 0]
     s.set(
         "bass",
-        [patterns.pitched(RIFF[n], m.CLAVE, BASS_NOTES) for n in order]
-        + [patterns.pitched(STOP, m.CLAVE, BASS_NOTES)],
+        [patterns.pitched(RIFF[n], m.CLAVE, BASS_NOTES) for n in [*order, 3]],
         r"\mf\fingers",
     )
     s.set(
         "gtr",
-        [None, None]
-        + [patterns.pitched(RIFF[n], m.CLAVE, GUITAR_NOTES) for n in order[2:]]
-        + [patterns.pitched(STOP, m.CLAVE, GUITAR_NOTES)],
+        [None, None] + [patterns.pitched(RIFF[n], m.CLAVE, GUITAR_NOTES) for n in [*order[2:], 3]],
         r"\mf\clean\pm",
     )
     build = [
@@ -66,7 +66,7 @@ def write(work: Work) -> None:
         "bd  x----x x----- x--- x--x-- x-----",
         "hh  x-x-x- x-x-x- x-x- x-x-x- ------\nsn  --g-g- o-g-g- g-g- o-o-o- oooooo\n"
         "bd  x----x x----- x--- x--x-- x--x--",
-        "sn  o-o-oo o-oooo oooo OOOOOO ------\nbd  x--x-- x--x-- x-x- x-x-x- ------",
+        "sn  o-o-oo o-oooo oooo oOoOoO OOOOOO\nbd  x--x-- x--x-- x-x- x-x-x- x-x-x-",
     ]
     s.set(
         "drums", [None if rows is None else drums.steps(rows, m.CLAVE) for rows in build], r"\mp\<"
@@ -74,21 +74,32 @@ def write(work: Work) -> None:
     s.set(
         "keys.rh",
         [None] * 4 + [m.comp("G9sus", STABS[n % 4], low=53, high=74)[0] for n in range(3)]
-        + [m.comp("G9sus", "A_____ ---A__ A___ A__A__ ------", low=53, high=74)[0]],
+        + [m.comp("G9sus", "A_____ ---A__ A___ A__A__ A__A__", low=53, high=74)[0]],
         r"\mf\<",
     )  # fmt: skip
     # The drum machine: a kick on each pulse (bars 1 to 4), then noise that rises (bars 7 and 8).
     four = drums.steps("mk  x----- x----- x--- x----- x-----", m.CLAVE)
-    riser = r"e,,1.. ~ | e,,4. ~ e,,4. ~ e,,4 ~ e,,4. r4."
-    s.set("eperc", patterns.join([four] * 6) + " " + riser + " |", r"\mp")
+    riser = r"e,,1.. ~ | e,,1.."
+    # The first beat has an impact and a low tone that falls: the cloud is now a star.
+    first = r"<< { " + four + r" } \\ { <es,, ges,,>1..\f } >>"
+    second = tools.first(four, r"\mp", note=True)
+    s.set("eperc", patterns.join([first, second] + [four] * 4) + " " + riser + " |", r"\mp")
     edits.append(
-        Edit("lowpass", s.bar(1), 1, length=7 * 8 - 1.5, stems=("drums", "bass", "gtr", "keys",
-             "eperc"), start=240.0, end=17000.0)
+        Edit("lowpass", s.bar(1), 1, length=7 * 8, stems=("drums", "bass", "gtr", "keys"),
+             start=240.0, end=17000.0)
     )  # fmt: skip
+    # The seam with the nebula: its last chord rings on above the riff and becomes soft.
+    for player, note in nebula.SPACE.items():
+        tremolo = ":32" if player.startswith("v") else ""
+        s.set(player, rf"{note}1..{tremolo}\ff\> ~ | {note}1..{tremolo} | R1*14/8*6\! |")
+    s.set(
+        "pad.rh",
+        r"""\switch "supersaw" <g c' d' f' g'>1..\f\> ~ | <g c' d' f' g'>1.. | R1*14/8*6\! |""",
+    )
     # "Two, one, fire. Lift off." The word "fire" is on the first beat of the next bar.
     fire = 2.43 - 0.7  # seconds from the start of the part of the recording to the word
     beat = 1 + 7 - fire * m.FAST / 60.0
-    cues.append(Cue("mercury3-548", s.bar(8), beat, offset=0.7, text="Two, one, fire. Lift off.", seconds=3.7, gain_db=-7.0,
+    cues.append(Cue("mercury3-548", s.bar(8), beat, offset=0.7, text="Two, one, fire. Lift off.", seconds=3.7, gain_db=-4.0,
                     radio=True))  # fmt: skip
     s.close()
 

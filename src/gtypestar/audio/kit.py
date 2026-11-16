@@ -80,7 +80,10 @@ CROCELL = KitSpec(
     },
     longest={"RideR": 5.0, "RideRBell": 4.0, "CrashL": 5.0, "CrashR": 5.0, "ChinaR": 3.5,
              "SplashL": 2.5, "HihatOpen": 2.5, "KDrumR": 1.2, "KDrumL": 1.2},
-    chokes={"HihatOpen": (42, 44, 46)},
+    # The open hi-hat stops when the hi-hat closes. The kick drum is one drum with two
+    # pedals: a new stroke stops the ring of the stroke before it. Without this, fast
+    # strokes of the two feet add up to a low rumble.
+    chokes={"HihatOpen": (42, 44, 46), "KDrumR": (35, 36), "KDrumL": (35, 36)},
     accent={38: "SnareRimShot"},
     gains_db={},
     # The recordings of this kit are softer than those of the DRSKit, and its room is louder.
@@ -112,7 +115,8 @@ DRS = KitSpec(
     longest={"Ride_tip": 5.0, "Ride_tip_bell": 4.0, "Crash_left_shank": 5.0,
              "Crash_right_shank": 5.0, "Crash_left_tip": 1.2, "Crash_right_tip": 1.5,
              "Hihat_open": 2.5, "Kdrum_with_contact": 1.2, "Kdrum_without_contact": 1.2},
-    chokes={"Hihat_open": (42, 44, 46), "Hihat_semi_open": (42, 44, 46)},
+    chokes={"Hihat_open": (42, 44, 46), "Hihat_semi_open": (42, 44, 46),
+            "Kdrum_with_contact": (35, 36), "Kdrum_without_contact": (35, 36)},  # fmt: skip
     accent={},
     gains_db={},
     mics_db={},

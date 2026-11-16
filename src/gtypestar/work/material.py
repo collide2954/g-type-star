@@ -294,6 +294,91 @@ THEME_CLOSE = [
 ]
 
 
+# The forms of the theme for the range of the tenor saxophone. Each time the theme comes
+# back, the saxophone uses a different part of its range (sounding A-flat 2 to E5, and
+# to C6 with the altissimo register): the contour of the theme changes, not only its octave.
+
+# The first statement: the middle and low register (G3 to G4).
+THEME_LOW = [
+    r"r4. g4.( c'4 d'4. ~ d'4.",
+    r"d'4. ~ d'4.) r4 a4.( g4.)",
+    r"e'4.( ~ e'4. ~ e'4 d'4. b4. ~",
+    r"b4. a4. ~ a4) r4. r4.",
+    r"r4. g4.( c'4 d'4. e'4. ~",
+    r"e'4.) g'4.( ~ g'4 f'4. d'4.)",
+    r"e'4.( ~ e'4. d'4 b4. a4. ~",
+    r"a4. g4. ~ g4 ~ g4.) r4.",
+]
+# Its second half: the theme starts low, breaks into the high octave at its highest
+# phrase, and falls through two octaves to the low G.
+THEME_LOW_RISE = [
+    r"r4. g4.( c'4 d'4. ~ d'4.",
+    r"d'4. ~ d'4.) r8 b16( a g4. ~ g4.)",
+    r"e'4.( ~ e'4. ~ e'4 d'4. b4. ~",
+    r"b4. a4. ~ a4) r4. r8 d'8( e'",
+    r"g'4.) ~ g'4. c''4( d''4. e''4. ~",
+    r"e''4.) g''4.( ~ g''4 f''4. d''4.)",
+    r"e''4.( ~ e''4. d''4 b'4. a'4.",
+    r"g'4. e'4. d'4 b4. g4.)",
+]
+# The second statement: a start from the low D, a leap of an eleventh to the high C,
+# the answer up to A5 and B-flat 5, and a fall to the low B at the end of the phrase.
+THEME_WIDE = [
+    r"r4 d16( e g4. c''4 d''4. ~ d''4.",
+    r"d''4.) r4. r4 a'8( b' d'' e''4. ~",
+    r"e''4. ~ e''4.) g''4( a''4. fis''4. ~",
+    r"fis''4. d''4. b'4) r4. g8( d b,)",
+    r"r4 d16( e g4. c''4 d''4. e''4. ~",
+    r"e''4.) g''4.( ~ g''4 a''4. bes''4.)",
+    r"a''4.( ~ a''4. g''4 e''4. d''4. ~",
+    r"d''4. b'4. a'4 g'4.) r4.",
+]
+# The last eight bars of the second statement: the answer of the second bar is one
+# octave lower, the motto of the fifth bar is low, and a leap of a tenth goes to the
+# highest phrase. Then the first line.
+THEME_CLOSE_WIDE = [
+    r"r4. g'4.( c''4 d''4. ~ d''4.",
+    r"d''4. ~ d''4.) r4 a4.( g4.)",
+    r"e''4.( ~ e''4. ~ e''4 d''4. b'4. ~",
+    r"b'4. a'4. ~ a'4) r4. r4.",
+    r"r4. g4.( c'4 d'4. e'4. ~",
+    r"e'4.) g''4.( ~ g''4 f''4. d''4.)",
+    *LINE_1,
+]
+# The quiet middle: the low register with much air in the tone. The second phrase is a
+# fourth lower (the motto from D), and the last note is the low A, near the lowest note.
+THEME_DEEP = [
+    r"r4. g4.( c'4 d'4. ~ d'4.",
+    r"d'4. ~ d'4.) r4 a4.( d4.)",
+    r"e'4.( ~ e'4. ~ e'4 d'4. b4. ~",
+    r"b4. a4. ~ a4) r4. r4.",
+    r"r4. d4.( g4 a4. b4. ~",
+    r"b4.) d'4.( ~ d'4 c'4. a4.)",
+    r"b4.( ~ b4. a4 fis4. e4. ~",
+    r"e4. d4. ~ d4 a,4. ~ a,4.)",
+]
+# The theme with the new division of the pulses: leaps between the registers. The motto
+# is low, each answer is high, the highest note is B5, and the end falls two octaves.
+THEME_LEAPS = [
+    r"r4 d16( e g4. c'4 d'4. ~ d'4.",
+    r"d'4.) r4. r4 a'8( b' d'' e''4. ~",
+    r"e''4. ~ e''4.) g''4( fis''4. d''4. ~",
+    r"d''4. b'4. a'4) r4. r4.",
+    r"r4 d16( e g4. c'4 d'4. e'4. ~",
+    r"e'4.) g''4.( ~ g''4 a''4. bes''4.)",
+    r"b''4.( ~ b''4. a''4 g''4. e''4. ~",
+    r"e''4. d''4. ~ d''4 b'4.) r4.",
+    r"r4. g'4.( c''4 d''4. ~ d''4.",
+    r"d''4. ~ d''4.) r8 b'16( a' g'4. ~ g'4.)",
+    r"e''4.( ~ e''4. ~ e''4 d''4. b'4. ~",
+    r"b'4. a'4. ~ a'4) r4. r8 d8( e",
+    r"g4.) ~ g4. c''4( d''4. e''4. ~",
+    r"e''4.) g''4.( ~ g''4 f''4. d''4.)",
+    r"e''4.( ~ e''4. d''4 b'4. a'4.",
+    r"g'4. e'4. d'4 b4. g4.)",
+]
+
+
 # ----------------------------------------------------------------------------
 # Sections of players: horns, strings, and the chords of the synthesizer
 # ----------------------------------------------------------------------------

@@ -1,10 +1,11 @@
-"""Keep the audio master of the MuseScore source in a GitHub release.
+"""Keep the audio master in a GitHub release.
 
-A build server cannot make this master: it cannot install Muse Sounds. The
+The saxophone, the horns and the strings of the master are Muse Sounds. A
+build server cannot make this master: it cannot install Muse Sounds. The
 computer of the owner makes the master and puts it in the release `audio`.
 The build server gets the master from that release, if the master is for
 the music of the present commit. If not, the build server makes the audio
-with the open sample libraries.
+itself: synthesizer patches play the wind and string parts.
 """
 
 from __future__ import annotations
@@ -27,7 +28,7 @@ NOTES = (
 
 
 def music_key(work: Work) -> str:
-    """Return a checksum of all notes and of the tempo plan of the work."""
+    """Return a checksum of the music: all notes, the tempo plan, and the recorded sounds."""
     digest = hashlib.sha256()
     for player in work.orchestra.players:
         digest.update(player.id.encode())
@@ -36,6 +37,9 @@ def music_key(work: Work) -> str:
         digest.update(f"{point.position}|{point.bpm}|{point.glide}".encode())
     for bar in work.structure.bars:
         digest.update(f"{bar.numerator}/{bar.denominator}".encode())
+    # The cues of the recorded sounds and the changes of the recording are music too.
+    for name in ("cues", "edits"):
+        digest.update(repr(work.extras.get(name, [])).encode())
     return digest.hexdigest()
 
 

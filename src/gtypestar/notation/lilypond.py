@@ -79,7 +79,11 @@ STYLE = r"""
      (mutecuica slash #f 0)
      (opencuica slash #f 0)
      (tambourine xcircle #f 0)
-     (maracas cross #f 3)))
+     (maracas cross #f 3)
+     (lowtom () #f -4)
+     (electricsnare diamond #f 1)
+     (acousticsnare () #f 2)
+     (ridecymbal xcircle #f 6)))
 
 % Dynamic marks that LilyPond does not have.
 sffz = #(make-dynamic-script "sffz")

@@ -25,15 +25,15 @@ RATE = float(dsp.RATE)
 class Amp:
     """The settings of an amplifier."""
 
-    tight_hz: float = 110.0  # low cut before the gain: a tight low end
-    push_hz: float = 900.0  # middle boost before the gain (an overdrive pedal)
-    push_db: float = 8.0
+    tight_hz: float = 95.0  # low cut before the gain: a tight low end
+    push_hz: float = 800.0  # middle boost before the gain (an overdrive pedal)
+    push_db: float = 6.0
     gain_db: float = 34.0
     stages: int = 3
     bias: float = 0.12  # makes the two halves of the wave different (even partials)
     low_db: float = 3.0  # tone controls after the gain
     mid_hz: float = 650.0
-    mid_db: float = -4.0
+    mid_db: float = 0.0
     presence_db: float = 3.0
     cabinet: bool = True
     gate_db: float = -62.0  # the noise gate closes below this level
@@ -53,18 +53,22 @@ BASS_GRIT = Amp(tight_hz=45.0, push_hz=700.0, push_db=4.0, gain_db=16.0, stages=
 
 def cabinet(samples: np.ndarray) -> np.ndarray:
     """The tone of a closed cabinet with four 12-inch loudspeakers and a near microphone."""
+    # After strong distortion, all partials of a low note have the same level: the
+    # sound is thin and sharp. A real loudspeaker has a resonance near 130 Hz and gives
+    # less and less level above 500 Hz. The two shelves make this slope.
     sections = np.vstack(
         [
-            dsp.highpass(75.0, 2),
-            dsp.peaking(120.0, 3.0, 1.2),
-            dsp.peaking(400.0, -3.0, 1.0),
-            dsp.peaking(2600.0, 4.0, 1.4),
-            dsp.peaking(4200.0, 2.0, 2.5),
-            dsp.lowpass(5200.0, 4),
+            dsp.highpass(70.0, 2),
+            dsp.peaking(140.0, 6.0, 1.0),
+            dsp.shelf(450.0, -6.0, high=True),
+            dsp.shelf(1800.0, -6.0, high=True),
+            dsp.peaking(2600.0, 3.0, 1.4),
+            dsp.lowpass(5000.0, 4),
             dsp.lowpass(7500.0, 2),
         ]
     )
-    return signal.sosfilt(sections, samples)
+    # The slope takes 8 dB of level away: the gain keeps the level of the amplifier.
+    return signal.sosfilt(sections, samples) * dsp.db(8.0)
 
 
 def amplify(samples: np.ndarray, amp: Amp = HIGH_GAIN) -> np.ndarray:

@@ -53,6 +53,16 @@ def kick(
     return (body + snap) * (0.25 + 0.75 * level**1.5)
 
 
+def hard_kick(level: float = 0.9, seed: int = 0) -> np.ndarray:
+    """The kick drum of dubstep: short and hard, with a strong click and a knock above it."""
+    out = kick(level, seed, pitch=50.0, sweep=240.0, sweep_time=0.02, decay=0.17, click=1.1,
+               drive=3.0)  # fmt: skip
+    time = _time(0.09)
+    knock = kernels.sine(150.0 + 260.0 * np.exp(-time / 0.008), RATE, 0.0) * np.exp(-time / 0.022)
+    out[: len(knock)] += 0.55 * knock * (0.3 + 0.7 * level)
+    return np.tanh(1.3 * out) / np.tanh(1.3)
+
+
 def sub_drop(level: float = 0.8, seconds: float = 1.6, start: float = 90.0, end: float = 32.0):
     """A long low tone whose pitch falls (the "drop" of electronic dance music)."""
     time = _time(seconds)
@@ -88,6 +98,54 @@ def snare(
     snap = random.normal(0.0, 1.0, len(time)) * np.exp(-time / 0.002)
     out = 0.9 * shell + noise * 0.55 * wires + 0.35 * signal.sosfilt(dsp.highpass(2000.0), snap)
     return np.tanh(1.4 * out) * (0.12 + 0.88 * level**1.7)
+
+
+def heavy_snare(
+    level: float = 0.9, seed: int = 0, *, pitch: float = 200.0, tail: float = 0.42
+) -> np.ndarray:
+    """The snare drum of dubstep, with two channels.
+
+    Four layers: a low body near 200 Hz whose pitch falls, a hard crack of
+    noise, hand claps, and a long tail of noise that is different on the
+    left and on the right (the "room" of the stroke).
+    """
+    random = _random(seed)
+    time = _time(tail * 2.5 + 0.1)
+    level = float(np.clip(level, 0.0, 1.0))
+    bend = 1.0 + 0.7 * np.exp(-time / 0.012)
+    tune = pitch * (1.0 + 0.008 * random.normal())
+    body = kernels.sine(tune * bend, RATE, 0.0) * np.exp(-time / 0.09)
+    body += 0.6 * kernels.sine(1.6 * tune * bend, RATE, 0.25) * np.exp(-time / 0.05)
+    crack = _band(random.normal(0.0, 1.0, len(time)) * np.exp(-time / 0.035), 1200.0, 9000.0)
+    snap = random.normal(0.0, 1.0, len(time)) * np.exp(-time / 0.002)
+    snap = signal.sosfilt(dsp.highpass(2500.0), snap)
+    hands = clap(1.0, seed + 1)
+    centre = body + 0.8 * crack + 0.4 * snap
+    centre[: len(hands)] += 0.6 * hands[: len(centre)]
+    centre = np.tanh(1.6 * centre)
+    out = np.empty((len(time), 2))
+    shape = np.exp(-time / (tail / 3.0)) * np.minimum(time / 0.01, 1.0)
+    for channel in range(2):
+        noise = _band(random.normal(0.0, 1.0, len(time)) * shape, 700.0, 6000.0)
+        out[:, channel] = centre + 0.3 * noise
+    return out * (0.15 + 0.85 * level**1.6)
+
+
+def roll_snare(level: float = 0.8, seed: int = 0, pitch: float = 220.0) -> np.ndarray:
+    """A short, tight snare drum for a roll. The pitch can rise from stroke to stroke."""
+    return snare(level, seed, pitch=pitch, decay=0.07, noise=0.9, brightness=0.9)
+
+
+def reverse_cymbal(seconds: float, level: float = 0.8, seed: int = 0) -> np.ndarray:
+    """A cymbal that plays backwards, with two channels: noise that grows and stops at the end."""
+    random = _random(seed)
+    time = _time(seconds)
+    left = seconds - time  # the time to the end of the sound
+    shape = np.exp(-left / (seconds / 3.5)) * np.minimum(left / 0.004, 1.0)
+    out = np.empty((len(time), 2))
+    for channel in range(2):
+        out[:, channel] = _band(random.normal(0.0, 1.0, len(time)), 2500.0, 9000.0) * shape
+    return out * 0.3 * level
 
 
 def clap(level: float = 0.8, seed: int = 0, *, decay: float = 0.22, spread: float = 0.011):

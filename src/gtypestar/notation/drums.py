@@ -67,6 +67,11 @@ MACHINE = [
     Drum(29, "downlifter", "cuio", 0, text="noise falls"),
     Drum(30, "impact", "tamb", 0, text="impact"),
     Drum(31, "noise burst", "mar", 0, text="noise"),
+    # The heavy sounds of the dubstep passage.
+    Drum(35, "hard kick", "toml", 1),
+    Drum(40, "heavy snare", "sne", 0),
+    Drum(41, "roll snare", "sna", 0),
+    Drum(32, "reverse cymbal", "cymr", 0, text="reverse cymbal"),
 ]
 MACHINE_BY_MIDI = {drum.midi: drum for drum in MACHINE}
 
@@ -80,8 +85,8 @@ ROWS: dict[str, dict[str, int]] = {
     "tm": {"h": 50, "m": 47, "f": 43, "l": 41},  # high, middle, floor, low floor
     "bd": {"x": 36, "y": 35},  # right foot, left foot
     # The drum machine.
-    "mk": {"x": 36, "d": 27},  # kick, sub drop
-    "ms": {"o": 38, "c": 39, "x": 37},  # snare, clap, rim
+    "mk": {"x": 36, "d": 27, "h": 35},  # kick, sub drop, hard kick
+    "ms": {"o": 38, "c": 39, "x": 37, "s": 40, "r": 41},  # snare, clap, rim, heavy, roll
     "mh": {"x": 42, "o": 46},
     "mt": {"t": 45, "z": 56, "n": 31},  # tom, zap, noise burst
 }

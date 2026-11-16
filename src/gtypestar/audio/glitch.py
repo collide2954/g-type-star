@@ -5,6 +5,12 @@ The style edits its own sound: a short part repeats many times (stutter), the
 for a moment, or a filter closes over the full band. These changes are not
 notes of a player. The work gives them as a list of edits. Each edit names
 the stems that it changes.
+
+Three kinds are long changes (`LONG_KINDS`): they can go through many bars.
+They make the end of the work, where the gravity of the white dwarf pulls
+the music down: the pitch of the recording falls with no change of the
+time ("sink"), the sound moves to the centre ("narrow"), and a low-pass
+filter closes slowly ("darken").
 """
 
 from __future__ import annotations
@@ -13,11 +19,15 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 import numpy as np
+from numba import njit
 
 from ..notation.work import Work
 from . import dsp, effects
 
 RATE = dsp.RATE
+# The long kinds of edit. Their values are functions of the time of the work: the render
+# makes the work in parts (see `render.chunks`), and each part gets the correct values.
+LONG_KINDS = ("sink", "narrow", "darken")
 
 
 @dataclass(frozen=True)
@@ -25,10 +35,15 @@ class Edit:
     """One change of the recording.
 
     `kind` is one of: stutter, tapestop, reverse, mute, gate, crush, lowpass,
-    highpass. `bar` and `beat` give the start (the beat is in quarter notes,
-    1 = start of the bar). `length` is the length of the changed part in
-    quarter notes. `stems` are the first parts of the names of the stems
-    that change ("" = all stems).
+    highpass, and the long kinds sink, narrow, darken. `bar` and `beat` give
+    the start (the beat is in quarter notes, 1 = start of the bar). `length`
+    is the length of the changed part in quarter notes. `stems` are the first
+    parts of the names of the stems that change ("" = all stems).
+
+    The long kinds: "sink" moves the pitch from `pitch_start` to `pitch`
+    (semitones; the time does not change). "narrow" moves the stereo width
+    from `width_start` to `width`. "darken" moves the cutoff of a low-pass
+    filter from `start` to `end`. `curve` gives the shape of the change.
     """
 
     kind: str
@@ -44,6 +59,10 @@ class Edit:
     bits: float = 6.0  # crush: number of bits
     hold: int = 6  # crush: each sample is held for this number of samples
     share: float = 0.5  # gate: the open share of each piece
+    curve: float = 1.0  # long kinds: 1 = a straight line; 2 = slow at first, then faster
+    pitch_start: float = 0.0  # sink: the change of pitch at the start of the edit (semitones)
+    width_start: float = 1.0  # narrow: the stereo width at the start (1 = no change)
+    width: float = 0.0  # narrow: the stereo width at the end (0 = all sound in the centre)
 
     @property
     def label(self) -> str:
@@ -62,9 +81,25 @@ class Edit:
         elif self.kind in ("lowpass", "highpass"):
             name = "Low-pass" if self.kind == "lowpass" else "High-pass"
             text = f"{name} filter, {self.start:.0f} Hz to {self.end:.0f} Hz"
+        elif self.kind == "sink":
+            text = f"The pitch of the recording falls, {self.pitch_start:g} to {self.pitch:g}"
+            text += " semitones"
+            if self.pitch_start == self.pitch:
+                text = f"The pitch of the recording stays {abs(self.pitch):g} semitones lower"
+        elif self.kind == "narrow":
+            text = f"The sound moves to the centre, width {self.width_start:g} to {self.width:g}"
+            if self.width_start == self.width:
+                text = f"The sound stays near the centre, width {self.width:g}"
+        elif self.kind == "darken":
+            move = "closes" if self.end < self.start else "opens"
+            text = f"A low-pass filter {move} slowly, {self.start:.0f} Hz to {self.end:.0f} Hz"
+            if self.start == self.end:
+                text = f"The low-pass filter stays at {self.end:.0f} Hz"
         else:
             text = {"tapestop": "Tape stop", "reverse": "Reverse", "mute": "Silence"}[self.kind]
-        if self.stems != ("",):
+        if self.kind in LONG_KINDS and len(self.stems) > 8:
+            text += " (the band)"
+        elif self.stems != ("",):
             text += " (" + ", ".join(self.stems) + ")"
         return f"{text}, {float(self.length):g} quarter notes"
 
@@ -112,6 +147,128 @@ def tapestop(part: np.ndarray) -> np.ndarray:
     return out * gain
 
 
+@njit(cache=True, fastmath=True)
+def _agreement(
+    mono: np.ndarray, first: float, second: float, rate: float, size: int, step: int
+) -> float:
+    """Return how well two parts of a sound agree (a larger value = a better agreement).
+
+    The parts start at `first` and at `second`. Each `step`-th sample of
+    `size` samples is compared, with the read speed `rate`.
+    """
+    count = len(mono)
+    together, own = 0.0, 1e-9
+    index = 0
+    while index < size:
+        place_1 = int(first + rate * index)
+        place_2 = int(second + rate * index)
+        if 0 <= place_1 < count and 0 <= place_2 < count:
+            together += mono[place_1] * mono[place_2]
+            own += mono[place_2] * mono[place_2]
+        index += step
+    return together / np.sqrt(own)
+
+
+@njit(cache=True, fastmath=True)
+def shift_pitch(sound: np.ndarray, ratio: np.ndarray, grain: int, search: int) -> np.ndarray:
+    """Change the pitch of a sound with two channels. Its length does not change.
+
+    `ratio` gives the pitch ratio for each sample (0.5 = one octave lower).
+    The sound is cut into short pieces (`grain` samples) that overlap by one
+    half. Each piece is played slower or faster, from the place in the sound
+    that has the same time. The start of each piece moves a little (not more
+    than `search` samples) to the place where it agrees best with the end of
+    the piece before it: thus a held tone gets no beats, and a stroke of a
+    drum is not heard two times.
+    """
+    count = len(sound)
+    out = np.zeros((count, 2))
+    hop = grain // 2
+    mono = sound[:, 0] + sound[:, 1]
+    before_start = 0.0
+    before_rate = 1.0
+    for start in range(0, count, hop):
+        rate = ratio[start]
+        best = 0
+        if start > 0 and abs(rate - 1.0) > 1e-4:
+            expected = before_start + before_rate * hop
+            # A coarse search first, then a fine search near its best place.
+            best_score = _agreement(mono, expected, float(start), rate, hop, 8)
+            coarse = 0
+            for move in range(-search, search + 1, 12):
+                score = _agreement(mono, expected, float(start + move), rate, hop, 8)
+                if score > best_score * 1.02 + 1e-9:
+                    best_score, coarse = score, move
+            best = coarse
+            best_score = _agreement(mono, expected, float(start + coarse), rate, hop, 4)
+            for move in range(coarse - 11, coarse + 12):
+                score = _agreement(mono, expected, float(start + move), rate, hop, 4)
+                if score > best_score + 1e-9:
+                    best_score, best = score, move
+        read = float(start + best)
+        for index in range(grain):
+            target = start + index
+            if target >= count:
+                break
+            weight = 0.5 - 0.5 * np.cos(2.0 * np.pi * (index + 0.5) / grain)
+            if start == 0 and index < hop:
+                # The first half of the first piece has no piece before it.
+                out[target, 0] += (1.0 - weight) * sound[target, 0]
+                out[target, 1] += (1.0 - weight) * sound[target, 1]
+            position = read + rate * index
+            place = int(np.floor(position))
+            if place < 0 or place + 1 >= count:
+                continue
+            share = position - place
+            out[target, 0] += weight * (
+                sound[place, 0] * (1.0 - share) + sound[place + 1, 0] * share
+            )
+            out[target, 1] += weight * (
+                sound[place, 1] * (1.0 - share) + sound[place + 1, 1] * share
+            )
+        before_start, before_rate = read, rate
+    return out
+
+
+def _apply_long(structure, edit: Edit, stems: dict[str, np.ndarray], offset: float) -> None:
+    """Apply a long edit to the part of each stem that is inside the time of the edit.
+
+    The values of the edit are functions of the time of the work. A stem of
+    one part of the render (with the end of its sounds after the part) gets
+    the same values as the stems of the other parts at the same time.
+    """
+    position = structure.bar(edit.bar).start + Fraction(edit.beat) - 1
+    first = int((structure.seconds(position) + offset) * RATE)
+    last = int((structure.seconds(position + Fraction(edit.length)) + offset) * RATE)
+    for name, stem in stems.items():
+        if not _matches(name, edit):
+            continue
+        low, high = max(first, 0), min(last, len(stem))
+        if high - low < 64 or not np.any(stem[low:high]):
+            continue
+        part = stem[low:high].astype(np.float64)
+        share = (np.arange(low, high) - first) / max(last - first, 1)
+        progress = np.clip(share, 0.0, 1.0) ** edit.curve
+        if edit.kind == "sink":
+            semitones = edit.pitch_start + (edit.pitch - edit.pitch_start) * progress
+            if float(np.max(np.abs(semitones))) < 0.02:
+                continue
+            # Short pieces for the drums: a stroke stays sharp. Long pieces for held tones.
+            drum = name.startswith(("drums", "eperc"))
+            changed = shift_pitch(
+                part, 2.0 ** (semitones / 12.0), 1536 if drum else 4096, 384 if drum else 768
+            )
+        elif edit.kind == "narrow":
+            amount = edit.width_start + (edit.width - edit.width_start) * progress
+            mid = 0.5 * (part[:, 0] + part[:, 1])
+            side = 0.5 * (part[:, 0] - part[:, 1]) * amount
+            changed = np.stack([mid + side, mid - side], axis=1)
+        else:
+            cutoff = edit.start * (edit.end / edit.start) ** progress
+            changed = effects.sweep(part, cutoff, "lowpass", 0.7)
+        stem[low:high] = changed.astype(np.float32)
+
+
 def apply(
     work: Work, stems: dict[str, np.ndarray], offset: float, begin: float, end: float
 ) -> dict[str, np.ndarray]:
@@ -122,6 +279,9 @@ def apply(
     structure = work.structure
     result = {name: stem.copy() for name, stem in stems.items()}
     for edit in sorted(edits, key=lambda item: (item.bar, float(item.beat))):
+        if edit.kind in LONG_KINDS:
+            _apply_long(structure, edit, result, offset)
+            continue
         position = structure.bar(edit.bar).start + Fraction(edit.beat) - 1
         start_seconds = structure.seconds(position)
         if not begin - 0.01 <= start_seconds < end:

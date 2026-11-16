@@ -23,6 +23,15 @@ GROUPS = [("20-45", 20, 45), ("45-90", 45, 90), ("90-180", 90, 180), ("180-355",
           ("2.8-5.6k", 2800, 5600), ("5.6-11k", 5600, 11200), ("11-20k", 11200, 20000)]  # fmt: skip
 
 
+# The separated stems of the reference tracks: the level of each band group relative to
+# the stem (dB), mean of six tracks. "music" is the stem "other" of the separation.
+REFERENCE = {
+    "drums": [-9.2, -3.3, -5.7, -10.9, -18.6, -22.4, -19.6, -18.0, -19.2, -30.6],
+    "bass": [-10.2, -2.7, -6.0, -11.5, -18.6, -25.6, -30.8, -42.1, -59.6, -67.7],
+    "music": [-33.8, -28.8, -14.2, -6.2, -5.1, -6.7, -9.0, -13.0, -24.0, -35.2],
+}
+
+
 def bands(sound: np.ndarray) -> tuple[np.ndarray, float]:
     """Return the power of the mid signal in each band group (dB), and the side level (dB)."""
     mid = 0.5 * (sound[:, 0] + sound[:, 1]).astype(np.float64)
@@ -52,6 +61,14 @@ def main() -> int:
         rows.append((name, levels, side))
     for name, levels, side in sorted(rows, key=lambda row: -row[1][-1]):
         print(f"{name:16s}" + "".join(f"{value:9.1f}" for value in levels) + f"{side:9.1f}")
+    groups, _sends = console.group_buses(stems, settings, kicks)
+    print("groups, each band relative to the total of the group; below: the separated stems")
+    print("of the six reference tracks (mean), from tools/tone.py")
+    for name in ("drums", "bass", "music"):
+        levels, side = bands(groups[name])
+        total = 10.0 * np.log10(np.sum(10.0 ** (levels / 10.0)))
+        print(f"{name:16s}" + "".join(f"{value:9.1f}" for value in levels - total) + f"{side:9.1f}")
+        print(f"{'  reference':16s}" + "".join(f"{value:9.1f}" for value in REFERENCE[name]))
     mixed, gains = console.mix(stems, settings, kicks)
     levels, side = bands(mixed)
     print(f"{'mix':16s}" + "".join(f"{value:9.1f}" for value in levels) + f"{side:9.1f}")

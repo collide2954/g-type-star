@@ -19,6 +19,10 @@ from .material import Bars
 
 SLOW = 70.0  # quarter notes in a minute; the pulse is the half note: 35 in a minute
 COMMON = (4, 4, ())
+# The notes of the horns and the strings in the last chord of the part. The chord rings
+# on into the next part (see ignition.py).
+SPACE = {"tpt": "d''", "asax": "f'", "tbn": "c'", "bsax": "g,", "vn1": "f'''", "vn2": "c'''",
+         "va": "d''", "vc": "g"}  # fmt: skip
 BEATS = (2, 2, 2, 2)  # the four beats of a bar, in eighth notes
 
 
@@ -185,9 +189,7 @@ def write(work: Work) -> None:
         "chip",
         r"""R1*4 | \repeat unfold 4 { g'''16\mf\< c'''' d'''' f'''' } | \repeat unfold 4 { g''''16\f f'''' d'''' c'''' } |""",
     )
-    space = {"tpt": "d''", "asax": "f'", "tbn": "c'", "bsax": "g,", "vn1": "f'''", "vn2": "c'''",
-             "va": "d''", "vc": "g"}  # fmt: skip
-    for player, note in space.items():
+    for player, note in SPACE.items():
         tremolo = ":32" if player.startswith("v") else ""
         s.set(player, rf"R1*4 | {note}1{tremolo}\p\< ~ | {note}1{tremolo}\ff |")
     s.close()

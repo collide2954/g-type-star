@@ -111,7 +111,8 @@ id = "sbass"
 name = "Synthesizer Bass"
 short = "Syn. B."
 family = "rhythm"
-instruments = ["bass moog", "bass sub", "bass reese", "bass wobble", "bass growl"]
+instruments = ["bass moog", "bass sub", "bass reese", "bass wobble", "bass growl", "bass yoi",
+               "bass screech", "bass grind", "bass gun"]
 
 [[player]]
 id = "drums"
@@ -322,6 +323,32 @@ clef = "bass"
 range = [21, 72]
 
 [instrument."bass growl"]
+transposition = 12
+score_transposition = 12
+clef = "bass"
+range = [21, 72]
+
+# More bass sounds of the dubstep passage (see src/gtypestar/audio/dubstep.py).
+
+[instrument."bass yoi"]
+transposition = 12
+score_transposition = 12
+clef = "bass"
+range = [21, 72]
+
+[instrument."bass screech"]
+transposition = 12
+score_transposition = 12
+clef = "bass"
+range = [21, 72]
+
+[instrument."bass grind"]
+transposition = 12
+score_transposition = 12
+clef = "bass"
+range = [21, 72]
+
+[instrument."bass gun"]
 transposition = 12
 score_transposition = 12
 clef = "bass"
