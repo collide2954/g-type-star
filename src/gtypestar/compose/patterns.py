@@ -221,10 +221,26 @@ class Groove:
                     chance = random.uniform()
                     target = step + (1 if random.uniform() < 0.5 else -1)
                     free = 0 <= target < len(kick[pulse]) and new.empty("bd", pulse, target)
-                    if chance < 0.06 * amount and free and new.empty("sn", pulse, target):
+                    if chance < 0.11 * amount and free and new.empty("sn", pulse, target):
                         new.put("bd", pulse, step, "-").put("bd", pulse, target, "x")
-                    elif chance < 0.12 * amount and free and target < step:
+                    elif chance < 0.2 * amount and free and target < step:
                         new.put("bd", pulse, target, "x")
+                    elif chance < 0.26 * amount:
+                        new.put("bd", pulse, step, "-")
+            # One more stroke of the kick drum on an empty step with no snare stroke.
+            if random.uniform() < 0.3 * amount:
+                pulse = int(random.integers(0, len(self.pulses)))
+                step = int(random.integers(1, len(kick[pulse])))
+                if new.empty("bd", pulse, step) and new.empty("sn", pulse, step):
+                    new.put("bd", pulse, step, "x")
+        if snare is not None and random.uniform() < 0.14 * amount:
+            # A soft stroke before a backbeat (a "drag"), on the step before it.
+            for pulse in pulses:
+                if snare[pulse][0] == "o" and pulse > 0:
+                    before = len(new.rows["sn"][pulse - 1]) - 1
+                    if new.empty("sn", pulse - 1, before) and new.empty("bd", pulse - 1, before):
+                        new.put("sn", pulse - 1, before, "g")
+                        break
         hat = new.rows.get("hh")
         if hat is not None:
             for pulse in pulses:

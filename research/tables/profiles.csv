@@ -1,0 +1,63 @@
+profile,group,parameter,low,high,unit,basis,evidence
+All,Form,Duration,13,13,minutes,"Decision of the owner. The longest track of the model band has 5:46; long works of the other circles have 10:45 to 21:00",R
+All,Form,Sections (one change of the music),20,26,sections,Whalefall: about 11 events in 5:46 (one change each 31 s),R
+All,Form,Time at the full level,0.53,0.77,share of the duration,Six reference tracks: 0.53 to 0.77,M
+All,Form,First full level,0.03,0.16,share of the duration,Six reference tracks: 11 to 49 s of 205 to 346 s,M
+All,Form,Longest quiet part: position,0.11,0.55,share of the duration,Six reference tracks: 0.11 to 0.55,M
+All,Form,Short stops of the full band,0.6,2.3,stops for each minute,Six reference tracks: 3 to 12 stops in a track,M
+All,Form,Dubstep passages,1,1,passages,Decision of the owner,K
+All,Form,Length of the dubstep passage,0,30,seconds,Decision of the owner. 16 bars at 140 quarter notes in a minute: 27.4 s,K
+All,Repetition,Full texture: bar is the same as one of the 8 bars before,0.00,0.06,share of the bars,The model of the method: Verklärte Nacht 0.05 (study of Night Music for Orchestra),M
+All,Repetition,Kick and snare: bar is the same as the bar before,0.00,0.15,share of the bars,Five reference tracks: 0.00 to 0.145,M
+All,Repetition,Kick and snare: bar is the same as one of the 8 bars before,0.00,0.34,share of the bars,Five reference tracks: 0.00 to 0.335,M
+All,Loudness,Integrated loudness of the master,-12.7,-9.6,LUFS,Six reference tracks,M
+All,Loudness,Loudness range of the master,4.6,12.6,LU,Six reference tracks,M
+All,Loudness,Crest factor of the master,11.7,14.6,dB,Six reference tracks,M
+All,Stereo,Correlation of the left and the right channel,0.71,0.80,correlation,Six reference tracks,M
+All,Stereo,Level of the side signal relative to the mid signal,-9.6,-7.7,dB,Six reference tracks,M
+All,Mix,Loudness of the drums relative to the mix,-5.3,-2.9,LU,Stems of six reference tracks,M
+All,Mix,Loudness of the bass relative to the mix,-8.0,-5.3,LU,Stems of six reference tracks,M
+All,Mix,Loudness of the other instruments relative to the mix,-6.1,-3.1,LU,Stems of six reference tracks,M
+All,Tone,Level of the third-octave bands from 40 Hz to 12.5 kHz,lowest,highest,dB relative to the total,Table reference_tone_balance: the range of the six reference tracks,M
+Groove,Metre,Pulses in a bar of the main metre,5,5,pulses,"Cool 7: four long pulses and one short pulse (3+3+3+3+2 eighth notes). The work: 3+3+2+3+3",R
+Groove,Metre,Ratio of the long pulse to the short pulse,1.5,1.5,ratio,Cool 7: dotted quarter note and quarter note,R
+Groove,Tempo,Quarter notes in a minute (main tempo),160,183,quarter notes in a minute,Cool 7: 183 (database value). Drum and bass: 160 to 180,R
+Groove,Tempo,Shortest regular note spacing,86,100,ms,Limit of rhythm perception near 100 ms (Neely). Reference tracks: fastest pulse 96 ms,R
+Groove,Drums,Strokes of the kick drum,1.4,2.7,strokes in a second,Six reference tracks,M
+Groove,Drums,Strokes of the snare drum,0.7,1.6,strokes in a second,Six reference tracks,M
+Groove,Drums,Strokes of the cymbals,2.9,5.4,strokes in a second,Six reference tracks,M
+Groove,Bass,Notes of the bass,1.5,3.3,notes in a second,Six reference tracks,M
+Groove,Bass,Bass notes below A1,0.33,0.54,share of the notes,Six reference tracks: the low B string,M
+Groove,Bass,Median length of a bass note,0.13,0.16,seconds,Five reference tracks,M
+Groove,Bass,Bass moves of an octave or more,0.09,0.31,share of the moves,Six reference tracks,M
+Groove,Texture,Speeds at the same time,3,3,layers,"Kick and snare far apart, a fast grid, slow melody notes",R
+Groove,Melody,Length of a melody note,3.0,3.5,beats,Drunk: 3.27 beats for each note (user transcription),R
+Groove,Melody,Melody notes in the scale,0.95,1.00,share of the notes,Drunk: 1.00,R
+Groove,Harmony,Chords in a loop,2,5,chords,Sungazer: loops of 2 or 4 chords. Snarky Puppy: 4 or 5,R
+Feel,Timing,Spread of the strokes of one drum against the pulse,7.6,12.5,ms,Six reference tracks: kick and snare (the value has the error of the measurement),M
+Feel,Timing,Spread of the hi-hat strokes,10.7,15.3,ms,Six reference tracks,M
+Feel,Timing,Bass guitar after the pulse,3,8,ms,Hofmann 2017,R
+Feel,Timing,Lead voice on the beat: later by,0.05,0.09,share of a beat,Nelias 2022: 0.09; notes between the beats stay on the grid,R
+Feel,Timing,Second sixteenth note of a pair (swing),0.50,0.60,share of the pair,Funk breaks: median 0.545. Quintuplet swing: 0.60,R
+Feel,Timing,Parts that a machine plays: shift from the grid,0,0,ms,Programmed layers are exact; the human layers move against them,R
+Feel,Loudness,Ghost note relative to a backbeat,0.22,0.33,ratio of key velocity,Groove MIDI Dataset: 0.28 (quartiles 0.22 to 0.33),M
+Feel,Loudness,"Hi-hat on the pulse, on the eighth note, between",1.00 : 0.79 : 0.62,1.00 : 0.75 : 0.46,ratio of key velocity,Groove MIDI Dataset: groove styles and funk,M
+Lines,Speed,Notes of a line for all lead players,8.2,12.2,notes in a second,Weimar Jazz Database: lines of fusion players 8.2 (median); Brecker and Potter 12.2 (90th percentile),M
+Lines,Intervals,Steps in fast notes,0.60,0.68,share of the moves,Weimar Jazz Database: 0.64,M
+Lines,Phrase,Notes in a phrase of a solo,8,24,notes,Weimar Jazz Database: quartiles 8 to 24; median 13,M
+Lines,Phrase,Rest between two phrases of a solo,0.5,0.9,seconds,Weimar Jazz Database: 0.67 s,M
+Space,Time,Start with no steady groove,30,75,seconds,Hancock: Ostinato 30 s. Reference tracks: 11 to 49 s before the full level,R
+Space,Time,Slowest pulse,33,35,beats in a minute,Threshold: 33 beats in a minute,R
+Space,Time,Notes in one beat of the slow pulse,11,19,notes,Against the Fall of Night: 11. Threshold: 19,R
+Space,Harmony,Notes of a chord of fourths,3,5,notes,Neely: melodies and chords in fourths. Hancock: quartal voicings,R
+Heavy,Pitch,Lowest note of the guitar,46.25,46.25,Hz,Standard tuning of the 8-string guitar: F-sharp 1,R
+Heavy,Rhythm,Length of the riff,11,11,sixteenth notes,"Meshuggah method: a riff of an uneven length (7, 9, 11, 22, 23 sixteenth notes) against the bar",R
+Heavy,Rhythm,Bars after which the riff and the bars come together,4,16,bars,"Meshuggah: 4, 8, or 16 bars",R
+Heavy,Tone,High-pass filter of the rhythm guitar,100,140,Hz,Mix practice of the style,R
+Large,Tempo,New tempo divided by old tempo,0.667,0.667,ratio,The long pulse becomes the beat. Whalefall: 0.6 (136 to 82),R
+Large,Tempo,Half-note pulse,58,58,beats in a minute,Against the Fall of Night: about 58,R
+Large,Form,Share of the solo in its part,0.30,0.40,share of the part,Lingus: the solo is 0.36 of the track,R
+Dubstep,Tempo,Quarter notes in a minute,132,142,quarter notes in a minute,Mostly 140; felt as 70,R
+Dubstep,Drums,Beat of the snare drum,3,3,beat of the bar,Half-time feel,R
+Dubstep,Bass,Lowest octave of the bass,30,60,Hz,A sine tone,R
+Dubstep,Bass,Moves of the filter in one beat,1,4,moves,"Quarter note, eighth note, eighth-note triplet, sixteenth note",R

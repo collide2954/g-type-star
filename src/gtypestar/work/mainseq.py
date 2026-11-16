@@ -32,6 +32,10 @@ BASS = [
     "a__-xb ---c_e b_a_ a__x-c -x-e_c",
     "a__x-b ---c-e b-a_ a__c_e b_-c_h",
     "a__x-a -x-b_c b_a_ a__x-e ---c_b",
+    "a_-a-b ---c_e g_b_ a__x-c -e_c_a",
+    "a__x-b --xc-e b_a_ a_xa-c ---b_c",
+    "a_____ -x-c_e b_a_ a__x-c b_g_e_",
+    "a__xab ---c-e b_-a a__-xc -x-e_c",
 ]
 # Soft forms for the bridge: long notes.
 COMPS_SOFT = [
@@ -68,12 +72,12 @@ def _bass(symbols: list[str], key: str, shapes: list[str] = BASS) -> list[str]:
     """Return one bar of bass for each chord. The figure changes from bar to bar."""
     source = m.random("bass", key)
     bars = []
-    last = -1
+    recent: list[int] = []
     for symbol in symbols:
         choice = int(source.integers(0, len(shapes)))
-        if choice == last:
+        while choice in recent[-min(3, len(shapes) - 1) :]:
             choice = (choice + 1) % len(shapes)
-        last = choice
+        recent.append(choice)
         bars.append(patterns.pitched(shapes[choice], m.CLAVE, m.bass_table(symbol)))
     return bars
 

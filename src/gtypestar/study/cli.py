@@ -11,11 +11,17 @@ def main(argv: list[str] | None = None) -> int:
         description="Build the style study: check the tables and write the report.",
     )
     commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("measure", help="measure the reference recordings (needs the cache)")
     commands.add_parser("report", help="write docs/style-study.md from the tables")
     commands.add_parser("check", help="check the tables for errors")
     commands.add_parser("all", help="do check and report")
     args = parser.parse_args(argv)
 
+    if args.command == "measure":
+        from . import measure
+
+        for path in measure.measure_all():
+            print(f"measured: {path}")
     if args.command in ("check", "all"):
         from . import report
 
