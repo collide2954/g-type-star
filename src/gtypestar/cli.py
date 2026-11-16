@@ -1,0 +1,247 @@
+"""Command line interface: build the score, the parts, the audio, and the video."""
+
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+
+BUILD_DIR = Path("build")
+
+
+def write_lilypond() -> list[Path]:
+    """Write the LilyPond files of the score and the parts."""
+    from .notation import lilypond
+    from .work import build
+
+    return lilypond.write_all(build(), BUILD_DIR / "ly")
+
+
+def compile_pdf(path: Path, output: Path) -> None:
+    """Compile one LilyPond file into a PDF file in the output directory."""
+    output.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(
+        ["lilypond", "-dno-point-and-click", "--loglevel=WARNING", "-o", str(output / path.stem),
+         str(path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )  # fmt: skip
+    if result.returncode != 0:
+        raise RuntimeError(f"LilyPond failed for {path}:\n{result.stderr[-2000:]}")
+    for line in result.stderr.splitlines():
+        if "warning" in line and "compress" not in line:
+            print(f"{path.name}: {line}")
+
+
+def build_pdfs(*, parts: bool = True) -> None:
+    """Build the score PDF and the part PDFs."""
+    paths = write_lilypond()
+    score = [path for path in paths if path.name == "score.ly"]
+    others = [path for path in paths if path.name != "score.ly"] if parts else []
+    compile_pdf(score[0], BUILD_DIR / "score")
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
+        list(pool.map(lambda path: compile_pdf(path, BUILD_DIR / "parts"), others))
+
+
+def build_audio(
+    bars: tuple[int, int] | None = None, engine: str = "open", profile: str = "Muse Sounds"
+) -> None:
+    """Render the audio master, or an excerpt of it.
+
+    The engine "open" is the sampler of this project with open sample
+    libraries. The engine "musescore" is MuseScore Studio with Muse Sounds.
+    """
+    from .audio import mix, musescore
+    from .work import build
+
+    if engine == "musescore":
+        audio, report = musescore.render_master(build(), BUILD_DIR / "musescore", bars, profile)
+    else:
+        audio, report = mix.render(build(), bars=bars)
+    name = "g-type-star" if bars is None else f"excerpt-{bars[0]}-{bars[1]}"
+    if engine == "musescore" and bars is not None:
+        name += "-musescore"
+    for path in mix.write(audio, BUILD_DIR / "audio", name):
+        print(f"audio: {path}")
+    print(report)
+
+
+def check_work() -> int:
+    """Find music that a player cannot play. Return the number of problems."""
+    from .compose.check import check
+    from .work import build
+
+    work = build()
+    problems = check(work)
+    for problem in problems:
+        print(problem)
+    seconds = work.structure.duration_seconds
+    print(f"{len(work.structure.bars)} bars, {seconds / 60:.1f} minutes, {len(problems)} problems")
+    return len(problems)
+
+
+def build_video(mobile: bool = False) -> None:
+    """Render the score video. The audio master must exist.
+
+    If `mobile` is true, the video is for a telephone (1080 x 1920).
+    """
+    from .video import pages, render
+    from .work import build
+
+    work = build()
+    audio = BUILD_DIR / "audio" / "g-type-star.flac"
+    if mobile:
+        screens = pages.build_pages(
+            work, BUILD_DIR / "video" / "pages-mobile", width_px=1080, mobile=True
+        )
+        output = BUILD_DIR / "video" / "g-type-star-mobile.mp4"
+        path = render.render(work, screens, audio, output, width=1080, height=1920, mobile=True)
+    else:
+        screens = pages.build_pages(work, BUILD_DIR / "video" / "pages")
+        path = render.render(work, screens, audio, BUILD_DIR / "video" / "g-type-star.mp4")
+    print(f"video: {path}")
+
+
+def show_stats() -> None:
+    """Print the numbers of the work as a table."""
+    from .compose.stats import measure
+    from .work import build
+
+    for name, value in measure(build()).rows():
+        print(f"{name:45s} {value}")
+
+
+def fetch_audio() -> int:
+    """Get the audio master from the release `audio`. Return 1 if it is not for this music."""
+    from . import release
+    from .work import build
+
+    return 0 if release.fetch(build(), BUILD_DIR / "audio") else 1
+
+
+def publish_audio() -> None:
+    """Put the audio master of the directory `build/audio` in the release `audio`."""
+    from . import release
+    from .work import build
+
+    release.publish(build(), BUILD_DIR / "audio", "MuseScore Studio with Muse Sounds")
+    print("publish-audio: the release 'audio' has the new master")
+
+
+def draw_chart() -> None:
+    """Draw the loudness of the audio master against the time. The audio master must exist."""
+    from .audio.chart import loudness_chart
+    from .work import build
+
+    audio = BUILD_DIR / "audio" / "g-type-star.flac"
+    print(f"chart: {loudness_chart(build(), audio, Path('docs') / 'loudness.svg')}")
+
+
+def calibrate_levels() -> None:
+    """Measure the levels of MuseScore with Muse Sounds for each dynamic mark."""
+    from .audio import calibrate
+
+    print(f"calibrate: {calibrate.measure(BUILD_DIR / 'musescore' / 'calibrate')}")
+
+
+def update_documents() -> None:
+    """Write the bar numbers, the times, and the measured values of the work into the documents."""
+    from . import documents
+    from .work import build
+
+    changed = documents.update_files(build())
+    for path in changed:
+        print(f"docs: updated {path}")
+    if not changed:
+        print("docs: the documents are up to date")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="gtypestar", description="Build G-Type Star.")
+    parser.add_argument(
+        "command",
+        choices=[
+            "check",
+            "stats",
+            "ly",
+            "score",
+            "parts",
+            "audio",
+            "fetch-audio",
+            "publish-audio",
+            "video",
+            "chart",
+            "docs",
+            "calibrate",
+            "all",
+        ],
+    )
+    parser.add_argument(
+        "--bars", metavar="FIRST-LAST", help="render only these bars (command: audio)"
+    )
+    parser.add_argument(
+        "--engine",
+        choices=["open", "musescore"],
+        default="open",
+        help="source of the sound (command: audio)",
+    )
+    parser.add_argument(
+        "--mobile",
+        action="store_true",
+        help="make the video for a telephone, 1080 x 1920 (command: video)",
+    )
+    parser.add_argument(
+        "--profile",
+        default="Muse Sounds",
+        help='sound profile of MuseScore: "Muse Sounds" or "MuseScore Basic"',
+    )
+    args = parser.parse_args(argv)
+    bars = None
+    if args.bars:
+        first, _, last = args.bars.partition("-")
+        bars = (int(first), int(last or first))
+    if args.command == "check":
+        return 1 if check_work() else 0
+    if args.command == "stats":
+        show_stats()
+        return 0
+    if args.command == "chart":
+        draw_chart()
+        return 0
+    if args.command == "docs":
+        update_documents()
+        return 0
+    if args.command == "calibrate":
+        calibrate_levels()
+        return 0
+    if args.command == "fetch-audio":
+        return fetch_audio()
+    if args.command == "publish-audio":
+        publish_audio()
+        return 0
+    if args.command == "ly":
+        for path in write_lilypond():
+            print(path)
+    elif args.command == "score":
+        build_pdfs(parts=False)
+    elif args.command == "parts":
+        build_pdfs(parts=True)
+    elif args.command == "audio":
+        build_audio(bars, args.engine, args.profile)
+    elif args.command == "video":
+        build_video(args.mobile)
+    else:
+        build_pdfs(parts=True)
+        build_audio()
+        build_video()
+        build_video(mobile=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
