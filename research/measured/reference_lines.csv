@@ -1,0 +1,7 @@
+recording,note_starts_per_second_median,note_starts_90th_percentile,note_starts_99th_percentile,share_of_time_8_or_more,share_of_time_11_or_more,pitch_5th_percentile_midi,pitch_95th_percentile_midi
+"Sungazer, Whalefall",11,18,23,0.767,0.577,50.25,80
+"Sungazer, Skrontch",12,19,26.44,0.781,0.587,53,81
+"Sungazer, Hot Saturn",12,20,28,0.731,0.561,48,80
+"Sungazer, Oeteldonk",9,14,17.78,0.671,0.3,50,74
+"Sungazer, Whisky and Mes",11,18,22,0.784,0.556,51,79
+"Sungazer, Paydushko Horo",9,16,20,0.596,0.366,49.25,81

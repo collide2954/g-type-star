@@ -27,6 +27,7 @@ from . import band, console, dsp, patches
 
 RATE = dsp.RATE
 TAIL_SECONDS = 5.0
+SUBSTITUTE_GAIN = 3.5  # a patch in place of a real instrument, relative to Muse Sounds
 LEAD_SECONDS = 0.5  # time before the first bar of an excerpt
 
 # The feel of each player, if the work does not give one.
@@ -123,10 +124,15 @@ def render_stems(
             if muse and player.id in MUSE_PLAYERS:
                 muse_events[player.id] = events
             else:
+                # A synthesizer patch plays the part: its level is near that of Muse Sounds.
                 stems[player.id] = band.cached(
-                    player.id + "-substitute", events, seconds,
-                    lambda e=events, p=player.id: band.render_substitute(e, seconds, p),
-                )  # fmt: skip
+                    player.id + "-substitute",
+                    events,
+                    seconds,
+                    lambda e=events, p=player.id: (
+                        band.render_substitute(e, seconds, p) * SUBSTITUTE_GAIN
+                    ),
+                )
         elif first == "tape":
             continue  # the recorded sounds come from the cue list of the work
     if keys_events:

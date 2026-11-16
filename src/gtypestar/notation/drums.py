@@ -114,8 +114,9 @@ def division(pulse: Fraction, count: int) -> tuple[Fraction, int]:
     number of plain notes that the `count` notes replace: five notes in a
     pulse of three eighth notes are a tuplet of 5 in the time of 3.
     """
-    if pulse / count in POWERS:
-        return pulse / count, 0
+    step = pulse / count
+    if step in POWERS or step * Fraction(2, 3) in POWERS:
+        return step, 0  # a plain note value, or a plain note value with a dot
     for value in POWERS:
         normal = pulse / value
         if normal.denominator == 1 and count / 2 < normal < count:

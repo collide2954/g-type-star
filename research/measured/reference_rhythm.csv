@@ -1,0 +1,7 @@
+recording,pulse_ms,pulses_per_second,cycle_lengths_in_pulses,main_cycle_pulses,main_cycle_seconds,kick_strokes_per_second,snare_strokes_per_second,cymbal_strokes_per_second,kick_share_at_half_a_pulse,bars_same_as_the_bar_before,bars_same_as_one_of_8_bars_before,bars
+"Sungazer, Whalefall",146.3,6.835,15 (76%); 6 (10%); 30 (5%),15,2.194,2.347,0.836,2.868,0.027,0.059,0.104,135
+"Sungazer, Skrontch",111.1,9.001,12 (48%); 24 (44%); 36 (8%),12,1.333,1.727,1.324,5.374,0.019,0.072,0.335,194
+"Sungazer, Hot Saturn",96.3,10.384,32 (30%); 8 (25%); 12 (15%),32,3.082,2.66,0.729,4.312,0.06,0,0,63
+"Sungazer, Oeteldonk",208.4,4.798,4 (45%); 18 (18%); 6 (18%),4,0.834,1.871,1.584,3.838,0.004,0.359,0.752,270
+"Sungazer, Whisky and Mes",157.8,6.337,10 (74%); 20 (16%); 5 (11%),10,1.578,2.433,0.892,4.556,0.008,0.145,0.279,179
+"Sungazer, Paydushko Horo",111,9.009,25 (35%); 5 (19%); 10 (8%),25,2.775,1.376,0.816,3.876,0.081,0.012,0.06,84

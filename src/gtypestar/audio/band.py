@@ -348,18 +348,17 @@ def render_guitar(events: list[Event], seconds: float) -> np.ndarray:
         by_tone.setdefault(tone if tone in AMPS else "clean", []).append(event)
     for tone, group in by_tone.items():
         settings = AMPS[tone]
-        if tone in ("crunch", "high gain"):
+        if tone in ("crunch", "high gain", "clean"):
+            # Two takes: far left and right for the heavy tones, nearer for the clean tone.
+            side_place = 0.92 if tone != "clean" else 0.6
             for side, seed in ((-1.0, 11), (1.0, 23)):
                 dry = amp.play(amp.GUITAR, _string_notes(group, seed=seed), seconds, seed=seed)
                 wet = amp.amplify(dry, settings)[: len(canvas.data)]
-                canvas.add(0.0, effects.pan(wet, 0.92 * side))
+                canvas.add(0.0, effects.pan(wet, side_place * side))
         else:
             dry = amp.play(amp.GUITAR, _string_notes(group), seconds, seed=5)
             wet = amp.amplify(dry, settings)[: len(canvas.data)]
-            both = effects.stereo(wet) * 1.41
-            if tone == "clean":
-                both = effects.chorus(both, rate_hz=0.5, depth_ms=2.5, mix=0.45)
-            canvas.add(0.0, both)
+            canvas.add(0.0, effects.stereo(wet) * 1.41)
     return canvas.data
 
 

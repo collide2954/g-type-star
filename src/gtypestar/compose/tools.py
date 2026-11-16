@@ -97,7 +97,8 @@ def _first_note(elements: list[music.Element]) -> music.Note | None:
     for element in elements:
         if isinstance(element, music.Note):
             return element
-        if isinstance(element, music.Group) and element.kind != "parallel":
+        if isinstance(element, music.Group):
+            # In music with two voices, the first note of the upper voice gets the marks.
             found = _first_note(element.children)
             if found:
                 return found
