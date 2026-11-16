@@ -26,66 +26,30 @@ DIVISIONS = 6720  # parts of a quarter note: 64th notes, triplets, quintuplets, 
 
 # Instrument of the work: the name of the part and the MusicXML sound identifier.
 SOUNDS = {
-    "piccolo": ("Piccolo", "wind.flutes.piccolo"),
-    "flute": ("Flute", "wind.flutes.flute"),
-    "alto flute": ("Alto Flute", "wind.flutes.flute.alto"),
-    "oboe": ("Oboe", "wind.reed.oboe"),
-    "English horn": ("English Horn", "wind.reed.english-horn"),
-    "clarinet in E-flat": ("E♭ Clarinet", "wind.reed.clarinet.eflat"),
-    "clarinet in B-flat": ("B♭ Clarinet", "wind.reed.clarinet.bflat"),
-    "bass clarinet": ("Bass Clarinet", "wind.reed.clarinet.bass"),
-    # Muse Sounds have no contrabass clarinet: the contrabassoon has the same range.
-    "contrabass clarinet": ("Contrabassoon", "wind.reed.contrabassoon"),
-    "bassoon": ("Bassoon", "wind.reed.bassoon"),
-    "contrabassoon": ("Contrabassoon", "wind.reed.contrabassoon"),
-    "horn in F": ("Horn in F", "brass.french-horn"),
-    "trumpet in C": ("C Trumpet", "brass.trumpet.c"),
+    "trumpet in B-flat": ("B♭ Trumpet", "brass.trumpet.bflat"),
+    "alto saxophone": ("Alto Saxophone", "wind.reed.saxophone.alto"),
+    "tenor saxophone": ("Tenor Saxophone", "wind.reed.saxophone.tenor"),
     "tenor trombone": ("Trombone", "brass.trombone.tenor"),
-    "bass trombone": ("Bass Trombone", "brass.trombone.bass"),
-    "tuba": ("Tuba", "brass.tuba"),
-    "timpani": ("Timpani", "drum.timpani"),
-    "vibraphone": ("Vibraphone", "pitched-percussion.vibraphone"),
-    "marimba": ("Marimba", "pitched-percussion.marimba"),
-    "glockenspiel": ("Glockenspiel", "pitched-percussion.glockenspiel"),
-    "crotales": ("Crotales", "metal.crotales"),
-    "xylophone": ("Xylophone", "pitched-percussion.xylophone"),
-    "tubular bells": ("Tubular Bells", "pitched-percussion.tubular-bells"),
-    "tuned gongs": ("Tubular Bells", "pitched-percussion.tubular-bells"),
-    "harp": ("Harp", "pluck.harp"),
-    "celesta": ("Celesta", "keyboard.celesta"),
-    "piano": ("Piano", "keyboard.piano"),
+    "baritone saxophone": ("Baritone Saxophone", "wind.reed.saxophone.baritone"),
+    "electric piano": ("Electric Piano", "keyboard.piano.electric"),
+    "wurlitzer": ("Electric Piano", "keyboard.piano.electric"),
+    "organ": ("Organ", "keyboard.organ.drawbar"),
     "violin": ("Violins", "strings.group"),
     "viola": ("Violas", "strings.group"),
     "violoncello": ("Violoncellos", "strings.group"),
-    "double bass": ("Contrabasses", "strings.group"),
 }
 
 # Unpitched percussion: the name of the part, the sound identifier, and the
 # drum of the playback program for each written note (MIDI number). The
-# entry `None` is for all other written notes.
-UNPITCHED = {
-    "bass drum": ("Bass Drum", "drum.bass-drum", {None: 36}),
-    "tam-tams": ("Tam-tam", "metal.tamtam", {None: 52}),
-    "suspended cymbals": ("Suspended Cymbal", "metal.cymbal.crash", {None: 57}),
-    "crash cymbals": ("Hand Cymbals", "metal.cymbal.crash", {None: 57}),
-    "wood blocks": ("Wood Blocks", "wood.wood-block", {60: 77, None: 76}),
-    "triangle": ("Triangle", "metal.triangle", {None: 81}),
-    "snare drum": ("Snare Drum", "drum.snare-drum", {None: 38}),
-    # Six drums: the written notes a, b, c', d', e', f' are the drums from low to high.
-    "tom-toms": (
-        "Concert Toms",
-        "drum.tom-tom",
-        {57: 41, 59: 43, 60: 45, 62: 47, 64: 48, 65: 50, None: 45},
-    ),
-    "taiko": ("Taiko", "drum.taiko", {None: 87}),
-}
+# entry `None` is for all other written notes. The playback program does not
+# play the drums of this work: the sampler and the drum machine of the project do.
+UNPITCHED: dict[str, tuple[str, str, dict[int | None, int]]] = {}
 
 # One player of a string section alone.
 SOLO_SOUNDS = {
     "violin": ("Violin", "strings.violin"),
     "viola": ("Viola", "strings.viola"),
     "violoncello": ("Violoncello", "strings.cello"),
-    "double bass": ("Contrabass", "strings.contrabass"),
 }
 
 TYPE_NAMES = {

@@ -1,0 +1,221 @@
+"""Recorded sounds: voices of space missions, radio noise, and the sound of the Sun.
+
+The part "Recorded Sounds" of the work is a list of cues. A cue starts a
+sound at a place in the music. There are two kinds of sound:
+
+- A file in the directory `.cache/media`: a public-domain recording, for
+  example the radio traffic of a space mission. If the file is not there,
+  the cue is silent and the render shows a message.
+- A sound that code makes from physical values: the tones that start and
+  stop a radio message of the Apollo missions, radio noise, a data signal,
+  and the oscillations of the Sun at a speed that the ear can hear.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from fractions import Fraction
+from pathlib import Path
+
+import numpy as np
+import soxr
+from scipy import signal
+
+from ..notation.work import Work
+from . import dsp, effects, kernels
+
+RATE = dsp.RATE
+MEDIA_DIR = Path(".cache/media")
+
+
+@dataclass(frozen=True)
+class Cue:
+    """One recorded sound at a place in the music."""
+
+    sound: str  # the name of a file in the media directory, or of a sound that code makes
+    bar: int
+    beat: Fraction | float = 1  # in quarter notes; 1 = start of the bar
+    length: Fraction | float | None = None  # quarter notes; None = the length of the sound
+    seconds: float | None = None  # the length in seconds, for the sounds that code makes
+    gain_db: float = -14.0
+    offset: float = 0.0  # start in the file, in seconds
+    speed: float = 1.0  # 2 = one octave higher and two times as fast
+    reverse: bool = False
+    pan: float = 0.0
+    radio: bool = False  # the narrow band of a radio message (300 to 3400 Hz), with distortion
+    fade: float = 0.05  # seconds at the start and at the end
+    seed: int = 0
+
+
+# ----------------------------------------------------------------------------
+# Sounds that code makes
+# ----------------------------------------------------------------------------
+
+# The Sun oscillates with a period near five minutes. The modes with the most power
+# have frequencies near 3090 microhertz, 135 microhertz apart (the "large separation").
+# Played 42 000 times faster, they are near 130 Hz, 5.7 Hz apart: a low hum with beats.
+SUN_PEAK_MICROHERTZ = 3090.0
+SUN_SEPARATION_MICROHERTZ = 135.0
+SUN_WIDTH_MICROHERTZ = 1000.0  # full width at half maximum of the power
+SUN_SPEED = 42000.0
+
+
+def sun(seconds: float, seed: int = 0, speed: float = SUN_SPEED) -> np.ndarray:
+    """The oscillations of the Sun, faster: a sum of its strongest modes. Two channels."""
+    random = np.random.default_rng(seed)
+    time = np.arange(int(seconds * RATE)) / RATE
+    out = np.zeros((len(time), 2))
+    sigma = SUN_WIDTH_MICROHERTZ / 2.355
+    for order in range(-9, 10):
+        for degree, share in ((0, 1.0), (1, 0.85), (2, 0.5)):
+            # Modes of degree 1 are half a separation from the modes of degree 0.
+            micro = SUN_PEAK_MICROHERTZ + (order + degree / 2.0) * SUN_SEPARATION_MICROHERTZ
+            micro -= 9.0 * (degree == 2)  # the small separation
+            power = np.exp(-0.5 * ((micro - SUN_PEAK_MICROHERTZ) / sigma) ** 2)
+            frequency = micro * 1e-6 * speed
+            # Each mode lives some days: its level changes slowly and at random.
+            knots = random.rayleigh(1.0, int(seconds / 1.3) + 3)
+            level = np.interp(time / 1.3, np.arange(len(knots)), knots)
+            phase = random.uniform(0.0, 2 * np.pi)
+            wave = np.sin(2 * np.pi * frequency * time + phase) * level * np.sqrt(power) * share
+            side = random.uniform(0.2, 0.8)
+            out[:, 0] += wave * np.cos(side * np.pi / 2)
+            out[:, 1] += wave * np.sin(side * np.pi / 2)
+    return out / 14.0
+
+
+def quindar(start: bool = True) -> np.ndarray:
+    """The tone at the start (2525 Hz) or at the end (2475 Hz) of an Apollo radio message."""
+    time = np.arange(int(0.25 * RATE)) / RATE
+    tone = np.sin(2 * np.pi * (2525.0 if start else 2475.0) * time)
+    tone *= np.minimum(1.0, np.minimum(time, 0.25 - time) / 0.004)
+    return effects.stereo(tone * 0.5)
+
+
+def static(seconds: float, seed: int = 0) -> np.ndarray:
+    """Radio noise: hiss in a narrow band, with crackle and a slow change of level."""
+    random = np.random.default_rng(seed)
+    total = int(seconds * RATE)
+    hiss = random.normal(0.0, 1.0, total)
+    band = signal.butter(2, [400.0, 3200.0], "bandpass", fs=RATE, output="sos")
+    hiss = signal.sosfilt(band, hiss)
+    knots = random.uniform(0.4, 1.0, int(seconds / 0.4) + 3)
+    hiss *= np.interp(np.arange(total) / (0.4 * RATE), np.arange(len(knots)), knots)
+    crackle = (random.uniform(0.0, 1.0, total) < 0.0006) * random.normal(0.0, 6.0, total)
+    crackle = signal.sosfilt(dsp.highpass(1500.0, 1), crackle)
+    return effects.stereo((hiss + crackle) * 0.12)
+
+
+def telemetry(seconds: float, seed: int = 0) -> np.ndarray:
+    """A data signal: fast changes between two tones, as a modem."""
+    random = np.random.default_rng(seed)
+    total = int(seconds * RATE)
+    bits = random.integers(0, 2, int(seconds * 300) + 2)
+    index = np.minimum((np.arange(total) / RATE * 300).astype(int), len(bits) - 1)
+    frequency = np.where(bits[index] == 1, 2225.0, 2025.0).astype(np.float64)
+    tone = kernels.sine(frequency, float(RATE), 0.0)
+    return effects.stereo(tone * 0.2)
+
+
+def wind(seconds: float, seed: int = 0) -> np.ndarray:
+    """Noise that a slow filter moves: the solar wind."""
+    random = np.random.default_rng(seed)
+    total = int(seconds * RATE)
+    time = np.arange(total) / RATE
+    out = np.zeros((total, 2))
+    for channel in range(2):
+        noise = random.normal(0.0, 1.0, total)
+        knots = random.uniform(0.0, 1.0, int(seconds / 2.5) + 3)
+        move = np.interp(time / 2.5, np.arange(len(knots)), knots)
+        cutoff = 250.0 * 2.0 ** (4.0 * move)
+        out[:, channel] = kernels.state_variable(noise, cutoff, np.full(total, 3.0), float(RATE), 1)
+    return out * 0.12
+
+
+MADE = {"sun", "quindar on", "quindar off", "static", "telemetry", "wind"}
+
+
+def make(cue: Cue, seconds: float) -> np.ndarray:
+    """Return a sound that code makes (two channels)."""
+    if cue.sound == "sun":
+        return sun(seconds, cue.seed)
+    if cue.sound == "quindar on":
+        return quindar(True)
+    if cue.sound == "quindar off":
+        return quindar(False)
+    if cue.sound == "static":
+        return static(seconds, cue.seed)
+    if cue.sound == "telemetry":
+        return telemetry(seconds, cue.seed)
+    return wind(seconds, cue.seed)
+
+
+def load(name: str) -> np.ndarray | None:
+    """Read a file of the media directory (two channels), or return None."""
+    import soundfile
+
+    for suffix in (".flac", ".wav", ".mp3", ".ogg"):
+        path = MEDIA_DIR / f"{name}{suffix}"
+        if path.exists():
+            data, rate = soundfile.read(str(path), dtype="float32", always_2d=True)
+            if data.shape[1] == 1:
+                data = np.repeat(data, 2, axis=1)
+            if rate != RATE:
+                data = soxr.resample(data, rate, RATE, quality="HQ")
+            return data[:, :2]
+    return None
+
+
+def radio(sound: np.ndarray) -> np.ndarray:
+    """Give a sound the narrow band and the distortion of a radio message."""
+    band = signal.butter(3, [320.0, 3300.0], "bandpass", fs=RATE, output="sos")
+    out = signal.sosfilt(band, sound.mean(axis=1))
+    out = np.tanh(6.0 * out / max(float(np.percentile(np.abs(out), 99.5)), 1e-6)) * 0.3
+    return effects.stereo(out) * 1.41
+
+
+def render(work: Work, begin: float, end: float, seconds: float, lead: float) -> np.ndarray | None:
+    """Return the stem of the recorded sounds, or None if the work has no cues."""
+    cues: list[Cue] = work.extras.get("cues", [])  # type: ignore[assignment]
+    if not cues:
+        return None
+    structure = work.structure
+    out = np.zeros((int(seconds * RATE) + RATE, 2), dtype=np.float32)
+    missing = set()
+    for cue in cues:
+        position = structure.bar(cue.bar).start + Fraction(cue.beat) - 1
+        start = structure.seconds(position)
+        if not begin - 0.01 <= start < end:
+            continue
+        wanted = cue.seconds
+        if cue.length is not None:
+            wanted = structure.seconds(position + Fraction(cue.length)) - start
+        if cue.sound in MADE:
+            sound = make(cue, wanted or 4.0)
+        else:
+            loaded = load(cue.sound)
+            if loaded is None:
+                missing.add(cue.sound)
+                continue
+            sound = loaded[int(cue.offset * RATE) :]
+        if cue.speed != 1.0:
+            sound = soxr.resample(sound, RATE * cue.speed, RATE, quality="HQ")
+        if wanted is not None:
+            sound = sound[: int(wanted * RATE)]
+        if cue.reverse:
+            sound = sound[::-1]
+        if cue.radio:
+            sound = radio(sound)
+        sound = sound.astype(np.float64).copy()
+        edge = max(8, min(int(cue.fade * RATE), len(sound) // 2))
+        sound[:edge] *= np.linspace(0.0, 1.0, edge)[:, None]
+        sound[-edge:] *= np.linspace(1.0, 0.0, edge)[:, None]
+        if cue.pan:
+            sound = sound * np.array([min(1.0, 1.0 - cue.pan), min(1.0, 1.0 + cue.pan)])
+        first = int((start - begin + lead) * RATE)
+        last = min(len(out), first + len(sound))
+        if last > first:
+            out[first:last] += (sound[: last - first] * dsp.db(cue.gain_db)).astype(np.float32)
+    for name in sorted(missing):
+        print(f"tape: the recorded sound {name!r} is not in {MEDIA_DIR}; the cue is silent")
+    return out

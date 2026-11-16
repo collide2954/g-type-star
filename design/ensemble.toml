@@ -1,0 +1,341 @@
+# G-Type Star: the ensemble.
+#
+# The sequence of the players in this file is the sequence in the score.
+# Pitches are MIDI numbers of the real sound (60 = middle C).
+# "transposition" is the number of semitones from the real sound up to the written note
+# in the part of the player.
+# "score_transposition" is the same number for the conductor score. The score is in C:
+# only the instruments that play in a different octave are transposed there.
+# If "score_transposition" is not given, it is 0.
+# "score_clef" is the clef in the conductor score, if it is different from the part.
+# The ranges are safe ranges for professional players.
+#
+# The model of the ensemble is the track "Cool 7" of Sungazer: drums with double kick and
+# electronic percussion, bass guitar, 8-string guitar, tenor saxophone, synthesizers, and
+# horn and string arrangements (see research/tables/forces.csv).
+
+[summary]
+band = ["tenor saxophone", "guitar", "keyboards", "bass guitar", "drums"]
+horn_players = 5      # the tenor saxophone is the soloist and a part of the section
+synthesizer_players = 4
+strings = [8, 6, 4, 4]
+total_staves = 21
+
+# ---------------------------------------------------------------- horns
+
+[[player]]
+id = "tpt"
+name = "Trumpet"
+short = "Tpt."
+family = "horns"
+instruments = ["trumpet in B-flat"]
+
+[[player]]
+id = "asax"
+name = "Alto Saxophone"
+short = "A. Sax."
+family = "horns"
+instruments = ["alto saxophone"]
+
+[[player]]
+id = "tsax"
+name = "Tenor Saxophone"
+short = "T. Sax."
+family = "horns"
+instruments = ["tenor saxophone"]
+
+[[player]]
+id = "tbn"
+name = "Trombone"
+short = "Tbn."
+family = "horns"
+instruments = ["tenor trombone"]
+
+[[player]]
+id = "bsax"
+name = "Baritone Saxophone"
+short = "B. Sax."
+family = "horns"
+instruments = ["baritone saxophone"]
+
+# ---------------------------------------------------------------- synthesizers
+# A synthesizer player changes the sound with the command \switch "name of the patch".
+# All patches of one player have the same range and the same clef.
+
+[[player]]
+id = "lead"
+name = "Synthesizer 1 (lead)"
+short = "Syn. 1"
+family = "synths"
+instruments = ["lead moog", "lead square", "lead wind", "synth brass", "bell fm"]
+
+[[player]]
+id = "pad"
+name = "Synthesizer 2 (chords)"
+short = "Syn. 2"
+family = "synths"
+instruments = ["supersaw", "pluck", "pad warm", "pad glass", "voice pad"]
+
+[[player]]
+id = "chip"
+name = "Chip Synthesizer"
+short = "Chip"
+family = "synths"
+instruments = ["chip pulse", "chip pulse 25", "chip pulse 12", "chip triangle"]
+
+# ---------------------------------------------------------------- rhythm section
+
+[[player]]
+id = "keys"
+name = "Electric Piano"
+short = "E. Pno."
+family = "rhythm"
+instruments = ["electric piano", "wurlitzer", "organ"]
+
+[[player]]
+id = "gtr"
+name = "Guitar (8 strings)"
+short = "Gtr."
+family = "rhythm"
+instruments = ["guitar"]
+
+[[player]]
+id = "bass"
+name = "Bass Guitar"
+short = "Bass"
+family = "rhythm"
+instruments = ["bass guitar"]
+
+[[player]]
+id = "sbass"
+name = "Synthesizer Bass"
+short = "Syn. B."
+family = "rhythm"
+instruments = ["bass moog", "bass sub", "bass reese", "bass wobble", "bass growl"]
+
+[[player]]
+id = "drums"
+name = "Drums"
+short = "Dr."
+family = "rhythm"
+instruments = ["drum kit"]
+
+[[player]]
+id = "eperc"
+name = "Electronic Percussion"
+short = "E. Perc."
+family = "rhythm"
+instruments = ["drum machine"]
+
+# ---------------------------------------------------------------- strings
+
+[[player]]
+id = "vn1"
+name = "Violins 1"
+short = "Vn. 1"
+family = "strings"
+count = 8
+instruments = ["violin"]
+
+[[player]]
+id = "vn2"
+name = "Violins 2"
+short = "Vn. 2"
+family = "strings"
+count = 6
+instruments = ["violin"]
+
+[[player]]
+id = "va"
+name = "Violas"
+short = "Va."
+family = "strings"
+count = 4
+instruments = ["viola"]
+
+[[player]]
+id = "vc"
+name = "Violoncellos"
+short = "Vc."
+family = "strings"
+count = 4
+instruments = ["violoncello"]
+
+# ---------------------------------------------------------------- recorded sounds
+# The player "tape" starts recorded sounds (voices of space missions, sounds of the Sun)
+# and the changes of the recording itself (repeats, stops, reversed sound).
+
+[[player]]
+id = "tape"
+name = "Recorded Sounds"
+short = "Tape"
+family = "media"
+instruments = ["tape"]
+
+# ---------------------------------------------------------------- instruments
+
+[instrument."trumpet in B-flat"]
+transposition = 2
+clef = "treble"
+range = [54, 86]
+
+[instrument."alto saxophone"]
+transposition = 9
+clef = "treble"
+range = [49, 84]
+
+[instrument."tenor saxophone"]
+transposition = 14
+clef = "treble"
+range = [44, 84]   # with the altissimo register, to C6
+
+[instrument."tenor trombone"]
+transposition = 0
+clef = "bass"
+range = [40, 74]
+
+[instrument."baritone saxophone"]
+transposition = 21
+clef = "treble"
+score_clef = "bass"
+range = [36, 69]
+
+[instrument."lead moog"]
+transposition = 0
+clef = "treble"
+range = [36, 103]
+
+[instrument."lead square"]
+transposition = 0
+clef = "treble"
+range = [36, 103]
+
+[instrument."lead wind"]
+transposition = 0
+clef = "treble"
+range = [36, 103]
+
+[instrument."synth brass"]
+transposition = 0
+clef = "treble"
+range = [36, 103]
+
+[instrument."bell fm"]
+transposition = 0
+clef = "treble"
+range = [36, 108]
+
+[instrument."supersaw"]
+transposition = 0
+clef = "grand"
+range = [24, 103]
+
+[instrument."pluck"]
+transposition = 0
+clef = "grand"
+range = [24, 103]
+
+[instrument."pad warm"]
+transposition = 0
+clef = "grand"
+range = [24, 103]
+
+[instrument."pad glass"]
+transposition = 0
+clef = "grand"
+range = [24, 108]
+
+[instrument."voice pad"]
+transposition = 0
+clef = "grand"
+range = [36, 91]
+
+[instrument."chip pulse"]
+transposition = 0
+clef = "treble"
+range = [33, 108]
+
+[instrument."chip pulse 25"]
+transposition = 0
+clef = "treble"
+range = [33, 108]
+
+[instrument."chip pulse 12"]
+transposition = 0
+clef = "treble"
+range = [33, 108]
+
+[instrument."chip triangle"]
+transposition = 0
+clef = "treble"
+range = [24, 96]
+
+[instrument."electric piano"]
+transposition = 0
+clef = "grand"
+range = [28, 100]   # a Rhodes piano with 73 keys: E1 to E7
+
+[instrument."wurlitzer"]
+transposition = 0
+clef = "grand"
+range = [33, 96]    # a Wurlitzer 200A: A1 to C7
+
+[instrument."organ"]
+transposition = 0
+clef = "grand"
+range = [36, 96]
+
+[instrument."guitar"]
+transposition = 12
+score_transposition = 12
+clef = "treble"
+range = [30, 88]    # 8 strings: F-sharp 1 to E6
+
+[instrument."bass guitar"]
+transposition = 12
+score_transposition = 12
+clef = "bass"
+range = [23, 67]    # 5 strings: B0 to G4
+
+[instrument."bass moog"]
+transposition = 0
+clef = "bass"
+range = [21, 72]
+
+[instrument."bass sub"]
+transposition = 0
+clef = "bass"
+range = [21, 60]
+
+[instrument."bass reese"]
+transposition = 0
+clef = "bass"
+range = [21, 72]
+
+[instrument."bass wobble"]
+transposition = 0
+clef = "bass"
+range = [21, 72]
+
+[instrument."bass growl"]
+transposition = 0
+clef = "bass"
+range = [21, 72]
+
+[instrument."violin"]
+transposition = 0
+clef = "treble"
+range = [55, 100]
+
+[instrument."viola"]
+transposition = 0
+clef = "alto"
+range = [48, 88]
+
+[instrument."violoncello"]
+transposition = 0
+clef = "bass"
+range = [36, 81]
+
+# The drum kit, the drum machine, and the tape have no pitch: they have no entry here.
+# The file design/drums.toml gives the note of each drum.

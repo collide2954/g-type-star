@@ -74,7 +74,7 @@ class Orchestra:
 
 def load_orchestra(path: Path | None = None) -> Orchestra:
     """Read the orchestra from the design data."""
-    with (path or DESIGN_DIR / "orchestra.toml").open("rb") as handle:
+    with (path or DESIGN_DIR / "ensemble.toml").open("rb") as handle:
         data = tomllib.load(handle)
     instruments = {
         name: Instrument(
@@ -285,6 +285,10 @@ class Work:
     chunks: dict[str, list[tuple[int, music.Group]]] = field(default_factory=dict)
     composer: str = ""
     subtitle: str = ""
+    # Data of the performance and of the mix that the parts of the work give:
+    # the feel of each player, the places of the backbeat, the recorded sounds,
+    # the changes of the recording, and the moves of the mixer.
+    extras: dict[str, object] = field(default_factory=dict)
 
     def section(
         self, bars: int, numerator: int, denominator: int, grouping: tuple[int, ...] = ()
