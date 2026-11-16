@@ -1,0 +1,7 @@
+recording,minutes,integrated_loudness_lufs,loudness_range_lu,short_term_10th_percentile_lu,short_term_median_lu,short_term_95th_percentile_lu,peak_db,crest_factor_db,left_right_correlation,side_level_db
+"Sungazer, Whalefall",5.77,-9.9,8.2,-5.8,-0.1,2.4,-0.1,12.5,0.73,-8.1
+"Sungazer, Skrontch",4.91,-11.0,4.6,-2.6,-0.7,1.9,0.2,13.4,0.75,-8.5
+"Sungazer, Hot Saturn",3.42,-10.8,5.0,-2.8,0.1,2.2,0.0,12.6,0.80,-9.6
+"Sungazer, Oeteldonk",5.26,-10.2,12.6,-11.1,-0.1,1.5,0.1,12.6,0.71,-7.7
+"Sungazer, Whisky and Mes",5.31,-9.6,5.7,-3.0,-0.5,2.7,0.0,11.7,0.77,-8.8
+"Sungazer, Paydushko Horo",5.28,-12.7,10.7,-8.3,0.3,2.3,0.0,14.6,0.80,-9.4

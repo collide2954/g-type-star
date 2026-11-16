@@ -1,16 +1,19 @@
-"""Measure real orchestra recordings, and match the tone balance of the mix to them.
+"""Measure the reference recordings, and match the tone balance of the mix to them.
 
-The references are public-domain recordings of full orchestras (Musopen).
-The code measures their tone balance (level in third-octave bands), their
-loudness range, and their stereo width. The master of the project must be
+The references are recordings of the band Sungazer that the owner of the
+project has. They are not in the repository, and the code cannot download
+them. The code measures their tone balance (level in third-octave bands),
+their loudness, and their stereo width. The master of the project must be
 inside the range of these values.
+
+Only the measured numbers are in the repository
+(`research/measured/reference_*.csv`). Thus a computer that does not have
+the recordings can make the master.
 """
 
 from __future__ import annotations
 
 import csv
-import hashlib
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,69 +24,35 @@ from scipy import signal
 
 from . import dsp, loudness
 
-REFERENCE_DIR = Path(".cache/reference")
-BASE_URL = "https://archive.org/download/MusopenCollectionAsFlac/"
+REFERENCE_DIR = Path(".cache/reference/audio")
 TARGET_FILE = Path("research/measured/reference_tone_balance.csv")
 SUMMARY_FILE = Path("research/measured/reference_recordings.csv")
 
 
 @dataclass(frozen=True)
 class Reference:
-    name: str
+    name: str  # the name of the file in the cache, without ".wav"
     work: str
-    path: str
-    sha1: str
 
 
-_T6 = "Tchaikovsky_SymphonyPathetique/PyotrIlyichTchaikovsky-SymphonyNo.6InBMinorOp.74pathtique-"
+# The album "Against the Fall of Night" (2024). The owner has six of its nine tracks.
 REFERENCES = [
-    Reference(
-        "tchaikovsky6-1",
-        "Tchaikovsky, Symphony No. 6, I",
-        _T6 + "01-AdagioAllegroNonTroppo.flac",
-        "dfae546cacdb682477861249fafe0d564b5c0f72",
-    ),
-    Reference(
-        "tchaikovsky6-4",
-        "Tchaikovsky, Symphony No. 6, IV",
-        _T6 + "04-FinaleAdagioLamentoso.flac",
-        "9d146de5bbca195b1a62d0b53a3175827859b2f4",
-    ),
-    Reference(
-        "brahms4-1",
-        "Brahms, Symphony No. 4, I",
-        "Brahms_SymphonyNo.4inEMinor/"
-        "JohannesBrahms-SymphonyNo.4InEMinorOp.98-01-AllegroNonTroppo.flac",
-        "0d9699bad6fd6b13459a77468958506f49f8018d",
-    ),
-    Reference(
-        "smetana-vltava",
-        "Smetana, Vltava",
-        "Smetana_Vltava/BedichSmetana-MVlast-Vltava.flac",
-        "503422b5cdbde1266b1ffd92390a0aa4d7462e27",
-    ),
-    Reference(
-        "borodin-steppes",
-        "Borodin, In the Steppes of Central Asia",
-        "Borodin_InTheSteppesOfCentralAsia/AlexanderBorodin-InTheSteppesOfCentralAsia.flac",
-        "a25677d7b6435f8f18475f4f7e9d1ef75a895481",
-    ),
+    Reference("02-whalefall", "Sungazer, Whalefall"),
+    Reference("03-skrontch", "Sungazer, Skrontch"),
+    Reference("04-hot-saturn", "Sungazer, Hot Saturn"),
+    Reference("05-oeteldonk", "Sungazer, Oeteldonk"),
+    Reference("06-whisky-and-mes", "Sungazer, Whisky and Mes"),
+    Reference("08-paydushko-horo", "Sungazer, Paydushko Horo"),
 ]
 
 
 def fetch(reference: Reference) -> Path:
-    """Download one reference recording and verify its checksum."""
-    path = REFERENCE_DIR / f"{reference.name}.flac"
+    """Return the path of one reference recording in the cache."""
+    path = REFERENCE_DIR / f"{reference.name}.wav"
     if not path.exists():
-        REFERENCE_DIR.mkdir(parents=True, exist_ok=True)
-        request = urllib.request.Request(
-            BASE_URL + reference.path, headers={"User-Agent": "gtypestar/0.1"}
+        raise FileNotFoundError(
+            f"{path}: the recording is not there. See research/README.md, 'Reference recordings'."
         )
-        with urllib.request.urlopen(request, timeout=600) as response:
-            path.write_bytes(response.read())
-    digest = hashlib.sha1(path.read_bytes()).hexdigest()  # noqa: S324 (the archive gives SHA-1)
-    if digest != reference.sha1:
-        raise RuntimeError(f"{path}: wrong checksum {digest}")
     return path
 
 
