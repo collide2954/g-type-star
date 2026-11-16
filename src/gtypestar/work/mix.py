@@ -61,14 +61,18 @@ STRIPS = {
         compress=(-20.0, 5.0, 0.02, 0.14), makeup_db=3.0, duck_db=3.5, duck_release=0.11,
     ),
     "sbass": Strip(
-        # The bass sounds of the dubstep passage have their rough part up to 9 kHz.
+        # The bass sounds of the dubstep passage have their rough part up to 9 kHz. No
+        # compressor: the sounds of the synthesizer have an even level by themselves, and
+        # a compressor here made the bass of the dubstep passage 10 dB too soft.
         gain_db=-4.0, bus="bass", eq=(("highpass", 28.0), ("lowpass", 9000.0)),
-        compress=(-18.0, 4.0, 0.01, 0.12), duck_db=5.0, duck_release=0.12,
+        duck_db=5.0, duck_release=0.12,
     ),
     # ------------------------------------------------------------ rhythm section
+    # No compressor: the clean tone has its own in the guitar sound (`band.render_guitar`),
+    # and the distortion of the heavy tones is a compressor by itself.
     "gtr": Strip(
         gain_db=-1.5, eq=(("highpass", 100.0), ("lowpass", 8000.0)),
-        compress=(-20.0, 3.0, 0.015, 0.12), duck_db=1.0, room=0.08, echo=0.07,
+        duck_db=1.0, room=0.08, echo=0.07,
     ),
     "keys": Strip(
         gain_db=-10.5, eq=(("highpass", 110.0), ("bell", 1000.0, 2.0, 0.7)), drive_db=5.0,

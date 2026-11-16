@@ -26,7 +26,7 @@ from . import amp, banks, drumsynth, dsp, dubstep, effects, kernels, patches, sy
 
 RATE = dsp.RATE
 CACHE_DIR = Path(".cache/render")
-VERSION = 3  # a change of this number makes all kept stems invalid
+VERSION = 8  # a change of this number makes all kept stems invalid
 PHRASE_GAP = 0.03  # a line with a rest longer than this starts a new phrase (seconds)
 
 
@@ -369,6 +369,11 @@ def render_guitar(events: list[Event], seconds: float) -> np.ndarray:
             for side, seed in ((-1.0, 11), (1.0, 23)):
                 dry = amp.play(amp.GUITAR, _string_notes(group, seed=seed), seconds, seed=seed)
                 wet = amp.amplify(dry, settings)[: len(canvas.data)]
+                if tone == "clean":
+                    # A clean guitar has large peaks: a compressor makes its level even.
+                    # The distortion of the other tones does this by itself.
+                    both = np.stack([wet, wet], axis=1)
+                    wet = effects.compress(both, -20.0, 3.0, 0.015, 0.12)[:, 0]
                 canvas.add(0.0, effects.pan(wet, side_place * side))
         else:
             dry = amp.play(amp.GUITAR, _string_notes(group), seconds, seed=5)

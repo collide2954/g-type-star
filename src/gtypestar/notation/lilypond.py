@@ -550,12 +550,26 @@ def _marks_voice(marks: _Marks, total: Fraction) -> str:
     return " ".join(parts)
 
 
+def _without_rests(elements: list[music.Element]) -> list[music.Element]:
+    """Return the elements with spacer rests in place of all rests."""
+    result: list[music.Element] = []
+    for element in elements:
+        if isinstance(element, music.Rest) and element.kind != "s":
+            element = replace(element, kind="s", posts=[])
+        elif isinstance(element, music.Group):
+            element = replace(element, children=_without_rests(element.children))
+        result.append(element)
+    return result
+
+
 def drum_music(emitter: _Emitter, elements: list[music.Element]) -> str:
     """Return the music of a drum staff: three voices that continue through the part."""
     feet = {midi for midi, drum in emitter.drums.items() if drum.voice == 1}
     voices, marks = drum_voices(elements, feet)
     total = sum((music.length(element) for element in elements), Fraction(0))
     lines = ["<<"]
+    # The third voice shows no rests: three rests at the same place are hard to read.
+    voices[2] = _without_rests(voices[2])
     for voice, setting in zip(voices, ("\\voiceOne", "\\voiceTwo", "\\voiceFour"), strict=True):
         if not _pitches(voice):
             continue

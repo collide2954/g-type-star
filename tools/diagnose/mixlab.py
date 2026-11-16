@@ -11,7 +11,10 @@ and for the mix before and after the master against the reference masters.
 
 Usage:
 
-    uv run python tools/diagnose/mixlab.py FIRST-LAST [--stems] [--write NAME]
+    uv run python tools/diagnose/mixlab.py FIRST-LAST [--stems] [--fixed] [--write NAME]
+
+`--fixed`: use the levels of the groups of the full render (from the reference
+passage), not the levels that give these bars the balance of the references.
 """
 
 from __future__ import annotations
@@ -118,7 +121,8 @@ def main() -> int:
         levels, side = bands(groups[name])
         print(row(name, relative(levels), side))
         print(row("  - reference", relative(levels) - np.array(REFERENCE[name])))
-    mixed, gains = console.mix(stems, settings, kicks)
+    fixed = render.reference_gains(work, True) if "--fixed" in arguments else None
+    mixed, gains = console.mix(stems, settings, kicks, fixed)
     levels, side = bands(mixed)
     print(row("mix", relative(levels), side))
     print(row("  - reference", relative(levels) - np.array(REFERENCE["master"])))

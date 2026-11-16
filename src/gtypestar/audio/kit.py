@@ -32,6 +32,7 @@ from . import dsp
 
 RATE = dsp.RATE
 SAMPLES_DIR = Path(".cache/samples")
+FAST_KICK = 0.8  # the loudness of a kick stroke less than 0.16 seconds after the stroke before
 CACHE_BYTES = 1_800_000_000
 GRACE_SECONDS = 0.032  # a grace note (flam) comes this much before the main stroke
 
@@ -236,10 +237,14 @@ def render(
             level *= 0.55
         # Fast strokes of one foot are not possible: the feet take turns.
         if midi == 36 and name == spec.drums[36]:
-            if start - previous_kick < 0.16 and last_index.get("foot") == 36:
+            fast = start - previous_kick < 0.16
+            if fast and last_index.get("foot") == 36:
                 name, foot = spec.drums.get(35, name), 35
             else:
                 foot = 36
+            if fast:
+                # A stroke in a fast run has less force than a single stroke.
+                level *= FAST_KICK
             last_index["foot"] = foot
             previous_kick = start
         if name not in instruments:

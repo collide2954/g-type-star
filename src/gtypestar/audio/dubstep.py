@@ -45,8 +45,10 @@ SOUNDS = ("bass wobble", "bass growl", "bass yoi", "bass screech", "bass grind",
 
 SUB_LOW = 41.0  # hertz: the sub tone is between this value and one octave above it
 SUB_GAIN = {"bass screech": 0.55, "bass gun": 0.75}  # the sub is softer under these sounds
-SUB_LEVEL = 0.42  # the amplitude of the sub tone at full level
-MIDDLE_LEVEL = 0.26  # the level (RMS) of the middle layer while it sounds
+SUB_LEVEL = 0.45  # the amplitude of the sub tone at full level
+# The level (RMS) of the middle layer while it sounds. In this style the bass is the
+# lead voice: its middle layer is as loud as the saxophone and the guitar in the mix.
+MIDDLE_LEVEL = 0.45
 # The compressor for three bands makes the high bands louder: the style is bright and hard.
 BAND_GAINS_DB = (0.0, 5.0, 12.0)
 FIZZ_DB = -9.0  # a hard-clipped copy of the band from 1.5 to 7 kHz, under the sound
