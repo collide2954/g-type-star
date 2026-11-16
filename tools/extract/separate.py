@@ -8,6 +8,7 @@ The stems are for measurement only. They do not go into the repository.
 Usage:
 
     .cache/analysis-venv/bin/python -I tools/extract/separate.py [--model htdemucs] [--threads 6]
+    .cache/analysis-venv/bin/python -I tools/extract/separate.py --file build/audio/render.flac
 """
 
 from __future__ import annotations
@@ -35,7 +36,10 @@ def separate(path: Path, model, name: str, output: Path) -> None:
         return
     audio, rate = soundfile.read(str(path), dtype="float32", always_2d=True)
     if rate != model.samplerate:
-        raise SystemExit(f"{path}: the rate is {rate}; the model needs {model.samplerate}")
+        import librosa
+
+        audio = librosa.resample(audio.T, orig_sr=rate, target_sr=model.samplerate).T
+        rate = model.samplerate
     wave = torch.from_numpy(np.ascontiguousarray(audio.T))
     reference = wave.mean(0)
     mean, deviation = reference.mean(), reference.std()
@@ -60,10 +64,17 @@ def main() -> int:
     parser.add_argument("--model", default="htdemucs")
     parser.add_argument("--threads", type=int, default=6)
     parser.add_argument("files", nargs="*", help="names of recordings (default: all)")
+    parser.add_argument("--file", type=Path, help="one audio file, for example a render")
+    parser.add_argument("--output", type=Path, default=Path(".cache/analysis/stems"),
+                        help="the directory for the stems of --file")  # fmt: skip
     args = parser.parse_args()
     torch.set_num_threads(args.threads)
     model = get_model(args.model)
     model.eval()
+    if args.file:
+        # A render of the work: the same separation as the references, for a fair comparison.
+        separate(args.file, model, args.model, args.output)
+        return 0
     paths = sorted(AUDIO_DIR.glob("*.wav"))
     if args.files:
         paths = [path for path in paths if path.stem in args.files]

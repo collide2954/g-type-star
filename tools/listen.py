@@ -25,6 +25,11 @@ The checkpoint `laion/clap-htsat-unfused` separates them (0.35).
 Usage:
 
     .cache/analysis-venv/bin/python tools/listen.py build/audio/g-type-star.flac [more files]
+    .cache/analysis-venv/bin/python tools/listen.py FILE --tags "dubstep drop; heavy metal riff"
+
+With `--tags`, the script shows how well each part of the file agrees with
+your own descriptions (and the values of the reference recordings for the
+same descriptions).
 """
 
 from __future__ import annotations
@@ -100,6 +105,12 @@ def summary(nearest: np.ndarray) -> str:
 
 
 def main() -> int:
+    arguments = sys.argv[1:]
+    tags = TAGS
+    if "--tags" in arguments:
+        place = arguments.index("--tags")
+        tags = [tag.strip() for tag in arguments[place + 1].split(";") if tag.strip()]
+        del arguments[place : place + 2]
     torch.set_num_threads(4)
     model = ClapModel.from_pretrained(MODEL).eval()
     processor = ClapProcessor.from_pretrained(MODEL)
@@ -112,7 +123,7 @@ def main() -> int:
         CACHE.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(CACHE, **tracks)
     reference = np.concatenate(list(tracks.values()))
-    texts = [text for _name, good, bad in PAIRS for text in (good, bad)] + TAGS
+    texts = [text for _name, good, bad in PAIRS for text in (good, bad)] + tags
     inputs = processor(text=texts, return_tensors="pt", padding=True)
     with torch.no_grad():
         words = torch.nn.functional.normalize(model.get_text_features(**inputs), dim=-1).numpy()
@@ -127,7 +138,12 @@ def main() -> int:
             f"reference {name:18s} {nearest.mean():.3f}  {np.percentile(nearest, 10):.3f}"
             f"            {frechet(vectors, others):7.3f}   {values}"
         )
-    for name in sys.argv[1:]:
+    offset = 2 * len(PAIRS)
+    if tags is not TAGS:
+        means = 100.0 * (reference @ words.T)[:, offset:].mean(axis=0)
+        print("references, your descriptions: " + ", ".join(
+            f"{tag} {value:.0f}" for tag, value in zip(tags, means, strict=True)))  # fmt: skip
+    for name in arguments:
         path = Path(name)
         parts, times = windows(path)
         vectors = embed(model, processor, parts)
@@ -149,18 +165,22 @@ def main() -> int:
             ),
         }
         print(json.dumps(report))
+        if tags is not TAGS:
+            means = 100.0 * scores[:, offset:].mean(axis=0)
+            print("render, your descriptions:     " + ", ".join(
+                f"{tag} {value:.0f}" for tag, value in zip(tags, means, strict=True)))  # fmt: skip
         print(f"time    near  {names}   strongest tags")
-        offset = 2 * len(PAIRS)
-        for index in range(0, len(times), 3):
-            chunk = slice(index, index + 3)
+        step = 3 if len(times) > 12 else 1
+        for index in range(0, len(times), step):
+            chunk = slice(index, index + step)
             pair_values = "  ".join(f"{value:+7.1f}" for value in pair_scores(scores[chunk]))
             tag_scores = scores[chunk, offset:].mean(axis=0)
-            top = np.argsort(-tag_scores)[:3]
-            tags = ", ".join(f"{TAGS[t]} {100 * tag_scores[t]:.0f}" for t in top)
+            top = np.argsort(-tag_scores)[: 3 if tags is TAGS else len(tags)]
+            shown = ", ".join(f"{tags[t]} {100 * tag_scores[t]:.0f}" for t in top)
             minutes = int(times[index] // 60)
             print(
                 f"{minutes}:{times[index] % 60:04.1f}  {float(nearest[chunk].mean()):.3f} "
-                f"{pair_values}   {tags}"
+                f"{pair_values}   {shown}"
             )
     return 0
 

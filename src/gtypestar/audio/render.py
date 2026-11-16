@@ -238,6 +238,34 @@ def reference_bars(work: Work) -> tuple[int, int]:
     return 1, min(len(work.structure.bars), 24)
 
 
+def reference_gains(work: Work, muse: bool) -> dict[str, float]:
+    """Return the gains of the groups (drums, bass, music) from the reference passage.
+
+    The gains stay in the cache: they change only if the music of the
+    passage or the settings of the mix change. Thus an excerpt renders fast.
+    """
+    import hashlib
+    import json
+
+    bars = reference_bars(work)
+    begin, end = window(work, bars)
+    digest = hashlib.sha1(repr((band.VERSION, bars, muse)).encode())  # noqa: S324
+    digest.update(repr(work.extras.get("mix")).encode())
+    for player in work.orchestra.players:
+        for event in _inside(player_events(work, player.id), begin, end):
+            digest.update(
+                repr((player.id, round(event.start, 4), round(event.seconds, 4), event.midi,
+                      round(event.level, 3), event.note.instrument, event.note.state)).encode()
+            )  # fmt: skip
+    path = band.CACHE_DIR / f"gains-{digest.hexdigest()[:16]}.json"
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    _mix, gains = mix_bars(work, bars, muse=muse)
+    band.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(gains), encoding="utf-8")
+    return gains
+
+
 def render(
     work: Work,
     bars: tuple[int, int] | None = None,
@@ -258,7 +286,7 @@ def render(
 
     if muse is None:
         muse = musestems.available()
-    _mix, gains = mix_bars(work, reference_bars(work), muse=muse)
+    gains = reference_gains(work, muse)
     begin, end = window(work, bars)
     if bars is not None:
         mixed, _gains = mix_bars(work, bars, muse=muse, gains=gains, stems_to=stems_to)
