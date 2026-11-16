@@ -40,9 +40,8 @@ CHORDS = ["a_____ ---a__ ---- a__-a_ ______", "---a__ ------ a___ ---a__ ---a__"
 
 def line_4() -> list[str]:
     """Return the fourth line for all lead players: eight bars."""
-    first = [bar.replace(")", "") for bar in m.LINE_1]
-    middle = [bar.replace("(", "").replace(")", "") for bar in m.LINE_2]
-    return [*first, *middle, *LINE_END]
+    bars = [*m.LINE_1, *m.LINE_2, *LINE_END]
+    return [bar.replace("(", "").replace(")", "") for bar in bars]
 
 
 def write(work: Work) -> None:
@@ -56,7 +55,7 @@ def write(work: Work) -> None:
     symbols = m.LOOP_A * 4
     theme = m.THEME_HIGH + m.THEME_SECOND
     s.set("tsax", theme, r"\ff\normaltone")
-    s.set("tpt", [tools.octave(bar, 1) for bar in theme], r"\ff")
+    s.set("tpt", theme, r"\ff")
     s.set("asax", [tools.tr(bar, -3) if n % 4 != 1 else tools.tr(bar, -4)
                    for n, bar in enumerate(theme)], r"\f")  # fmt: skip
     s.set("vn1", [tools.octave(bar, 1) for bar in theme], r"\f")
@@ -101,8 +100,8 @@ def write(work: Work) -> None:
     s = Bars(work, 8)
     structure.mark(s.bar(1), "T")
     line = line_4()
-    line[0] = line[0]
-    s.set("tsax", line, r"\ff")
+    # The saxophone player has one bar of rest to breathe.
+    s.set("tsax", [*line[:3], None, *line[4:]], r"\ff")
     s.set("gtr", line, r"\ff\leadtone")
     s.set("lead", [tools.octave(bar, 1) for bar in line], r"\ff", r'\switch "lead moog"')
     s.set("chip", [tools.octave(bar, 2) for bar in line], r"\f")
@@ -136,8 +135,8 @@ def write(work: Work) -> None:
         step = [0, 4, 8][number]
         sax += [None if bar is None else tools.tr(bar, step if step < 8 else step - 12)
                 for bar in mottos]  # fmt: skip
-        trumpet += [None if bar is None else tools.tr(tools.octave(bar, 1), step if step < 8
-                                                      else step - 12) for bar in mottos]  # fmt: skip
+        trumpet += [None if bar is None else tools.tr(bar, step if step < 8 else step - 12)
+                    for bar in mottos]  # fmt: skip
         drum_bars += m.drum_bars(m.MAIN_OPEN, 2, f"pulse {number}", amount=1.2, crash=(1,))
         drum_bars += m.drum_bars(m.MORPH, 2, f"pulse five {number}", amount=1.0, crash=(1,),
                                  fills={2: "five 2"})  # fmt: skip
@@ -146,8 +145,9 @@ def write(work: Work) -> None:
         bass_bars += mainseq._bass(symbols[2:], f"pulse five {number}", mainseq.BASS_FIVE)
         key_bars += mainseq._keys(symbols[:2], f"pulse {number}")
         key_bars += mainseq._keys(symbols[2:], f"pulse five {number}", patterns_=mainseq.COMPS_FIVE)
-        root = {"a": tools.tr("g,,", step if step < 8 else step - 12) + r" \pm",
-                "b": tools.tr("g,", step if step < 8 else step - 12)}  # fmt: skip
+        # The lowest string of the guitar is F-sharp: the riff on E-flat is one octave higher.
+        shift = step if step < 8 else step
+        root = {"a": tools.tr("g,,", shift) + r" \pm", "b": tools.tr("g,", shift)}
         guitar_bars += [patterns.pitched(p, m.CLAVE, root) for p in
                         ("aaaaaa a-aa-a aaaa aaaaaa a-ab--", "aaaaaa aa-aab aaaa a-aaaa aab---",
                          "aaaaa a-a-a aaa aaaaa a-ab-", "aaaaa aa-aa a-a aaaaa aaaab")]  # fmt: skip

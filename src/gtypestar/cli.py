@@ -1,4 +1,4 @@
-"""Command line interface: build the score, the parts, the audio, and the video."""
+"""Command line interface: check the work, and build the audio, the score, and the video."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from pathlib import Path
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
 BUILD_DIR = Path("build")
+NAME = "g-type-star"
 
 
 def write_lilypond() -> list[Path]:
@@ -48,27 +49,86 @@ def build_pdfs(*, parts: bool = True) -> None:
         list(pool.map(lambda path: compile_pdf(path, BUILD_DIR / "parts"), others))
 
 
-def build_audio(
-    bars: tuple[int, int] | None = None, engine: str = "open", profile: str = "Muse Sounds"
-) -> None:
-    """Render the audio master, or an excerpt of it.
+def write_audio(audio, directory: Path, name: str) -> list[Path]:
+    """Write a master as FLAC and as MP3. Return the paths."""
+    import soundfile
 
-    The engine "open" is the sampler of this project with open sample
-    libraries. The engine "musescore" is MuseScore Studio with Muse Sounds.
-    """
-    from .audio import mix, musescore
+    from .audio import dsp
+
+    directory.mkdir(parents=True, exist_ok=True)
+    flac = directory / f"{name}.flac"
+    soundfile.write(str(flac), audio, dsp.RATE, subtype="PCM_24")
+    mp3 = directory / f"{name}.mp3"
+    subprocess.run(
+        ["ffmpeg", "-y", "-loglevel", "error", "-i", str(flac), "-codec:a", "libmp3lame",
+         "-q:a", "1", str(mp3)],
+        check=True,
+    )  # fmt: skip
+    return [flac, mp3]
+
+
+def build_audio(bars: tuple[int, int] | None, muse: bool | None, name: str | None) -> Path:
+    """Render the audio master, or an excerpt of it. Return the path of the FLAC file."""
+    from .audio import render
     from .work import build
 
-    if engine == "musescore":
-        audio, report = musescore.render_master(build(), BUILD_DIR / "musescore", bars, profile)
-    else:
-        audio, report = mix.render(build(), bars=bars)
-    name = "g-type-star" if bars is None else f"excerpt-{bars[0]}-{bars[1]}"
-    if engine == "musescore" and bars is not None:
-        name += "-musescore"
-    for path in mix.write(audio, BUILD_DIR / "audio", name):
+    audio, report = render.render(build(), bars, muse=muse)
+    name = name or (NAME if bars is None else f"excerpt-{bars[0]}-{bars[1]}")
+    paths = write_audio(audio, BUILD_DIR / "audio", name)
+    for path in paths:
         print(f"audio: {path}")
-    print(report)
+    print(
+        f"{report.seconds / 60:.2f} minutes, {report.loudness_lufs:.1f} LUFS, loudness range "
+        f"{report.loudness_range:.1f} LU, peak {report.peak_db:.1f} dB, crest factor "
+        f"{report.crest_db:.1f} dB"
+    )
+    compare(paths[0])
+    return paths[0]
+
+
+def compare(path: Path) -> None:
+    """Compare an audio file with the reference tracks: loudness, stereo width, tone balance."""
+    from .audio import reference
+
+    measured = reference.measure(reference.load_stereo(path))
+    centres, mean, lowest, highest = reference.target_balance()
+    print(
+        f"compare: {measured.loudness_lufs:.1f} LUFS (references -12.7 to -9.6), loudness range "
+        f"{measured.loudness_range:.1f} LU (4.6 to 12.6), crest factor {measured.crest_db:.1f} dB "
+        f"(11.7 to 14.6), correlation {measured.correlation:.2f} (0.71 to 0.80), side level "
+        f"{measured.side_db:.1f} dB (-9.6 to -7.7)"
+    )
+    outside = [
+        f"{centre:.0f} Hz {value - (high if value > high else low):+.1f} dB"
+        for centre, value, low, high in zip(centres, measured.balance, lowest, highest, strict=True)
+        if 40.0 < centre < 12000.0 and (value > high + 1.0 or value < low - 1.0)
+    ]
+    text = ", ".join(outside) if outside else "all bands from 40 Hz to 12 kHz are in the range"
+    print(f"compare: tone balance: {text}")
+    del mean
+
+
+def write_stems(bars: tuple[int, int] | None, muse: bool | None, show_only: bool) -> None:
+    """Render the stems of the work or of some bars. Write them, or only show their loudness."""
+    import numpy as np
+    import soundfile
+
+    from .audio import dsp, loudness, render
+    from .work import build
+
+    work = build()
+    parts = [bars] if bars is not None else render.chunks(work)
+    directory = BUILD_DIR / "stems"
+    for part in parts:
+        stems, _kicks, _seconds = render.render_stems(work, part, muse=muse)
+        for name, sound in sorted(stems.items()):
+            level = loudness.integrated(loudness.block_power(sound.astype(np.float32)))
+            peak = dsp.to_db(float(np.abs(sound).max()))
+            print(f"bars {part[0]}-{part[1]}: {name:16s} {level:7.1f} LUFS  peak {peak:6.1f} dB")
+            if not show_only:
+                target = directory / f"bars-{part[0]:03d}-{part[1]:03d}"
+                target.mkdir(parents=True, exist_ok=True)
+                soundfile.write(str(target / f"{name}.flac"), sound, dsp.RATE, subtype="PCM_24")
 
 
 def check_work() -> int:
@@ -81,7 +141,7 @@ def check_work() -> int:
     for problem in problems:
         print(problem)
     seconds = work.structure.duration_seconds
-    print(f"{len(work.structure.bars)} bars, {seconds / 60:.1f} minutes, {len(problems)} problems")
+    print(f"{len(work.structure.bars)} bars, {seconds / 60:.2f} minutes, {len(problems)} problems")
     return len(problems)
 
 
@@ -94,16 +154,16 @@ def build_video(mobile: bool = False) -> None:
     from .work import build
 
     work = build()
-    audio = BUILD_DIR / "audio" / "g-type-star.flac"
+    audio = BUILD_DIR / "audio" / f"{NAME}.flac"
     if mobile:
         screens = pages.build_pages(
             work, BUILD_DIR / "video" / "pages-mobile", width_px=1080, mobile=True
         )
-        output = BUILD_DIR / "video" / "g-type-star-mobile.mp4"
+        output = BUILD_DIR / "video" / f"{NAME}-mobile.mp4"
         path = render.render(work, screens, audio, output, width=1080, height=1920, mobile=True)
     else:
         screens = pages.build_pages(work, BUILD_DIR / "video" / "pages")
-        path = render.render(work, screens, audio, BUILD_DIR / "video" / "g-type-star.mp4")
+        path = render.render(work, screens, audio, BUILD_DIR / "video" / f"{NAME}.mp4")
     print(f"video: {path}")
 
 
@@ -113,40 +173,15 @@ def show_stats() -> None:
     from .work import build
 
     for name, value in measure(build()).rows():
-        print(f"{name:45s} {value}")
+        print(f"{name:62s} {value}")
 
 
-def fetch_audio() -> int:
-    """Get the audio master from the release `audio`. Return 1 if it is not for this music."""
-    from . import release
+def write_midi() -> None:
+    """Write the performance of the work as a MIDI file."""
+    from .perform import midi
     from .work import build
 
-    return 0 if release.fetch(build(), BUILD_DIR / "audio") else 1
-
-
-def publish_audio() -> None:
-    """Put the audio master of the directory `build/audio` in the release `audio`."""
-    from . import release
-    from .work import build
-
-    release.publish(build(), BUILD_DIR / "audio", "MuseScore Studio with Muse Sounds")
-    print("publish-audio: the release 'audio' has the new master")
-
-
-def draw_chart() -> None:
-    """Draw the loudness of the audio master against the time. The audio master must exist."""
-    from .audio.chart import loudness_chart
-    from .work import build
-
-    audio = BUILD_DIR / "audio" / "g-type-star.flac"
-    print(f"chart: {loudness_chart(build(), audio, Path('docs') / 'loudness.svg')}")
-
-
-def calibrate_levels() -> None:
-    """Measure the levels of MuseScore with Muse Sounds for each dynamic mark."""
-    from .audio import calibrate
-
-    print(f"calibrate: {calibrate.measure(BUILD_DIR / 'musescore' / 'calibrate')}")
+    print(f"midi: {midi.write(build(), BUILD_DIR / 'midi' / f'{NAME}.mid')}")
 
 
 def update_documents() -> None:
@@ -165,66 +200,35 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="gtypestar", description="Build G-Type Star.")
     parser.add_argument(
         "command",
-        choices=[
-            "check",
-            "stats",
-            "ly",
-            "score",
-            "parts",
-            "audio",
-            "fetch-audio",
-            "publish-audio",
-            "video",
-            "chart",
-            "docs",
-            "calibrate",
-            "all",
-        ],
-    )
+        choices=["check", "stats", "ly", "score", "parts", "audio", "stems", "levels", "compare",
+                 "midi", "video", "docs", "all"],
+    )  # fmt: skip
+    parser.add_argument("file", nargs="?", help="an audio file (command: compare)")
+    parser.add_argument("--bars", metavar="FIRST-LAST", help="render only these bars")
+    parser.add_argument("--name", help="the name of the audio file (command: audio)")
     parser.add_argument(
-        "--bars", metavar="FIRST-LAST", help="render only these bars (command: audio)"
-    )
-    parser.add_argument(
-        "--engine",
-        choices=["open", "musescore"],
-        default="open",
-        help="source of the sound (command: audio)",
+        "--no-muse",
+        action="store_true",
+        help="do not use MuseScore: synthesizer patches play the wind and string parts",
     )
     parser.add_argument(
         "--mobile",
         action="store_true",
         help="make the video for a telephone, 1080 x 1920 (command: video)",
     )
-    parser.add_argument(
-        "--profile",
-        default="Muse Sounds",
-        help='sound profile of MuseScore: "Muse Sounds" or "MuseScore Basic"',
-    )
     args = parser.parse_args(argv)
     bars = None
     if args.bars:
         first, _, last = args.bars.partition("-")
         bars = (int(first), int(last or first))
+    muse = False if args.no_muse else None
     if args.command == "check":
         return 1 if check_work() else 0
     if args.command == "stats":
         show_stats()
-        return 0
-    if args.command == "chart":
-        draw_chart()
-        return 0
-    if args.command == "docs":
+    elif args.command == "docs":
         update_documents()
-        return 0
-    if args.command == "calibrate":
-        calibrate_levels()
-        return 0
-    if args.command == "fetch-audio":
-        return fetch_audio()
-    if args.command == "publish-audio":
-        publish_audio()
-        return 0
-    if args.command == "ly":
+    elif args.command == "ly":
         for path in write_lilypond():
             print(path)
     elif args.command == "score":
@@ -232,12 +236,19 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "parts":
         build_pdfs(parts=True)
     elif args.command == "audio":
-        build_audio(bars, args.engine, args.profile)
+        build_audio(bars, muse, args.name)
+    elif args.command in ("stems", "levels"):
+        write_stems(bars, muse, show_only=args.command == "levels")
+    elif args.command == "compare":
+        compare(Path(args.file or BUILD_DIR / "audio" / f"{NAME}.flac"))
+    elif args.command == "midi":
+        write_midi()
     elif args.command == "video":
         build_video(args.mobile)
     else:
         build_pdfs(parts=True)
-        build_audio()
+        build_audio(None, muse, None)
+        write_midi()
         build_video()
         build_video(mobile=True)
     return 0

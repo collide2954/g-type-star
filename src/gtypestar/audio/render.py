@@ -174,7 +174,10 @@ def mix_bars(
     """Render and mix the work or some bars. Return the mix before the master, and the gains."""
     from . import glitch
 
-    stems, kicks, _seconds = render_stems(work, bars, muse=muse, muse_full=muse_full)
+    stems, kicks, seconds = render_stems(work, bars, muse=muse, muse_full=muse_full)
+    if not stems:
+        # A passage with no sound.
+        return np.zeros((int(seconds * RATE), 2), dtype=np.float32), dict(gains or {})
     settings = work.extras.get("mix") or console.Mix()
     begin, end = window(work, bars)
     offset = LEAD_SECONDS - begin if begin > 0 else 0.0

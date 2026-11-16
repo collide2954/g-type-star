@@ -220,7 +220,7 @@ def write(work: Work) -> None:
     s = Bars(work, 8, COMMON)
     structure.mark(s.bar(1), "P")
     theme = [tools.tr(bar, 4) for bar in CHORALE[8:]]
-    s.set("tpt", [tools.octave(bar, 1) for bar in theme], r"\f")
+    s.set("tpt", theme, r"\f")
     s.set("tsax", theme, r"\f\normaltone")
     s.set("asax", [tools.tr(bar, -3) if i not in (2, 3) else tools.tr(bar, -4)
                    for i, bar in enumerate(theme)], r"\f")  # fmt: skip

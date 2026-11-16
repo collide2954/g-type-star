@@ -350,7 +350,13 @@ def layers(
         before = make(symbol, top, before)
         # With fewer than four players, the lowest notes of the voicing are used.
         notes = before[: len(players)]
-        bar = layer(symbol, patterns_[number % len(patterns_)], players, notes, pulses)
+        pattern = patterns_[number % len(patterns_)]
+        if kind.startswith("horns") and number % 2 == 1:
+            # A wind player must breathe: each second bar of a held chord ends with a rest.
+            groups = pattern.split()
+            if set(groups[-1]) == {"_"}:
+                pattern = " ".join([*groups[:-1], "-" * len(groups[-1])])
+        bar = layer(symbol, pattern, players, notes, pulses)
         for player in players:
             result[player].append(bar[player])
     return result

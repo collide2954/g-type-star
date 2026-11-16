@@ -186,10 +186,10 @@ def write(work: Work) -> None:
         s.set(player, tools.first(patterns.join(bars), r"\f\<", note=True))
     s.set(
         "tsax",
-        [r"fis'4.(\f\< b'4. ~ b'4 cis''4. dis''4.)", r"dis''1*7/4",
-         r"g'4.( c''4. ~ c''4 d''4. e''4.)", r"e''1*7/4",
-         r"as'4.( des''4. ~ des''4 es''4. f''4.)", r"f''1*7/4",
-         r"a'4.( d''4. ~ d''4 e''4. fis''4.)", r"fis''4. ~ fis''4. ~ fis''4 g''4.\ff ~ g''4."],
+        [r"fis'4.(\f\< b'4. ~ b'4 cis''4. dis''4. ~", r"dis''4. ~ dis''4. ~ dis''4 ~ dis''4.) r4.",
+         r"g'4.( c''4. ~ c''4 d''4. e''4. ~", r"e''4. ~ e''4. ~ e''4 ~ e''4.) r4.",
+         r"as'4.( des''4. ~ des''4 es''4. f''4. ~", r"f''4. ~ f''4. ~ f''4 ~ f''4.) r4.",
+         r"a'4.( d''4. ~ d''4 e''4. fis''4. ~", r"fis''4. ~ fis''4.) r4 g''4.\ff ~ g''4."],
     )  # fmt: skip
     s.set("eperc", r"R1*14/8*6 | e,,1*7/4\mf\< ~ | e,,1*7/4\f |")
     s.close()

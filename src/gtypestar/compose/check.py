@@ -4,8 +4,11 @@ The checks are:
 
 - Each note must be in the range of the instrument.
 - A wind instrument plays one note at a time.
-- A player who changes to a different instrument must have the time to do it.
-- The timpani player must have the time to tune a drum to a different note.
+- A wind player must have a rest to breathe.
+- The drummer has two hands and two feet.
+
+The synthesizers, the drum machine, and the recorded sounds have no limits:
+a sequencer or the studio plays them.
 """
 
 from __future__ import annotations
@@ -17,16 +20,11 @@ from ..notation.pitch import from_midi
 from ..notation.work import Work
 from ..perform.events import PerfNote, perform
 
-ONE_NOTE_FAMILIES = ("woodwinds", "brass")
-
-# The smallest time in seconds for a change of instrument.
-CHANGE_SECONDS = {"percussion": 4.0}
-CHANGE_SECONDS_DEFAULT = 8.0
-
-# The timpani: the number of drums, and the smallest time in seconds to tune
-# a drum to a different note.
-TIMPANI_DRUMS = 4
-TIMPANI_SECONDS = 5.0
+ONE_NOTE_FAMILIES = ("horns",)
+BREATH_SECONDS = 0.35  # a rest of this length or more is time to breathe
+LONGEST_BREATH = 18.0  # the longest time with no such rest, in seconds
+FEET = {35, 36, 44}  # the drums that the feet play
+HANDS = 2
 
 
 @dataclass(frozen=True)
@@ -41,41 +39,38 @@ class Problem:
         return f"{self.player}, bar {self.bar}: {self.text}"
 
 
-def _free_after(note: PerfNote, percussion: bool) -> Fraction:
-    """Return the time (in quarter notes) at which the player is free after a note.
-
-    A percussion player is free immediately after a stroke: the instrument
-    continues to sound without the player. A roll occupies the player to
-    its end.
-    """
-    if percussion and not note.tremolo:
-        return note.start
-    return note.start + note.duration
-
-
-def _timpani_problems(work: Work, player: str, notes: list[PerfNote]) -> list[Problem]:
-    """Find the notes for which the timpani player has too little time to tune a drum.
-
-    The model: a note that no drum has goes to the drum that the player did
-    not use for the longest time. The time for the change of tuning starts
-    at the last stroke on that drum (for a roll: at its end).
-    """
+def _breath_problems(work: Work, player: str, notes: list[PerfNote]) -> list[Problem]:
+    """Find the passages of a wind player that are too long with no rest."""
     problems: list[Problem] = []
     structure = work.structure
-    drums: dict[float, Fraction] = {}  # the note of each drum -> the time of its last use
+    start = end = None
     for note in notes:
-        if note.instrument != "timpani":
-            continue
-        if note.midi not in drums and len(drums) >= TIMPANI_DRUMS:
-            old = min(drums, key=lambda midi: drums[midi])
-            seconds = structure.seconds(note.start) - structure.seconds(drums.pop(old))
-            if seconds < TIMPANI_SECONDS:
-                text = (
-                    f"only {max(seconds, 0.0):.1f} s to tune a drum from "
-                    f"{from_midi(old).name} to {from_midi(note.midi).name}"
-                )
-                problems.append(Problem(player, structure.bar_at(note.start).number, text))
-        drums[note.midi] = _free_after(note, percussion=True)
+        begin = structure.seconds(note.start)
+        finish = structure.seconds(note.start + note.duration)
+        if end is None or begin - end >= BREATH_SECONDS:
+            start = begin
+            flagged = False
+        end = max(end or 0.0, finish)
+        if end - start > LONGEST_BREATH and not flagged:
+            flagged = True
+            text = f"more than {LONGEST_BREATH:.0f} s with no rest to breathe"
+            problems.append(Problem(player, structure.bar_at(note.start).number, text))
+    return problems
+
+
+def _limb_problems(work: Work, player: str, notes: list[PerfNote]) -> list[Problem]:
+    """Find the moments at which the drummer needs more than two hands or two feet."""
+    problems: list[Problem] = []
+    moments: dict[Fraction, list[int]] = {}
+    for note in notes:
+        if note.grace == 0:
+            moments.setdefault(note.start, []).append(int(note.midi))
+    for start, drums in sorted(moments.items()):
+        hands = [midi for midi in drums if midi not in FEET]
+        feet = [midi for midi in drums if midi in FEET]
+        if len(hands) > HANDS or len(feet) > 2:
+            text = f"{len(hands)} strokes of the hands and {len(feet)} of the feet at one time"
+            problems.append(Problem(player, work.structure.bar_at(start).number, text))
     return problems
 
 
@@ -85,25 +80,13 @@ def check(work: Work) -> list[Problem]:
     structure = work.structure
     for player in work.orchestra.players:
         seen: set[tuple[int, str]] = set()
-        percussion = player.family == "percussion"
-        smallest = CHANGE_SECONDS.get(player.family, CHANGE_SECONDS_DEFAULT)
-        last_instrument = ""
-        free = Fraction(0)
         notes = sorted(perform(work, player.id), key=lambda item: item.start)
-        problems.extend(_timpani_problems(work, player.id, notes))
+        if player.family in ONE_NOTE_FAMILIES:
+            problems.extend(_breath_problems(work, player.id, notes))
+        if player.id == "drums":
+            problems.extend(_limb_problems(work, player.id, notes))
         for note in notes:
             bar = structure.bar_at(note.start).number
-            if last_instrument and note.instrument != last_instrument:
-                seconds = structure.seconds(note.start) - structure.seconds(free)
-                if seconds < smallest:
-                    text = (
-                        f"only {max(seconds, 0.0):.1f} s for the change from the "
-                        f"{last_instrument} to the {note.instrument}"
-                    )
-                    problems.append(Problem(player.id, bar, text))
-                free = Fraction(0)
-            last_instrument = note.instrument
-            free = max(free, _free_after(note, percussion))
             instrument = work.orchestra.instruments.get(note.instrument)
             if instrument is not None and not note.harmonic:
                 name = from_midi(note.midi).name

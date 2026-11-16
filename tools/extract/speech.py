@@ -29,8 +29,10 @@ def main() -> int:
             "start": round(segment.start, 2),
             "end": round(segment.end, 2),
             "text": segment.text.strip(),
-            "words": [[word.word.strip(), round(word.start, 2), round(word.end, 2)]
-                      for word in segment.words or []],
+            "words": [
+                [word.word.strip(), round(word.start, 2), round(word.end, 2)]
+                for word in segment.words or []
+            ],
         }
         for segment in segments
     ]
