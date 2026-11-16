@@ -203,6 +203,7 @@ class _DynamicState:
     mark: str = ""
     changed: bool = False  # a hairpin came after the mark
     silence: Fraction = Fraction(0)  # rests after the last note, in quarter notes
+    techniques: dict[str, str] = field(default_factory=dict)  # the state of the player
 
 
 REPEAT_AFTER_SILENCE = Fraction(8)  # after this silence, a dynamic mark is given again
@@ -217,6 +218,7 @@ def _drop_repeated_dynamics(elements: list[music.Element], state: _DynamicState)
     for element in elements:
         if isinstance(element, music.Command) and element.name == "switch":
             state.mark = ""
+            state.techniques.clear()
         elif isinstance(element, music.Rest):
             state.silence += element.duration
         elif isinstance(element, music.Note):
@@ -233,6 +235,13 @@ def _drop_repeated_dynamics(elements: list[music.Element], state: _DynamicState)
                         continue
                 elif post.kind == "hairpin":
                     state.changed = True
+                elif post.kind == "command" and post.value in techniques.TECHNIQUES:
+                    # A technique that is in effect is not written again.
+                    technique = techniques.TECHNIQUES[post.value]
+                    if technique.state:
+                        if state.techniques.get(technique.state) == technique.value:
+                            continue
+                        state.techniques[technique.state] = technique.value
                 kept.append(post)
             element.posts[:] = kept
             state.silence = Fraction(0)

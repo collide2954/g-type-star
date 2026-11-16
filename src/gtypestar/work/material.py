@@ -292,3 +292,215 @@ THEME_CLOSE = [
     r"e''4.) g''4.( ~ g''4 f''4. d''4.)",
     *LINE_1,
 ]
+
+
+# ----------------------------------------------------------------------------
+# Sections of players: horns, strings, and the chords of the synthesizer
+# ----------------------------------------------------------------------------
+
+HORNS = ("bsax", "tbn", "asax", "tpt")  # from the lowest to the highest voice
+STRINGS = ("vc", "va", "vn2", "vn1")
+
+
+def horn_notes(symbol: str, top: int | None = None, before: tuple | None = None) -> tuple:
+    """Return a voicing for the four horns: the root in the baritone, three notes above."""
+    chord = chords.parse(symbol)
+    root = chord.bass
+    while root < 41:
+        root += 12
+    upper = chords.voice(chord, 3, low=55, high=80, top=top, before=before[1:] if before else None)
+    return (root, *upper)
+
+
+def string_notes(symbol: str, top: int | None = None, before: tuple | None = None) -> tuple:
+    """Return a wide voicing for the four string groups."""
+    return chords.voice(
+        symbol, 4, low=45, high=86, spread=True, rootless=False, top=top, before=before
+    )
+
+
+def layer(
+    symbol: str, pattern: str, players: tuple[str, ...], notes: tuple[int, ...],
+    pulses: tuple = CLAVE,
+) -> dict[str, str]:  # fmt: skip
+    """Return one bar for each player of a section: one note of the chord, the same rhythm."""
+    return {
+        player: patterns.pitched(pattern, pulses, {"a": chords.names((midi,), symbol)})
+        for player, midi in zip(players, notes, strict=True)
+    }
+
+
+def layers(
+    symbols: list[str | None], patterns_: list[str], players: tuple[str, ...], kind: str,
+    pulses: tuple = CLAVE, tops: list[int | None] | None = None,
+) -> dict[str, list[str | None]]:  # fmt: skip
+    """Return the bars of a section of players for a list of chords (None = a bar of rest).
+
+    `kind` starts with "horns" or "strings". `tops` gives the highest note of some bars.
+    """
+    result: dict[str, list[str | None]] = {player: [] for player in players}
+    before = None
+    for number, symbol in enumerate(symbols):
+        if symbol is None:
+            for player in players:
+                result[player].append(None)
+            continue
+        top = tops[number] if tops else None
+        make = horn_notes if kind.startswith("horns") else string_notes
+        before = make(symbol, top, before)
+        # With fewer than four players, the lowest notes of the voicing are used.
+        notes = before[: len(players)]
+        bar = layer(symbol, patterns_[number % len(patterns_)], players, notes, pulses)
+        for player in players:
+            result[player].append(bar[player])
+    return result
+
+
+def pad_bars(
+    symbols: list[str | None], pattern: str = "a_____ ______ ____ ______ ______",
+    pulses: tuple = CLAVE, low: int = 55, high: int = 79,
+) -> list[str | None]:  # fmt: skip
+    """Return the bars of the synthesizer chords (right hand) for a list of chords."""
+    result: list[str | None] = []
+    before = None
+    for symbol in symbols:
+        if symbol is None:
+            result.append(None)
+            continue
+        before = chords.voice(symbol, 4, low=low, high=high, before=before)
+        result.append(patterns.pitched(pattern, pulses, {"a": chords.names(before, symbol)}))
+    return result
+
+
+def roots(symbols: list[str | None], pattern: str, pulses: tuple = CLAVE, octave: int = 0):
+    """Return bars with the root of each chord in a rhythm pattern (for the synthesizer bass)."""
+    return [
+        None if symbol is None else patterns.pitched(pattern, pulses, bass_table(symbol, octave))
+        for symbol in symbols
+    ]
+
+
+# ----------------------------------------------------------------------------
+# More lines
+# ----------------------------------------------------------------------------
+
+# The melody of the bridge: the motto upside down (G, D, C, B-flat), then a rise.
+BRIDGE = [
+    r"r4. g''4.( d''4 c''4. bes'4. ~",
+    r"bes'4. ~ bes'4.) r4 f''4.( d''4.)",
+    r"es''4.( ~ es''4. f''4 g''4. bes''4. ~",
+    r"bes''4. a''4. ~ a''4) g''4.( f''4.)",
+    r"r4. g''4.( d''4 c''4. bes'4.)",
+    r"d''4.( f''4. ~ f''4 bes''4. ~ bes''4.)",
+    r"c'''4.( ~ c'''4. bes''4 g''4. f''4. ~",
+    r"f''4. es''4. d''4 c''4.) r4.",
+]
+
+# The solo of the tenor saxophone in the main sequence: 20 bars above the loop.
+# It starts with the motto and with few notes, goes to lines of sixteenth notes,
+# has its highest note in bar 14, and ends on a long G before the second line.
+SAX_SOLO = [
+    r"r4. r4. r4 d'8( e' g' a'4. ~",
+    r"a'4.) r4. g'8( a' bes'4. d''4.)",
+    r"r4 e''8( d''4. b'4 g'4. fis'4.)",
+    r"e'4.( g'4. ~ g'4) r4. r8 a'16( b' c'' d''",
+    r"e''4.) d''8( b' a' g'4) r8 b'16( d'' e''8 fis''8. e''16 d''8)",
+    r"r8 d''8( bes' g'8 a' bes' d''4 f''4.) r4.",
+    r"e''16( fis'' g'' fis'' e'' d'' b'8 d'' e'' g''4 ~ g''4. ~ g''8) r4",
+    r"r4. e''8( d'' c'' a'4 g'8 a' c'' d''8. c''16 a'8)",
+    r"g'16( a' b' d'' e'' fis'' g'' fis'' e'' d'' b' a' g'8 b' d''16 e'' fis'' a'' g''8) r4.",
+    r"r8 g''16( f'' d'' bes' a'8 g'16 a' bes' d'' f''4 ~ f''8 d''16 bes' g'8) r4.",
+    r"e'16( g' b' d'' e'' g'' fis'' e'' d'' b' g' e' fis'8 a' b'16 d'' e'' fis'' g''8 a''16 g'' "
+    r"e''8 d''8)",
+    r"c''8( e'' g'' a''4. g''8 e'' d''16 c'' a' g' a'8 c''16 d'' e'' g'' a''8)",
+    r"g''8->( e'' d'' g''8-> e'' d'' g''8-> e'' g''8-> e'' d'' b'8 d'' e'')",
+    r"g''8->( f'' d'' g''8-> f'' d'' g''8-> f'' a''4. ~ a''8) r4",
+    r"g''16( fis'' e'' d'' b' a' g' a' b' d'' e'' fis'' g''8 e'' d''16 b' a' g' fis'8 "
+    r"e'16 fis' g' a' b'8)",
+    r"c''8( e'' a' c''16 d'' e'' g'' a''8 g''8 e'' d''4.) r4.",
+    r"r4. d''8( e'' g'' a''4 g''8 e'' d'' b'4.)",
+    r"r4. bes'8( d'' f'' g''4 f''8 d'' bes' a'4.)",
+    r"r4. e''8( fis'' g'' a''4 g''8 fis'' e'' d''4.)",
+    r"c''8( d'' e'' g''4. ~ g''4 ~ g''4. ~ g''8) r4",
+]
+
+# The second line for all lead players: four bars. The motto goes up through the scale
+# (bar 1), a line falls through the scale of B-flat (bar 2), the triads of C and D take
+# turns (bar 3), and notes go round the notes of the chord of A minor (bar 4).
+LINE_2 = [
+    r"g16( c' d' e' a d' e' fis' b e' fis' g' c' fis' g' a' d' g' a' b' e' a' b' c'' "
+    r"fis' b' c'' d''",
+    r"es''16 d'' bes' g' a' bes' d'' c'' bes' g' f' g' a' bes' g' f' d' es' f' g' bes' a' "
+    r"g' f' d' bes a g",
+    r"c'16 e' g' d' fis' a' e' g' c'' fis' a' d'' g' c'' e'' a' d'' fis'' c'' e'' g'' "
+    r"fis'' d'' a' g'' e'' c'' d''",
+    r"e''16 dis'' e'' c'' b' c'' a' gis' a' e' g' a' c'' b' a' g' fis' a' c'' e'' d'' c'' "
+    r"a' fis' d' fis' a' c'')",
+]
+
+# The bass alone, between the solos of the drums: lines in the high register.
+BASS_SOLO = [
+    r"g,16( d g a d' g a d' e' a d' e' g'8 e' d'16 b g a b d' e'8 d'16 b a g)",
+    r"e16( g a b d' e' g'8 fis' e' d'4 b8 a g e4.)",
+    r"c16( g c' d' g c' d' e' g' e' d' c' b8 d' e'16 fis' g' e' d' b g8 a b)",
+    r"c'8( e' g' fis'4. e'8 d' b16 a g e fis8 a16 b d' e' fis'8)",
+]
+
+# The grooves with the new division of the pulses: five notes in each long pulse and
+# three in the short pulse. The pulses keep their lengths (see research/tables/rhythm.csv,
+# "Pulse morph").
+MORPH = Groove(
+    """
+    hh  xxxxx xxxxx xxx xxxxx xxxxx
+    sn  ----- o---g --- ----- o--g-
+    bd  x--x- ----- x-- x-x-- -----
+    """,
+    CLAVE,
+)
+MORPH_HALF = Groove(
+    """
+    hh  x-x-x x-x-x x-x x-x-x x-x-x
+    sn  ----- ----- --- x---- -----
+    bd  x---- ----- x-- ----- ---x-
+    """,
+    CLAVE,
+)
+MORPH_FILLS: dict[str, dict[str, list[str]]] = {
+    "five 1": {"sn": ["oogoo"], "bd": ["-----"]},
+    "five toms 1": {"sn": ["oo---"], "tm": ["--hmf"]},
+    "five 2": {"sn": ["o-ogo", "ooOoo"], "bd": ["-x---", "-----"]},
+    "five toms 2": {"sn": ["oog--", "-----"], "tm": ["---hh", "mmfff"], "bd": ["-----", "x-x--"]},
+}
+FILLS.update(MORPH_FILLS)
+
+
+# ----------------------------------------------------------------------------
+# A figure whose length is not the length of the bar
+# ----------------------------------------------------------------------------
+
+
+def cycle_bars(cell: str, bars: int, close: str = "", steps: tuple[int, ...] = STEPS) -> list[str]:
+    """Lay a short figure again and again across some bars. Return a pattern for each bar.
+
+    `cell` is a figure in sixteenth notes whose length is not a part of the
+    bar (for example 11). It repeats with no gap. The last notes of the
+    last bar are `close`: there the figure and the bars come together again.
+    This is the method of the band Meshuggah (see research/tables/rhythm.csv).
+    """
+    size = sum(steps)
+    total = size * bars
+    flat = (cell * (total // len(cell) + 1))[: total - len(close)] + close
+    result = []
+    for bar in range(bars):
+        part = flat[bar * size : (bar + 1) * size]
+        groups, place = [], 0
+        for length in steps:
+            groups.append(part[place : place + length])
+            place += length
+        result.append(" ".join(groups))
+    return result
+
+
+def only(pattern: str, letters: str, new: str = "x") -> str:
+    """Return a pattern with `new` at each place that has one of `letters`, and rests elsewhere."""
+    return "".join(char if char == " " else (new if char in letters else "-") for char in pattern)

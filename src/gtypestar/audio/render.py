@@ -23,7 +23,7 @@ import soundfile
 from ..notation.work import Work
 from ..perform import feel
 from ..perform.events import perform
-from . import band, console, dsp, patches
+from . import band, console, dsp
 
 RATE = dsp.RATE
 TAIL_SECONDS = 5.0
@@ -73,17 +73,23 @@ def _inside(events: list[feel.Event], begin: float, end: float) -> list[feel.Eve
 
 
 def render_stems(
-    work: Work, bars: tuple[int, int] | None = None, *, muse: bool | None = None
+    work: Work,
+    bars: tuple[int, int] | None = None,
+    *,
+    muse: bool | None = None,
+    muse_full: dict[str, np.ndarray] | None = None,
 ) -> tuple[dict[str, np.ndarray], np.ndarray, float]:
-    """Render the stems of the work. Return the stems, the kick times, and the length.
+    """Render the stems of the work or of some bars. Return the stems, the kick times, the length.
 
-    `muse`: use MuseScore with Muse Sounds for the wind, string, and keyboard
-    players (default: yes, if the computer has them).
+    `muse`: use MuseScore with Muse Sounds for the wind and string players
+    (default: yes, if the computer has them). `muse_full` are the stems of
+    MuseScore for the full work: the function takes the part for the bars.
     """
-    from . import kit, musestems
+    from . import kit, musestems, tape
 
     begin, end = window(work, bars)
-    seconds = end - begin + TAIL_SECONDS + (LEAD_SECONDS if begin > 0 else 0.0)
+    lead = LEAD_SECONDS if begin > 0 else 0.0
+    seconds = end - begin + TAIL_SECONDS + lead
     if muse is None:
         muse = musestems.available()
     stems: dict[str, np.ndarray] = {}
@@ -112,12 +118,6 @@ def render_stems(
             stems["bass"] = band.cached(
                 "bass", events, seconds, lambda e=events: band.render_bass(e, seconds)
             )
-        elif first in patches.SUBTRACTIVE or first in patches.FM or first.startswith("chip") \
-                or first == "voice pad":  # fmt: skip
-            stems[player.id] = band.cached(
-                player.id, events, seconds,
-                lambda e=events, p=player.id: band.render_patch(e, seconds, p),
-            )  # fmt: skip
         elif first in ("electric piano", "wurlitzer"):
             keys_events.extend(events)
         elif first in band.SUBSTITUTES:
@@ -133,44 +133,159 @@ def render_stems(
                         band.render_substitute(e, seconds, p) * SUBSTITUTE_GAIN
                     ),
                 )
-        elif first == "tape":
-            continue  # the recorded sounds come from the cue list of the work
+        elif first != "tape":
+            stems[player.id] = band.cached(
+                player.id,
+                events,
+                seconds,
+                lambda e=events, p=player.id: band.render_patch(e, seconds, p),
+            )
     if keys_events:
         keys_events.sort(key=lambda event: event.start)
         stems["keys"] = band.cached(
             "keys", keys_events, seconds, lambda: band.render_keys(keys_events, seconds)
         )
-    if muse_events:
+    if muse_events and muse_full is not None:
+        total = int(seconds * RATE) + RATE
+        first_sample = int((begin - lead) * RATE)
+        for name, full in muse_full.items():
+            part = full[max(0, first_sample) : first_sample + total]
+            if np.any(part):
+                piece = np.zeros((total, 2), dtype=np.float32)
+                piece[: len(part)] = part
+                stems[name] = piece
+    elif muse_events:
         stems.update(musestems.render(work, bars, list(muse_events), seconds, begin))
-    from . import tape
-
-    recorded = tape.render(work, begin, end, seconds, LEAD_SECONDS if begin > 0 else 0.0)
-    if recorded is not None:
+    recorded = tape.render(work, begin, end, seconds, lead)
+    if recorded is not None and np.any(recorded):
         stems["tape"] = recorded
     return stems, np.array(sorted(kicks)), seconds
 
 
-def render(
-    work: Work, bars: tuple[int, int] | None = None, *, muse: bool | None = None,
+def mix_bars(
+    work: Work,
+    bars: tuple[int, int] | None,
+    *,
+    muse: bool | None = None,
+    muse_full: dict[str, np.ndarray] | None = None,
+    gains: dict[str, float] | None = None,
     stems_to: Path | None = None,
-) -> tuple[np.ndarray, console.MasterReport]:  # fmt: skip
-    """Render the work or an excerpt. Return the master and its report."""
+) -> tuple[np.ndarray, dict[str, float]]:
+    """Render and mix the work or some bars. Return the mix before the master, and the gains."""
     from . import glitch
 
-    stems, kicks, _seconds = render_stems(work, bars, muse=muse)
+    stems, kicks, _seconds = render_stems(work, bars, muse=muse, muse_full=muse_full)
     settings = work.extras.get("mix") or console.Mix()
     begin, end = window(work, bars)
     offset = LEAD_SECONDS - begin if begin > 0 else 0.0
     stems = glitch.apply(work, stems, offset, begin, end)
-    moves = work.extras.get("moves")
-    if moves is not None:
-        stems = moves(work, stems, offset)
     if stems_to is not None:
         stems_to.mkdir(parents=True, exist_ok=True)
         for name, sound in stems.items():
             soundfile.write(str(stems_to / f"{name}.flac"), sound, RATE, subtype="PCM_24")
-    mixed = console.mix(stems, settings, kicks)
-    return console.master(mixed, tone=bars is None or (end - begin) > 20.0)
+    return console.mix(stems, settings, kicks, gains)
+
+
+CHUNK_SECONDS = 40.0  # the full work is rendered in parts of about this length
+WORKERS = 3
+_JOB: dict = {}
+
+
+def chunks(work: Work) -> list[tuple[int, int]]:
+    """Divide the work into parts for the render: (first bar, last bar).
+
+    A part starts at a rehearsal mark or after a double bar line, if that
+    is possible: there the sound changes, and a cut is not audible.
+    """
+    structure = work.structure
+    cuts = sorted({1, *structure.marks, *(bar + 1 for bar in structure.double_bars)})
+    cuts = [bar for bar in cuts if bar <= len(structure.bars)]
+    result = []
+    for index, first in enumerate(cuts):
+        last = cuts[index + 1] - 1 if index + 1 < len(cuts) else len(structure.bars)
+        start = first
+        while start <= last:
+            stop = start
+            begin = structure.seconds(structure.bar(start).start)
+            while stop < last and structure.seconds(structure.bar(stop + 1).end) - begin <= (
+                CHUNK_SECONDS
+            ):
+                stop += 1
+            result.append((start, stop))
+            start = stop + 1
+    return result
+
+
+def _chunk(bars: tuple[int, int]) -> tuple[int, np.ndarray]:
+    """Render one part of the work. Return its first sample in the work, and its mix."""
+    work = _JOB["work"]
+    mixed, _gains = mix_bars(
+        work, bars, muse=_JOB["muse"], muse_full=_JOB["muse_full"], gains=_JOB["gains"]
+    )
+    begin, _end = window(work, bars)
+    lead = LEAD_SECONDS if begin > 0 else 0.0
+    return int(round((begin - lead) * RATE)), mixed
+
+
+def reference_bars(work: Work) -> tuple[int, int]:
+    """Return the bars that give the balance of the groups: a passage with all players."""
+    marks = {label: bar for bar, label in work.structure.marks.items()}
+    if "D" in marks and "E" in marks:
+        return marks["D"], marks["E"] - 1
+    return 1, min(len(work.structure.bars), 24)
+
+
+def render(
+    work: Work,
+    bars: tuple[int, int] | None = None,
+    *,
+    muse: bool | None = None,
+    stems_to: Path | None = None,
+    workers: int = WORKERS,
+) -> tuple[np.ndarray, console.MasterReport]:
+    """Render the work or an excerpt. Return the master and its report.
+
+    The full work is rendered in parts, some at the same time. The levels of
+    the groups (drums, bass, music) come from one passage with all players:
+    all parts use the same levels.
+    """
+    import multiprocessing
+
+    from . import musestems
+
+    if muse is None:
+        muse = musestems.available()
+    _mix, gains = mix_bars(work, reference_bars(work), muse=muse)
+    begin, end = window(work, bars)
+    if bars is not None:
+        mixed, _gains = mix_bars(work, bars, muse=muse, gains=gains, stems_to=stems_to)
+        return console.master(mixed, tone=(end - begin) > 20.0)
+
+    muse_full = None
+    if muse:
+        seconds = work.structure.duration_seconds + TAIL_SECONDS
+        muse_full = musestems.render(work, None, list(MUSE_PLAYERS), seconds, 0.0)
+    total = int((work.structure.duration_seconds + TAIL_SECONDS) * RATE) + RATE
+    full = np.zeros((total, 2), dtype=np.float32)
+    _JOB.update(work=work, muse=muse, muse_full=muse_full, gains=gains)
+    try:
+        parts = chunks(work)
+        if workers <= 1:
+            results = map(_chunk, parts)
+        else:
+            pool = multiprocessing.get_context("fork").Pool(workers)
+            results = pool.imap_unordered(_chunk, parts)
+        for first, mixed in results:
+            if first < 0:
+                mixed, first = mixed[-first:], 0
+            last = min(total, first + len(mixed))
+            full[first:last] += mixed[: last - first]
+        if workers > 1:
+            pool.close()
+            pool.join()
+    finally:
+        _JOB.clear()
+    return console.master(full)
 
 
 def position_seconds(work: Work, bar: int, beat: Fraction | float = 1) -> float:

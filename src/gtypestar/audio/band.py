@@ -114,6 +114,8 @@ def render_patch(events: list[Event], seconds: float, player: str) -> np.ndarray
                 sound = synth.render_fm(patch, event.midi, sounding(event), level,
                                         seed=(player, number))  # fmt: skip
                 canvas.add(event.start, sound)
+        elif name in ("bass wobble", "bass growl"):
+            canvas.add(0.0, moving_bass(group, seconds, name, player))
         elif name in patches.SUBTRACTIVE:
             patch = patches.SUBTRACTIVE[name]
             if patch.glide > 0:
@@ -170,6 +172,76 @@ def _lines(canvas: Canvas, patch: synth.Patch, events: list[Event], player: str)
     flush()
 
 
+def moving_bass(events: list[Event], seconds: float, name: str, player: str) -> np.ndarray:
+    """The bass sounds of dubstep: a filter moves one time in each note.
+
+    "bass wobble": a low-pass filter opens and closes in each note. The
+    rhythm of the notes is the rhythm of the wobble: eighth notes, triplets,
+    or sixteenth notes. "bass growl": two resonances move between two vowels
+    in each note, as a voice that says "yoi" or "wow". Under the two sounds, a
+    sine tone gives the lowest octave with no change.
+    """
+    total = int(seconds * RATE) + RATE
+    canvas = Canvas(seconds)
+    ordered = sorted(events, key=lambda event: event.start)
+    source_canvas = Canvas(seconds)
+    if name == "bass wobble":
+        _lines(source_canvas, patches.BASS_WOBBLE, ordered, player)
+    else:
+        for number, event in enumerate(ordered):
+            level, _end = accent_level(event)
+            sound = synth.render_fm(patches.BASS_GROWL, event.midi, sounding(event), level,
+                                    seed=(player, number))  # fmt: skip
+            source_canvas.add(event.start, sound)
+    source = source_canvas.data.astype(np.float64)
+    first_curve = np.full(total, 110.0)
+    second_curve = np.full(total, 900.0)
+    vowels = [("u", "a"), ("o", "i"), ("a", "e"), ("e", "u"), ("i", "o")]
+    for number, event in enumerate(ordered):
+        begin = int(event.start * RATE)
+        length = max(64, int(event.seconds * RATE))
+        stop = min(total, begin + length)
+        if begin >= total:
+            continue
+        share = np.arange(stop - begin) / length
+        level, _end = accent_level(event)
+        if name == "bass wobble":
+            # One cycle of the filter in the note: closed, open, closed.
+            shape = np.sin(np.pi * np.clip(share / 0.92, 0.0, 1.0)) ** 1.5
+            first_curve[begin:stop] = 110.0 * (2600.0 * (0.4 + 0.9 * level) / 110.0) ** shape
+        else:
+            start_vowel, end_vowel = vowels[(number + int(event.midi)) % len(vowels)]
+            move = np.clip(share / 0.7, 0.0, 1.0) ** 0.8
+            low = VOWELS[start_vowel][0] * (VOWELS[end_vowel][0] / VOWELS[start_vowel][0]) ** move
+            high = VOWELS[start_vowel][1] * (VOWELS[end_vowel][1] / VOWELS[start_vowel][1]) ** move
+            first_curve[begin:stop] = low
+            second_curve[begin:stop] = high
+    out = np.zeros_like(source)
+    for channel in range(2):
+        signal_in = source[:, channel]
+        if name == "bass wobble":
+            moved = kernels.ladder(signal_in * 3.0, first_curve, 0.55, 2.2, float(RATE))
+            out[:, channel] = effects.saturate(moved * 2.5, 10.0, bias=0.2)
+        else:
+            quality = np.full(total, 6.0)
+            first = kernels.state_variable(signal_in, first_curve, quality, float(RATE), 1)
+            second = kernels.state_variable(signal_in, second_curve, quality, float(RATE), 1)
+            mixed = 2.2 * first + 1.6 * second + 0.25 * signal_in
+            out[:, channel] = effects.fold(mixed * 1.4, 4.0) * 0.5
+    # The sound of the middle: no low octave (the sine tone has it), and strong compression.
+    out = signal.sosfilt(dsp.highpass(140.0, 2), out, axis=0)
+    out = effects.compress(out, -24.0, 8.0, 0.002, 0.06, makeup_db=10.0)
+    canvas.add(0.0, out * 0.28)
+    for number, event in enumerate(ordered):
+        level, level_end = accent_level(event)
+        sub = synth.render_note(patches.BASS_SUB, event.midi, sounding(event), 0.9 * level,
+                                0.9 * level_end, seed=("sub", player, number))  # fmt: skip
+        canvas.add(event.start, sub)
+    return canvas.data
+
+
+VOWELS = {"a": (850.0, 1610.0, 2700.0), "o": (360.0, 640.0, 2500.0), "u": (250.0, 595.0, 2400.0),
+          "e": (390.0, 2300.0, 2900.0), "i": (240.0, 2400.0, 3100.0)}  # fmt: skip
 CHIP_WIDTH = {"chip pulse": 0.5, "chip pulse 25": 0.25, "chip pulse 12": 0.125}
 FRAME = RATE // 60  # an old game console changes its sound 60 times in a second
 
@@ -207,10 +279,6 @@ def chip(events: list[Event], seconds: float, name: str) -> np.ndarray:
         sound[:24] *= np.linspace(0.0, 1.0, min(24, total))[: len(sound[:24])]
         canvas.add(event.start, effects.stereo(sound))
     return canvas.data
-
-
-VOWELS = {"a": (850.0, 1610.0, 2700.0), "o": (360.0, 640.0, 2500.0), "u": (250.0, 595.0, 2400.0),
-          "e": (390.0, 2300.0, 2900.0), "i": (240.0, 2400.0, 3100.0)}  # fmt: skip
 
 
 def voice_pad(events: list[Event], seconds: float, player: str) -> np.ndarray:

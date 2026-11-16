@@ -10,7 +10,7 @@ a slow melody.
 
 from __future__ import annotations
 
-from ..compose import chords, patterns
+from ..compose import chords, patterns, tools
 from ..notation import drums
 from ..notation.work import Work
 from . import material as m
@@ -32,6 +32,28 @@ BASS = [
     "a__-xb ---c_e b_a_ a__x-c -x-e_c",
     "a__x-b ---c-e b-a_ a__c_e b_-c_h",
     "a__x-a -x-b_c b_a_ a__x-e ---c_b",
+]
+# Soft forms for the bridge: long notes.
+COMPS_SOFT = [
+    "a_____ ______ ____ a_____ ______",
+    "---a__ ______ ____ ---a__ ______",
+    "a_____ ______ a___ ______ ---a__",
+]
+BASS_SOFT = [
+    "a_____ ______ c___ a_____ ___e_c",
+    "a_____ ___c__ b___ ______ a__c_e",
+    "a_____ ______ a_c_ b_____ ___c__",
+]
+# Forms with five notes in each long pulse and three in the short pulse.
+COMPS_FIVE = [
+    "--a__ _____ a__ --a__ _____",
+    "a____ --a__ --- a__a_ _____",
+    "--a__ __--- a__ ----- a____",
+]
+BASS_FIVE = [
+    "a__xb --c_e b_a a_x_c -e_c_",
+    "a__xb -xc_e b_a a__xc b_c_e",
+    "a_x_b --c_e b-a a_c_e b_c_h",
 ]
 # Figures of the guitar: three notes of the chord (a, b, c) in sixteenth notes.
 PICKS = [
@@ -56,7 +78,9 @@ def _bass(symbols: list[str], key: str, shapes: list[str] = BASS) -> list[str]:
     return bars
 
 
-def _keys(symbols: list[str], key: str, low: int = 55, high: int = 77) -> list[str]:
+def _keys(
+    symbols: list[str], key: str, low: int = 55, high: int = 77, patterns_: list[str] = COMPS
+) -> list[str]:
     """Return one bar of the electric piano for each chord."""
     source = m.random("keys", key)
     bars = []
@@ -64,7 +88,7 @@ def _keys(symbols: list[str], key: str, low: int = 55, high: int = 77) -> list[s
     for symbol in symbols:
         voicing = chords.voice(symbol, 4, low=low, high=high, before=before)
         before = voicing
-        pattern = COMPS[int(source.integers(0, len(COMPS)))]
+        pattern = patterns_[int(source.integers(0, len(patterns_)))]
         bars.append(patterns.pitched(pattern, m.CLAVE, {"a": chords.names(voicing, symbol)}))
     return bars
 
@@ -110,9 +134,177 @@ def write(work: Work) -> None:
                     fills={4: "snare 1", 8: "linear 2", 12: "toms 1", 16: "kicks 2"}),
         r"\f",
     )  # fmt: skip
-    s.set("bass", _bass(symbols, "theme 2"), r"\f")
+    line = [tools.first(m.LINE_1[0], r"\leadtone\pmoff", note=True), m.LINE_1[1]]
+    s.set("bass", _bass(symbols, "theme 2")[:14] + [tools.octave(b, -2) for b in m.LINE_1], r"\f")
     s.set("keys.rh", _keys(symbols, "theme 2"), r"\mf")
-    s.set("gtr", _picks(symbols, "theme 2"), r"\mf\clean\pm")
+    s.set("gtr", _picks(symbols, "theme 2")[:14] + line, r"\mf\clean\pm")
     claps = drums.steps("ms  ------ c----- ---- ------ c-----", m.CLAVE)
     s.set("eperc", [claps] * 16, r"\mf")
+    # The first line for all lead players: the last two bars.
+    s.set("lead", [None] * 14 + [tools.octave(bar, 1) for bar in m.LINE_1], r"\f")
+    s.set("chip", [None] * 14 + [tools.octave(bar, 2) for bar in m.LINE_1], r"\mf")
     s.close()
+
+    # ------------------------------------------------- the bridge
+    s = Bars(work, 16)
+    structure.mark(s.bar(1), "E")
+    symbols = m.LOOP_B * 3 + ["Ebmaj9", "Bbadd9/D", "Cm11", "D13b9"]
+    s.set("gtr", m.BRIDGE + _picks(symbols[8:], "bridge"), r"\mf\clean\pmoff")
+    s.set("tsax", [None] * 8 + [tools.octave(bar, -1) for bar in m.BRIDGE], r"\mf")
+    s.set(
+        "drums",
+        m.drum_bars(m.HALF, 16, "bridge", amount=0.8, crash=(1, 9), fills={8: "linear 1",
+                    16: "toms 2"}, grooves={n: m.MAIN_RIDE for n in range(9, 17)}),
+        r"\mf",
+    )  # fmt: skip
+    s.set("bass", _bass(symbols, "bridge", BASS_SOFT), r"\mf")
+    s.set("keys.rh", _keys(symbols, "bridge", patterns_=COMPS_SOFT), r"\mp")
+    strings = m.layers(symbols, ["a_____ ______ ____ ______ ______"], m.STRINGS, "strings")
+    for player, bars in strings.items():
+        s.set(player, bars, r"\p\<")
+    s.set("pad.rh", [None] * 8 + m.pad_bars(symbols[8:], low=60, high=84), r"\p",
+          r'\switch "pad glass"')  # fmt: skip
+    horns = m.layers([None] * 12 + symbols[12:], ["a_____ ______ ____ ______ ______"], m.HORNS,
+                     "horns")  # fmt: skip
+    for player, bars in horns.items():
+        s.set(player, bars, r"\p\<")
+    s.close()
+
+    # ------------------------------------------------- the solo of the saxophone
+    s = Bars(work, 24)
+    structure.mark(s.bar(1), "F")
+    symbols = m.LOOP_A * 6
+    s.set("tsax", m.SAX_SOLO + m.LINE_2, r"\mf")
+    s.set(
+        "drums",
+        m.drum_bars(m.MAIN_RIDE, 24, "sax solo", amount=1.4, crash=(1, 9, 13, 17, 21),
+                    fills={4: "snare 1", 8: "linear 2", 12: "toms 1", 16: "snare 2",
+                           20: "kicks 2", 24: "toms 2"},
+                    grooves={n: m.MAIN_OPEN for n in range(13, 25)}),
+        r"\f",
+    )  # fmt: skip
+    line = [tools.first(m.LINE_2[0], r"\leadtone\pmoff", note=True), *m.LINE_2[1:]]
+    s.set("bass", _bass(symbols, "sax solo")[:20] + [tools.octave(b, -2) for b in m.LINE_2], r"\f")
+    s.set("keys.rh", _keys(symbols, "sax solo"), r"\mf")
+    s.set("gtr", _picks(symbols, "sax solo")[:20] + line, r"\mf\clean\pm")
+    s.set("pad.rh", [None] * 8 + m.pad_bars(symbols[8:]), r"\mp\<", r'\switch "pad warm"')
+    stabs = ["------ ------ ---- A--a-- ------", "------ ---A-- ---- ------ A-----",
+             "---A-- ------ a___ ------ ------", "------ ------ ---- ---A-a A_____"]  # fmt: skip
+    horns = m.layers([None] * 12 + symbols[12:20] + [None] * 4, stabs, m.HORNS, "horns")
+    for player, bars in horns.items():
+        s.set(player, bars, r"\f")
+    s.set("eperc", [None] * 12 + [claps] * 12, r"\mf")
+    # The second line: the last four bars.
+    s.set("lead", [None] * 20 + [tools.octave(bar, 1) for bar in m.LINE_2], r"\f")
+    s.set("chip", [None] * 20 + [tools.octave(bar, 2) for bar in m.LINE_2], r"\mf")
+    s.close()
+
+    # ------------------------------------------------- bass and drums take turns
+    s = Bars(work, 8)
+    structure.mark(s.bar(1), "G")
+    solo_1 = m.Groove(
+        """
+        sn  o-oo-o o-g-oo ---- O--o-o g-O---
+        tm  ------ ------ h-m- ------ ---f-f
+        bd  -x--x- -x-x-- -x-x -xx-x- -x--x-
+        """,
+        m.CLAVE,
+    )
+    solo_2 = m.Groove(
+        """
+        cy  c----- ------ ---- ------ ------
+        sn  ---o-- O--o-o ---- o-o-o- O-O-OO
+        tm  -h--m- ------ f-f- ------ ------
+        bd  x-x--x -xx-x- -x-x -x-x-x -x-x--
+        """,
+        m.CLAVE,
+    )
+    solo_3 = m.Groove(
+        """
+        sn  O-o-g- o-O--- oo-- O--O-- ------
+        tm  ------ ---h-m --ff ------ h-m-f-
+        bd  -x-x-x -x---- ---- -xx-xx -x-x-x
+        """,
+        m.CLAVE,
+    )
+    solo_4 = m.Groove(
+        """
+        cy  c----- ------ ---- k----- ------
+        sn  ---ooo O-g-g- O--- ---O-- ------
+        tm  ------ ------ -hmf ------ ------
+        bd  x-x--- -x-x-x ---- x-x--- ------
+        """,
+        m.CLAVE,
+    )
+    time = m.drum_bars(m.HALF, 8, "trade", amount=0.6, crash=(1, 5))
+    s.set(
+        "drums",
+        [time[0], time[1], solo_1.text(), solo_2.text(), time[4], time[5], solo_3.text(),
+         solo_4.text()],
+        r"\f",
+    )  # fmt: skip
+    s.set("bass", [m.BASS_SOLO[0], m.BASS_SOLO[1], None, None, m.BASS_SOLO[2], m.BASS_SOLO[3],
+                   None, None], r"\f")  # fmt: skip
+    hits = ["A_____ ------ ---- ------ ------", None, None, None] * 2
+    chord_hits = ["Gmaj9", None, None, None, "Cmaj9#11", None, None, None]
+    s.set(
+        "keys.rh",
+        [None if symbol is None else m.comp(symbol, hit, low=55, high=77)[0]
+         for symbol, hit in zip(chord_hits, hits, strict=True)],
+        r"\f",
+    )  # fmt: skip
+    s.close()
+
+    # ------------------------------------------------- the quiet middle
+    s = Bars(work, 16)
+    structure.mark(s.bar(1), "H")
+    symbols = m.LOOP_A * 4
+    s.set("keys.rh", m.pad_bars(symbols, low=55, high=77), r"\p")
+    shimmer = []
+    for symbol in symbols:
+        notes = chords.voice(symbol, 5, low=74, high=96, rootless=False)
+        table = {
+            letter: chords.names((midi,), symbol)
+            for letter, midi in zip("abcde", notes, strict=True)
+        }
+        shimmer.append(patterns.pitched("abcde abcde abc edcba edcba", m.CLAVE, table))
+    s.set("chip", shimmer, r"\pp", r'\switch "chip pulse 25"')
+    s.set("bass", m.roots(symbols, "a_____ ______ ____ ______ ___c__", octave=1), r"\p")
+    s.set(
+        "drums",
+        [None] * 4 + m.drum_bars(m.MORPH_HALF, 12, "middle", amount=0.5, crash=(),
+                                 fills={12: "five toms 2"}),
+        r"\p\<",
+    )  # fmt: skip
+    s.set("tsax", [None] * 8 + m.THEME, r"\p\subtone")
+    strings = m.layers([None] * 8 + symbols[8:], ["a_____ ______ ____ ______ ______"], m.STRINGS,
+                       "strings")  # fmt: skip
+    for player, bars in strings.items():
+        s.set(player, bars, r"\pp\<")
+    s.close()
+
+    # ------------------------------------------------- the theme with the new division
+    s = Bars(work, 16)
+    structure.mark(s.bar(1), "J")
+    s.set("tsax", m.THEME_HIGH + m.THEME_SECOND, r"\f\normaltone")
+    s.set(
+        "drums",
+        m.drum_bars(m.MORPH, 16, "morph", amount=1.0, crash=(1, 5, 9, 13),
+                    fills={4: "five 1", 8: "five toms 2", 12: "five 1", 16: "five 2"}),
+        r"\f",
+    )  # fmt: skip
+    s.set("bass", _bass(symbols, "morph", BASS_FIVE), r"\f")
+    s.set("keys.rh", _keys(symbols, "morph", patterns_=COMPS_FIVE), r"\mf")
+    chug = {"a": r"g,, \pm", "b": "g,"}
+    chugs = ["aaaaa a-a-a aaa aaaaa a-ab-", "aaaaa aa-aa a-a aaaaa aab--",
+             "a-aaa aaaaa aaa a-a-a aaaaa", "aaaaa a-a-a aab aaaaa a-a--"]  # fmt: skip
+    s.set("gtr", [patterns.pitched(chugs[n % 4], m.CLAVE, chug) for n in range(16)],
+          r"\f\crunch")  # fmt: skip
+    s.set("pad.rh", m.pad_bars(symbols), r"\mf", r'\switch "supersaw"')
+    horns = m.layers([None] * 8 + symbols[8:], ["a_____ ______ ____ ______ ______"], m.HORNS,
+                     "horns")  # fmt: skip
+    for player, bars in horns.items():
+        s.set(player, bars, r"\mf\<")
+    s.set("eperc", [claps] * 16, r"\mf")
+    s.close()
+    structure.double_bar(s.section.last_bar)

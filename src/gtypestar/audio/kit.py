@@ -55,6 +55,7 @@ class KitSpec:
     chokes: dict[str, tuple[int, ...]]
     accent: dict[int, str]  # the instrument for a note with an accent (for example a rimshot)
     gains_db: dict[str, float]
+    mics_db: dict[str, float]  # the level of each group of microphones, to agree with the mixer
 
 
 CROCELL = KitSpec(
@@ -82,6 +83,9 @@ CROCELL = KitSpec(
     chokes={"HihatOpen": (42, 44, 46)},
     accent={38: "SnareRimShot"},
     gains_db={},
+    # The recordings of this kit are softer than those of the DRSKit, and its room is louder.
+    mics_db={"kick": 11.0, "snare": 10.0, "toms": 12.0, "cymbals": 10.0, "overheads": 8.5,
+             "room": -1.0},
 )  # fmt: skip
 
 DRS = KitSpec(
@@ -111,6 +115,7 @@ DRS = KitSpec(
     chokes={"Hihat_open": (42, 44, 46), "Hihat_semi_open": (42, 44, 46)},
     accent={},
     gains_db={},
+    mics_db={},
 )  # fmt: skip
 
 
@@ -276,4 +281,6 @@ def render(
                 angle = (position + 1.0) * np.pi / 4.0
                 stems[group][first : first + length, 0] += part * np.float32(np.cos(angle))
                 stems[group][first : first + length, 1] += part * np.float32(np.sin(angle))
+    for group, level in spec.mics_db.items():
+        stems[group] *= np.float32(dsp.db(level))
     return stems

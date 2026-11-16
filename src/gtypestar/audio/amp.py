@@ -37,14 +37,15 @@ class Amp:
     presence_db: float = 3.0
     cabinet: bool = True
     gate_db: float = -62.0  # the noise gate closes below this level
-    level_db: float = -9.0
+    level_db: float = -19.0
 
 
 CLEAN = Amp(tight_hz=70.0, push_db=0.0, gain_db=6.0, stages=1, bias=0.05, low_db=1.0, mid_db=-2.0,
             presence_db=2.0, gate_db=-80.0, level_db=-8.0)  # fmt: skip
-CRUNCH = Amp(tight_hz=90.0, push_db=5.0, gain_db=20.0, stages=2, mid_db=-1.0, level_db=-9.0)
+CRUNCH = Amp(tight_hz=90.0, push_db=5.0, gain_db=20.0, stages=2, mid_db=-1.0, level_db=-19.0)
 HIGH_GAIN = Amp()
-LEAD = Amp(tight_hz=140.0, push_hz=1100.0, push_db=10.0, gain_db=38.0, mid_db=1.0, presence_db=1.0)
+LEAD = Amp(tight_hz=140.0, push_hz=1100.0, push_db=10.0, gain_db=38.0, mid_db=1.0, presence_db=1.0,
+           level_db=-17.0)  # fmt: skip
 BASS_GRIT = Amp(tight_hz=45.0, push_hz=700.0, push_db=4.0, gain_db=16.0, stages=2, bias=0.2,
                 low_db=2.0, mid_hz=400.0, mid_db=-2.0, presence_db=1.0, cabinet=False,
                 gate_db=-80.0, level_db=-8.0)  # fmt: skip

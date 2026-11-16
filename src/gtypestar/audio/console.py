@@ -61,8 +61,43 @@ def filters(rows: tuple[tuple, ...]) -> list[np.ndarray]:
     return result
 
 
+def active(sound: np.ndarray, before: float = 0.3, after: float = 2.5) -> list[tuple[int, int]]:
+    """Return the parts of a stem that have sound, as (first sample, last sample).
+
+    Most stems are silent for most of the time. The mixer works only on the
+    parts with sound, with some time before and after each part.
+    """
+    block = 4096
+    count = len(sound) // block + 1
+    padded = np.zeros(count * block, dtype=np.float32)
+    padded[: len(sound)] = np.abs(sound).max(axis=1)
+    loud = padded.reshape(count, block).max(axis=1) > 1e-5
+    spans: list[tuple[int, int]] = []
+    start = None
+    for index, value in enumerate(list(loud) + [False]):
+        if value and start is None:
+            start = index
+        elif not value and start is not None:
+            first = max(0, start * block - int(before * RATE))
+            last = min(len(sound), index * block + int(after * RATE))
+            if spans and first <= spans[-1][1]:
+                spans[-1] = (spans[-1][0], last)
+            else:
+                spans.append((first, last))
+            start = None
+    return spans
+
+
 def channel(sound: np.ndarray, strip: Strip, kicks: np.ndarray | None = None) -> np.ndarray:
     """Apply a channel strip to a stem (two channels). Return the new stem."""
+    result = np.zeros(sound.shape, dtype=np.float32)
+    for first, last in active(sound):
+        moved = None if kicks is None else kicks - first / RATE
+        result[first:last] = _channel(sound[first:last], strip, moved)
+    return result
+
+
+def _channel(sound: np.ndarray, strip: Strip, kicks: np.ndarray | None) -> np.ndarray:
     out = sound.astype(np.float64)
     if strip.eq:
         out = effects.equalize(out, *filters(strip.eq))
@@ -85,7 +120,7 @@ def channel(sound: np.ndarray, strip: Strip, kicks: np.ndarray | None = None) ->
         out = (
             out * effects.duck(len(out), kicks, strip.duck_db, release=strip.duck_release)[:, None]
         )
-    return out * dsp.db(strip.gain_db)
+    return (out * dsp.db(strip.gain_db)).astype(np.float32)
 
 
 @dataclass
@@ -114,11 +149,43 @@ class Mix:
     )
 
 
-def mix(stems: dict[str, np.ndarray], settings: Mix, kicks: np.ndarray | None = None) -> np.ndarray:
-    """Mix the stems. Return the mix (two channels) before the master."""
+def balance_gains(groups: dict[str, np.ndarray], settings: Mix) -> dict[str, float]:
+    """Return the gain of each group (dB) that gives the balance of the reference tracks.
+
+    The music group stays; the other groups move.
+    """
+    gains = dict(settings.bus_gain_db)
+    if not settings.balance:
+        return gains
+    measured = {
+        name: loudness.integrated(loudness.block_power(groups[name].astype(np.float32)))
+        for name in settings.balance
+        if np.any(groups[name])
+    }
+    if "music" in measured and np.isfinite(measured["music"]):
+        for name, value in measured.items():
+            if name != "music" and np.isfinite(value):
+                wanted = settings.balance[name] - settings.balance["music"]
+                gains[name] = gains.get(name, 0.0) + wanted - (value - measured["music"])
+    return gains
+
+
+def mix(
+    stems: dict[str, np.ndarray],
+    settings: Mix,
+    kicks: np.ndarray | None = None,
+    gains: dict[str, float] | None = None,
+) -> tuple[np.ndarray, dict[str, float]]:
+    """Mix the stems. Return the mix (two channels) before the master, and the group gains.
+
+    `gains` are the gains of the groups in dB. If they are not given, the
+    function finds them from the balance of the reference tracks.
+    """
     length = max(len(stem) for stem in stems.values())
-    buses = {name: np.zeros((length, 2)) for name in ("drums", "bass", "music", "space")}
-    sends = {name: np.zeros((length, 2)) for name in ("room", "plate", "hall", "echo")}
+    buses = {name: np.zeros((length, 2), dtype=np.float32)
+             for name in ("drums", "bass", "music", "space")}  # fmt: skip
+    sends = {name: np.zeros((length, 2), dtype=np.float32)
+             for name in ("room", "plate", "hall", "echo")}  # fmt: skip
     for name, stem in stems.items():
         strip = settings.strips.get(name, Strip())
         out = channel(stem, strip, kicks)
@@ -126,7 +193,7 @@ def mix(stems: dict[str, np.ndarray], settings: Mix, kicks: np.ndarray | None = 
         for send in sends:
             share = getattr(strip, send)
             if share:
-                sends[send][: len(out)] += out * share
+                sends[send][: len(out)] += out * np.float32(share)
 
     drums = buses["drums"]
     if np.any(drums):
@@ -134,25 +201,14 @@ def mix(stems: dict[str, np.ndarray], settings: Mix, kicks: np.ndarray | None = 
         crushed = effects.each(crushed, lambda part: effects.saturate(part, 6.0))
         drums = drums + crushed * dsp.db(settings.drum_crush_db)
         drums = effects.each(drums, lambda part: effects.saturate(part, settings.drum_drive_db))
+        drums = drums.astype(np.float32)
     groups = {"drums": drums, "bass": buses["bass"], "music": buses["music"],
               "space": buses["space"]}  # fmt: skip
-    gains = dict(settings.bus_gain_db)
-    if settings.balance:
-        # Give the groups the relative loudness of the reference tracks. The music
-        # group stays; the other groups move.
-        measured = {
-            name: loudness.integrated(loudness.block_power(groups[name].astype(np.float32)))
-            for name in settings.balance
-            if np.any(groups[name])
-        }
-        if "music" in measured:
-            for name, value in measured.items():
-                if name != "music" and np.isfinite(value) and np.isfinite(measured["music"]):
-                    wanted = settings.balance[name] - settings.balance["music"]
-                    gains[name] = gains.get(name, 0.0) + wanted - (value - measured["music"])
-    total = np.zeros((length, 2))
+    if gains is None:
+        gains = balance_gains(groups, settings)
+    total = np.zeros((length, 2), dtype=np.float32)
     for name, bus in groups.items():
-        total += bus * dsp.db(gains.get(name, 0.0))
+        total += bus * np.float32(dsp.db(gains.get(name, 0.0)))
 
     spaces = [
         ("room", effects.room(settings.room_seconds, 0.6, 0.004, 0.4, seed=3), settings.room_db),
@@ -164,12 +220,12 @@ def mix(stems: dict[str, np.ndarray], settings: Mix, kicks: np.ndarray | None = 
         if np.any(sends[name]):
             wet = effects.reverb(sends[name], response, tail=False)
             wet = signal.sosfilt(dsp.highpass(180.0, 2), wet, axis=0)
-            total += wet * dsp.db(level)
+            total += (wet * dsp.db(level + gains.get("music", 0.0))).astype(np.float32)
     if np.any(sends["echo"]):
         echoes = effects.delay(sends["echo"], settings.echo_seconds, settings.echo_feedback)
         echoes = signal.sosfilt(dsp.highpass(250.0, 2), echoes, axis=0)
-        total += echoes[:length] * dsp.db(settings.echo_db)
-    return total
+        total += (echoes[:length] * dsp.db(settings.echo_db)).astype(np.float32)
+    return total, gains
 
 
 TARGET_LUFS = -10.5  # the six reference tracks: -9.6 to -12.7 LUFS
