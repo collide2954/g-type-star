@@ -29,6 +29,7 @@ class Technique:
     value: str = ""
     italic: bool = False
     below: bool = False
+    meaning: str = ""  # a note on the first page of the score, for a sign that needs one
 
 
 _T = Technique
@@ -66,7 +67,7 @@ TECHNIQUES: dict[str, Technique] = {
         _T("bellsup", "bells up", "", ""),
         _T("cuivre", "cuivré", "tone", "brassy"),
         # Percussion, harp, keyboards.
-        _T("lv", "l.v.", "ring", "on"),
+        _T("lv", "l.v.", "ring", "on", meaning="let the sound ring"),
         _T("damp", "damp", "ring", "off"),
         _T("bowed", "with a bow", "attack", "bowed"),
         _T("softmallets", "soft mallets", "mallet", "soft"),
@@ -74,7 +75,7 @@ TECHNIQUES: dict[str, Technique] = {
         _T("motoron", "motor on", "motor", "on"),
         _T("motoroff", "motor off", "motor", "off"),
         # Guitar and bass guitar.
-        _T("pm", "P.M.", "mute", "palm"),
+        _T("pm", "P.M.", "mute", "palm", meaning="mute the strings with the palm of the hand"),
         _T("pmoff", "open", "mute", "off"),
         _T("letring", "let ring", "ring", "on"),
         _T("fingers", "fingers", "attack", "fingers"),
@@ -85,11 +86,17 @@ TECHNIQUES: dict[str, Technique] = {
         _T("crunch", "crunch", "tone", "crunch"),
         _T("highgain", "high gain", "tone", "high gain"),
         _T("leadtone", "lead", "tone", "lead"),
-        _T("octaver", "octave pedal on", "motor", "on"),
+        _T(
+            "octaver",
+            "octave pedal on",
+            "motor",
+            "on",
+            meaning="a pedal adds the note one octave lower",
+        ),  # fmt: skip
         _T("octaveroff", "octave pedal off", "motor", "off"),
         # Saxophone.
-        _T("growl", "growl", "tone", "growl"),
-        _T("subtone", "subtone", "tone", "sub"),
+        _T("growl", "growl", "tone", "growl", meaning="sing a low note while you play"),
+        _T("subtone", "subtone", "tone", "sub", meaning="a soft tone with much air"),
         _T("normaltone", "ord.", "tone", "normal"),
         # Expression words. These have no effect on the audio.
         _T("espr", "espr.", italic=True, below=True),

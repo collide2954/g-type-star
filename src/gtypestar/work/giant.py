@@ -146,8 +146,9 @@ def write(work: Work) -> None:
     symbols = loop * 2
     s.set("tpt", CHORALE, r"\mf\dolce")
     s.set("vn1", [tools.octave(bar, 1) for bar in CHORALE], r"\mp")
-    s.set("tsax", [None] * 8 + [tools.tr(bar, -3) if i not in (2, 3) else tools.tr(bar, -4)
-                                for i, bar in enumerate(CHORALE[8:])], r"\mp\subtone")  # fmt: skip
+    second = [tools.tr(bar, -3) if i not in (2, 3) else tools.tr(bar, -4)
+              for i, bar in enumerate(CHORALE[8:])]  # fmt: skip
+    s.set("tsax", [None] * 8 + tools.true_ties(second), r"\mp\subtone")
     low_horns = m.layers(symbols, ["a___ ____"], ("bsax", "tbn", "asax"), "horns3", HALVES)
     for player, bars in low_horns.items():
         s.set(player, bars, r"\p")
@@ -222,8 +223,9 @@ def write(work: Work) -> None:
     theme = [tools.tr(bar, 4) for bar in CHORALE[8:]]
     s.set("tpt", theme, r"\f")
     s.set("tsax", theme, r"\f\normaltone")
-    s.set("asax", [tools.tr(bar, -3) if i not in (2, 3) else tools.tr(bar, -4)
-                   for i, bar in enumerate(theme)], r"\f")  # fmt: skip
+    second = [tools.tr(bar, -3) if i not in (2, 3) else tools.tr(bar, -4)
+              for i, bar in enumerate(theme)]  # fmt: skip
+    s.set("asax", tools.true_ties(second), r"\f")
     s.set("lead", [tools.octave(bar, 1) for bar in theme], r"\f")
     s.set("vn1", [tools.octave(bar, 1) for bar in theme], r"\f")
     low_horns = m.layers(symbols, ["a___ ____"], ("bsax", "tbn"), "horns2", HALVES)
@@ -278,6 +280,7 @@ def write(work: Work) -> None:
             s.bar(1),
             2,
             offset=33.7,
+            text="One and a half G.",
             seconds=0.9,
             gain_db=-9.0,
             radio=True,
@@ -288,6 +291,7 @@ def write(work: Work) -> None:
             s.bar(3),
             2,
             offset=50.25,
+            text="Two G.",
             seconds=0.7,
             gain_db=-8.0,
             radio=True,
@@ -298,6 +302,7 @@ def write(work: Work) -> None:
             s.bar(5),
             2,
             offset=73.3,
+            text="Two and a half G.",
             seconds=0.85,
             gain_db=-7.0,
             radio=True,
@@ -308,6 +313,7 @@ def write(work: Work) -> None:
             s.bar(7),
             2,
             offset=120.85,
+            text="Five G.",
             seconds=1.1,
             gain_db=-6.0,
             radio=True,
@@ -321,10 +327,10 @@ def write(work: Work) -> None:
     # "Three, two, one, fire": the word "fire" is on the first beat of the next part.
     fire = 2.15  # seconds from the start of the part of the recording to the word "fire"
     beat = 1 + 8 - fire * m.GIANT / 60.0
-    cues.append(Cue("mercury3-548", s.bar(1), beat, offset=356.6, seconds=2.6, gain_db=-3.0,
+    cues.append(Cue("mercury3-548", s.bar(1), beat, offset=356.6, text="Fire three, two, one, fire.", seconds=2.6, gain_db=-3.0,
                     radio=True))  # fmt: skip
     cues.append(Cue("static", s.bar(1), 1, seconds=3.6, gain_db=-22.0, seed=9))
-    s.set("eperc", r"<< { e,,\breve\p\< } \\ { es,,1\mf r1 } >> |")
+    s.set("eperc", r"<< { e,,1\p\< ~ | e,,1 } \\ { es,,1\mf | R1 } >> |")
     s.set("sbass", r"d,,1\mp\> ~ | d,,2 r2\! |")
     s.close()
     structure.double_bar(s.section.last_bar)

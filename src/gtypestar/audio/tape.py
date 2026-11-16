@@ -45,6 +45,34 @@ class Cue:
     radio: bool = False  # the narrow band of a radio message (300 to 3400 Hz), with distortion
     fade: float = 0.05  # seconds at the start and at the end
     seed: int = 0
+    text: str = ""  # the words of a voice, for the score
+
+    @property
+    def label(self) -> str:
+        """Return the text of the cue in the score."""
+        name = LABELS.get(self.sound, self.sound)
+        if self.text:
+            name = f"{name}: \u201c{self.text}\u201d"
+        if self.seconds is not None and self.seconds >= 8.0:
+            name += f" ({self.seconds:.0f} seconds)"
+        return name
+
+
+# The names of the sounds in the score.
+LABELS = {
+    "sun": "The Sun: its oscillations, 42 000 times faster",
+    "sun-sonification": "The Sun: recording of the Solar and Heliospheric Observatory",
+    "wind": "Noise: wind of particles",
+    "quindar on": "Radio tone: start of a message",
+    "quindar off": "Radio tone: end of a message",
+    "static": "Radio noise",
+    "telemetry": "Data signal",
+    "mercury3-548": "Voice (Mercury 3, 1961)",
+    "voyager-heliosphere": "Voyager 1: plasma waves outside the heliosphere",
+    "voyager-termination-shock": "Voyager 1: the termination shock",
+    "earth-chorus": "Earth: radio waves of the radiation belts",
+    "cassini-saturn-radio": "Cassini: radio emissions of Saturn",
+}
 
 
 # ----------------------------------------------------------------------------

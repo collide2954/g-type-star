@@ -298,27 +298,32 @@ clef = "bass"
 range = [23, 67]    # 5 strings: B0 to G4
 
 [instrument."bass moog"]
-transposition = 0
+transposition = 12
+score_transposition = 12
 clef = "bass"
 range = [21, 72]
 
 [instrument."bass sub"]
-transposition = 0
+transposition = 12
+score_transposition = 12
 clef = "bass"
 range = [21, 60]
 
 [instrument."bass reese"]
-transposition = 0
+transposition = 12
+score_transposition = 12
 clef = "bass"
 range = [21, 72]
 
 [instrument."bass wobble"]
-transposition = 0
+transposition = 12
+score_transposition = 12
 clef = "bass"
 range = [21, 72]
 
 [instrument."bass growl"]
-transposition = 0
+transposition = 12
+score_transposition = 12
 clef = "bass"
 range = [21, 72]
 

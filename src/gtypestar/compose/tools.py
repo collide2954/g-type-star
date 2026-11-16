@@ -72,6 +72,45 @@ def invert(text: str, axis: str) -> str:
     return _apply(text, mirror)
 
 
+def _last_event(elements: list[music.Element]) -> music.Note | music.Rest | None:
+    for element in reversed(elements):
+        if isinstance(element, music.Note | music.Rest):
+            return element
+        if isinstance(element, music.Group) and element.kind != "grace":
+            children = element.children[-1].children if element.kind == "parallel" else None
+            found = _last_event(children if children is not None else element.children)
+            if found is not None:
+                return found
+    return None
+
+
+def true_ties(bars: list[str | None]) -> list[str | None]:
+    """Remove each tie at the end of a bar that goes to a different pitch.
+
+    A tie holds one pitch. When two bars of a line move by different
+    intervals (a second voice that follows the chords), the last note of a
+    bar and the first note of the next bar can have different pitches. The
+    tie is then wrong: the slur of the phrase connects the two notes.
+    """
+    result: list[str | None] = list(bars)
+    for index, text in enumerate(result):
+        if text is None or "~" not in text:
+            continue
+        parsed = music.parse(text)
+        last = _last_event(parsed.children)
+        if not isinstance(last, music.Note) or not any(post.kind == "tie" for post in last.posts):
+            continue
+        later = result[index + 1] if index + 1 < len(result) else None
+        target = _first_event(music.parse(later).children) if later else None
+        held = isinstance(target, music.Note) and {p.pitch.midi for p in target.pitches} & {
+            p.pitch.midi for p in last.pitches
+        }
+        if not held:
+            last.posts = [post for post in last.posts if post.kind != "tie"]
+            result[index] = music.body_to_lilypond(parsed)
+    return result
+
+
 def times(text: str, count: int) -> str:
     """Return the music repeated a number of times."""
     return " ".join([text.strip()] * count)

@@ -6,6 +6,7 @@ The checks are:
 - A wind instrument plays one note at a time.
 - A wind player must have a rest to breathe.
 - The drummer has two hands and two feet.
+- Each note of the drums and of the drum machine must be a sound that exists.
 
 The synthesizers, the drum machine, and the recorded sounds have no limits:
 a sequencer or the studio plays them.
@@ -16,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from fractions import Fraction
 
+from ..notation import drums
 from ..notation.pitch import from_midi
 from ..notation.work import Work
 from ..perform.events import PerfNote, perform
@@ -25,6 +27,7 @@ BREATH_SECONDS = 0.35  # a rest of this length or more is time to breathe
 LONGEST_BREATH = 18.0  # the longest time with no such rest, in seconds
 FEET = {35, 36, 44}  # the drums that the feet play
 HANDS = 2
+DRUM_TABLES = {"drums": drums.BY_MIDI, "eperc": drums.MACHINE_BY_MIDI}
 
 
 @dataclass(frozen=True)
@@ -65,9 +68,9 @@ def _limb_problems(work: Work, player: str, notes: list[PerfNote]) -> list[Probl
     for note in notes:
         if note.grace == 0:
             moments.setdefault(note.start, []).append(int(note.midi))
-    for start, drums in sorted(moments.items()):
-        hands = [midi for midi in drums if midi not in FEET]
-        feet = [midi for midi in drums if midi in FEET]
+    for start, strokes in sorted(moments.items()):
+        hands = [midi for midi in strokes if midi not in FEET]
+        feet = [midi for midi in strokes if midi in FEET]
         if len(hands) > HANDS or len(feet) > 2:
             text = f"{len(hands)} strokes of the hands and {len(feet)} of the feet at one time"
             problems.append(Problem(player, work.structure.bar_at(start).number, text))
@@ -87,6 +90,11 @@ def check(work: Work) -> list[Problem]:
             problems.extend(_limb_problems(work, player.id, notes))
         for note in notes:
             bar = structure.bar_at(note.start).number
+            if player.id in DRUM_TABLES and int(note.midi) not in DRUM_TABLES[player.id]:
+                text = f"the note {from_midi(note.midi).name} is not a sound of the {player.name}"
+                if (bar, text) not in seen:
+                    seen.add((bar, text))
+                    problems.append(Problem(player.id, bar, text))
             instrument = work.orchestra.instruments.get(note.instrument)
             if instrument is not None and not note.harmonic:
                 name = from_midi(note.midi).name

@@ -56,8 +56,9 @@ def write(work: Work) -> None:
     theme = m.THEME_HIGH + m.THEME_SECOND
     s.set("tsax", theme, r"\ff\normaltone")
     s.set("tpt", theme, r"\ff")
-    s.set("asax", [tools.tr(bar, -3) if n % 4 != 1 else tools.tr(bar, -4)
-                   for n, bar in enumerate(theme)], r"\f")  # fmt: skip
+    second = [tools.tr(bar, -3) if n % 4 != 1 else tools.tr(bar, -4)
+              for n, bar in enumerate(theme)]  # fmt: skip
+    s.set("asax", tools.true_ties(second), r"\f")
     s.set("vn1", [tools.octave(bar, 1) for bar in theme], r"\f")
     low_horns = m.layers(symbols, ["a_____ ______ ____ ______ ______"], ("bsax", "tbn"), "horns2")
     for player, bars in low_horns.items():
@@ -127,7 +128,7 @@ def write(work: Work) -> None:
     s = Bars(work, 12)
     structure.mark(s.bar(1), "U")
     keys = ["Gmaj9", "Bmaj9", "Ebmaj9"]
-    mottos = [r"g'4.(\f\< c''4. ~ c''4 d''4. e''4. ~", r"e''1*7/4\ff)", None, None]
+    mottos = [r"g'4.(\f\< c''4. ~ c''4 d''4. e''4. ~", r"e''1..\ff)", None, None]
     sax, trumpet, drum_bars, bass_bars, key_bars, guitar_bars, pad_bars, sub_bars = (
         [], [], [], [], [], [], [], []
     )  # fmt: skip
@@ -167,7 +168,7 @@ def write(work: Work) -> None:
         s.set(player, tools.first(patterns.join(bars), r"\f\<", note=True))
     s.set(
         "eperc",
-        r"R1*14/8*2 | e,,1*7/4\mf\< ~ | e,,1*7/4 | R1*14/8*2 | e,,1*7/4\mf\< ~ | e,,1*7/4 | R1*14/8*2 | e,,1*7/4\f\< ~ | e,,1*7/4\ff |",
+        r"R1*14/8*2 | e,,1..\mf\< ~ | e,,1.. | R1*14/8*2 | e,,1..\mf\< ~ | e,,1.. | R1*14/8*2 | e,,1..\f\< ~ | e,,1..\ff |",
     )
     s.close()
 
@@ -191,19 +192,19 @@ def write(work: Work) -> None:
         for player, bars in parts.items():
             s.set(player, bars, r"\ff")
     s.set("tsax", [r"a'4.->\ff a'4.-> a'4-> c''4.-> c''4.->", r"d''4.-> d''4.-> e''4-> fis''8-> fis''-> fis''-> fis''-> fis''-> fis''->",
-                   r"g''1*7/4->", r"g''4.-> r4. r4 r4. r4."])  # fmt: skip
+                   r"g''1..->", r"g''4.-> r4. r4 r4. r4."])  # fmt: skip
     for player, low in (("gtr", "<d, a, d>"), ("bass", "d,")):
         end = "<g,, d, g, b,>" if player == "gtr" else "g,,"
         s.set(player, [patterns.pitched(strokes, m.CLAVE, {"a": low}),
                        patterns.pitched(faster, m.CLAVE, {"a": low}),
-                       f"{end}1*7/4->", f"{end}4.-> r4. r4 r4. r4."], r"\ff")  # fmt: skip
+                       f"{end}1..->", f"{end}4.-> r4. r4 r4. r4."], r"\ff")  # fmt: skip
     chord = chords.names(chords.voice(final, 5, low=55, high=84), final)
     sus = chords.names(chords.voice("D13sus", 4, low=55, high=79), "D13sus")
     for player in ("keys.rh", "pad.rh"):
         s.set(player, [patterns.pitched(strokes, m.CLAVE, {"a": sus}),
                        patterns.pitched(faster, m.CLAVE, {"a": sus}),
-                       f"{chord}1*7/4", f"{chord}4.-> r4. r4 r4. r4."], r"\ff")  # fmt: skip
-    s.set("sbass", [None, None, r"g,,1*7/4\ff", r"g,,4. r4. r4 r4. r4."])
+                       f"{chord}1..", f"{chord}4.-> r4. r4 r4. r4."], r"\ff")  # fmt: skip
+    s.set("sbass", [None, None, r"g,,1..\ff", r"g,,4. r4. r4 r4. r4."])
     s.set(
         "chip",
         [
@@ -215,7 +216,7 @@ def write(work: Work) -> None:
     )
     s.set(
         "eperc",
-        r"R1*14/8*2 | << { R1*14/8 } \\ { ges,,1*7/4\ff } >> | << { r4. r4. r4 r4. r4. } \\ { ges,,4.\ff r4. r4 r4. r4. } >> |",
+        r"R1*14/8*2 | << { R1*14/8 } \\ { ges,,1..\ff } >> | << { r4. r4. r4 r4. r4. } \\ { ges,,4.\ff r4. r4 r4. r4. } >> |",
     )
     # After the first pulse of the last bar, the sound stops at once.
     edits.append(Edit("mute", s.bar(4), 2.5, length=5.5, stems=("drums", "gtr", "bass", "keys",

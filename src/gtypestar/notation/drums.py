@@ -26,6 +26,7 @@ class Drum:
     lilypond: str  # the name in the drum mode of LilyPond
     voice: int  # 0 = the hands (stems up), 1 = the feet (stems down)
     ghost: bool = False  # a very soft stroke; the score shows it in brackets
+    text: str = ""  # a text above the note in the score, for the sounds with no usual sign
 
 
 KIT = [
@@ -60,12 +61,12 @@ MACHINE = [
     Drum(42, "machine hat", "hh", 0),
     Drum(46, "machine hat open", "hho", 0),
     Drum(45, "machine tom", "tomml", 0),
-    Drum(56, "zap", "cb", 0),
-    Drum(27, "sub drop", "bda", 1),
-    Drum(28, "riser", "cuim", 0),
-    Drum(29, "downlifter", "cuio", 0),
-    Drum(30, "impact", "tamb", 0),
-    Drum(31, "noise burst", "mar", 0),
+    Drum(56, "zap", "cb", 0, text="zap"),
+    Drum(27, "sub drop", "bda", 1, text="sub drop"),
+    Drum(28, "riser", "cuim", 0, text="noise rises"),
+    Drum(29, "downlifter", "cuio", 0, text="noise falls"),
+    Drum(30, "impact", "tamb", 0, text="impact"),
+    Drum(31, "noise burst", "mar", 0, text="noise"),
 ]
 MACHINE_BY_MIDI = {drum.midi: drum for drum in MACHINE}
 

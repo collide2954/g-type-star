@@ -34,12 +34,30 @@ def write(work: Work) -> None:
         Cue("sun-sonification", s.bar(1), 3, gain_db=-15.0, fade=3.0),
         Cue("wind", s.bar(2), 1, seconds=50.0, gain_db=-20.0, fade=8.0, seed=2),
         Cue("quindar on", s.bar(3), 1, gain_db=-20.0),
-        Cue("mercury3-548", s.bar(3), 1.5, offset=30.5, seconds=1.0, gain_db=-13.0, radio=True),
+        Cue(
+            "mercury3-548",
+            s.bar(3),
+            1.5,
+            offset=30.5,
+            text="Trajectory okay.",
+            seconds=1.0,
+            gain_db=-13.0,
+            radio=True,
+        ),
         Cue("quindar off", s.bar(3), 3.5, gain_db=-20.0),
         Cue("static", s.bar(4), 1, seconds=2.5, gain_db=-24.0, seed=3, pan=-0.5),
         Cue("voyager-heliosphere", s.bar(7), 1, gain_db=-17.0, fade=1.5, pan=0.4),
         Cue("quindar on", s.bar(11), 2, gain_db=-21.0),
-        Cue("mercury3-548", s.bar(11), 2.5, offset=20.5, seconds=0.5, gain_db=-14.0, radio=True),
+        Cue(
+            "mercury3-548",
+            s.bar(11),
+            2.5,
+            offset=20.5,
+            text="Roger.",
+            seconds=0.5,
+            gain_db=-14.0,
+            radio=True,
+        ),
         Cue("quindar off", s.bar(11), 3.5, gain_db=-21.0),
         Cue("earth-chorus", s.bar(13), 1, gain_db=-19.0, fade=1.0, pan=-0.4),
         Cue("telemetry", s.bar(15), 3, seconds=1.2, gain_db=-27.0, pan=0.6),
@@ -111,8 +129,26 @@ def write(work: Work) -> None:
     structure.change(s.bar(1), 1, "accel. poco a poco")
     structure.arrive(s.bar(6), 4, 87.5)
     cues += [
-        Cue("mercury3-548", s.bar(2), 1, offset=33.6, seconds=1.0, gain_db=-13.0, radio=True),
-        Cue("mercury3-548", s.bar(4), 1, offset=50.2, seconds=0.75, gain_db=-12.0, radio=True),
+        Cue(
+            "mercury3-548",
+            s.bar(2),
+            1,
+            offset=33.6,
+            text="One and a half G.",
+            seconds=1.0,
+            gain_db=-13.0,
+            radio=True,
+        ),
+        Cue(
+            "mercury3-548",
+            s.bar(4),
+            1,
+            offset=50.2,
+            text="Two G.",
+            seconds=0.75,
+            gain_db=-12.0,
+            radio=True,
+        ),
         Cue("static", s.bar(5), 1, seconds=6.0, gain_db=-22.0, seed=5),
     ]
     ladder = [
@@ -125,7 +161,7 @@ def write(work: Work) -> None:
     ]
     s.set("drums", [drums.steps(rows, BEATS) for rows in ladder], r"\mp\<")
     # The drum machine: a low tone that falls (bars 1 and 2), and noise that rises (bars 5 and 6).
-    s.set("eperc", r"""<< { R1*4 | e,,\breve\mp\< } \\ { es,,1\mf ~ | es,,1 | R1*4 } >> |""")
+    s.set("eperc", r"""<< { R1*4 | e,,1\mp\< ~ | e,,1 } \\ { es,,1\mf ~ | es,,1 | R1*4 } >> |""")
     s.set(
         "bass",
         r"g,,1\mp\< ~ | g,,1 | g,,2 g,,2 | g,,4 g,,4 g,,4 g,,4 | g,,8\f g,, g,, g,, g,, g,, g,, g,, | <g,, d,>1\ff\fermata |",

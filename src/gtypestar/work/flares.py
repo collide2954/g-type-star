@@ -78,8 +78,8 @@ def write(work: Work) -> None:
     s.set("drums", riff_drums(CELL, 4, "a1") + riff_drums(CELL, 4, "a2"), r"\ff")
     s.set("sbass", m.roots(["F#5"] * 8, "a_____ ______ ____ a_____ ______"), r"\f",
           r'\switch "bass sub"')  # fmt: skip
-    s.set("eperc", r"<< { R1*14/8 } \\ { ges,,1*7/4\f } >> | R1*14/8*7 |")
-    cues.append(Cue("mercury3-548", s.bar(1), 1, offset=72.1, seconds=1.9, gain_db=-11.0,
+    s.set("eperc", r"<< { R1*14/8 } \\ { ges,,1..\f } >> | R1*14/8*7 |")
+    cues.append(Cue("mercury3-548", s.bar(1), 1, offset=72.1, text="Roger. Two and a half G.", seconds=1.9, gain_db=-11.0,
                     radio=True, pan=-0.3))  # fmt: skip
     s.close()
 
@@ -191,7 +191,7 @@ def write(work: Work) -> None:
          r"as'4.( des''4. ~ des''4 es''4. f''4. ~", r"f''4. ~ f''4. ~ f''4 ~ f''4.) r4.",
          r"a'4.( d''4. ~ d''4 e''4. fis''4. ~", r"fis''4. ~ fis''4.) r4 g''4.\ff ~ g''4."],
     )  # fmt: skip
-    s.set("eperc", r"R1*14/8*6 | e,,1*7/4\mf\< ~ | e,,1*7/4\f |")
+    s.set("eperc", r"R1*14/8*6 | e,,1..\mf\< ~ | e,,1..\f |")
     s.close()
 
     # ------------------------------------------------- the mass leaves the Sun
@@ -201,7 +201,7 @@ def write(work: Work) -> None:
         "gtr",
         [patterns.pitched("A_____ A_____ A___ A_____ A_____", m.CLAVE, {"a": "<bes,, f, bes,>"}),
          patterns.pitched("A__A__ A__A__ A_A_ AAAAAA AAAAAA", m.CLAVE, {"a": "<bes,, f, bes,>"}),
-         r"<bes,, f, bes, d>1*7/4\ff ~", r"<bes,, f, bes, d>1*7/4"],
+         r"<bes,, f, bes, d>1..\ff ~", r"<bes,, f, bes, d>1.."],
         r"\ff",
     )  # fmt: skip
     del pulses
@@ -209,7 +209,7 @@ def write(work: Work) -> None:
         "bass",
         [patterns.pitched("A_____ A_____ A___ A_____ A_____", m.CLAVE, {"a": "bes,,"}),
          patterns.pitched("A__A__ A__A__ A_A_ AAAAAA AAAAAA", m.CLAVE, {"a": "bes,,"}),
-         r"bes,,1*7/4\ff ~", r"bes,,1*7/4"],
+         r"bes,,1..\ff ~", r"bes,,1.."],
     )  # fmt: skip
     s.set(
         "drums",
@@ -232,11 +232,11 @@ def write(work: Work) -> None:
     for player, bars in strings.items():
         s.set(player, bars, r"\ff")
     s.set("tsax", [r"f''4.->\ff f''4.-> f''4-> f''4.-> f''4.->", r"f''4.-> f''4.-> f''4-> g''4. ~ g''4.",
-                   r"as''1*7/4 ~", r"as''1*7/4"])  # fmt: skip
+                   r"as''1.. ~", r"as''1.."])  # fmt: skip
     s.set("pad.rh", m.pad_bars(chord, low=58, high=82), r"\ff")
     s.set("keys.rh", m.pad_bars(chord), r"\ff")
-    s.set("sbass", [None, None, r"bes,,1*7/4\ff ~", r"bes,,1*7/4"])
-    s.set("eperc", r"R1*14/8*2 | << { R1*14/8 } \\ { ges,,1*7/4\ff } >> | R1*14/8 |")
+    s.set("sbass", [None, None, r"bes,,1..\ff ~", r"bes,,1.."])
+    s.set("eperc", r"R1*14/8*2 | << { R1*14/8 } \\ { ges,,1..\ff } >> | R1*14/8 |")
     # The "tape" stops: all sound slows down in the last bar.
     edits.append(Edit("tapestop", s.bar(4), 1, length=7.0, stems=("",)))
     s.close()

@@ -79,7 +79,7 @@ def write(work: Work) -> None:
     )  # fmt: skip
     # The drum machine: a kick on each pulse (bars 1 to 4), then noise that rises (bars 7 and 8).
     four = drums.steps("mk  x----- x----- x--- x----- x-----", m.CLAVE)
-    riser = r"e,,1*7/4 ~ e,,4. ~ e,,4. ~ e,,4 ~ e,,4. r4."
+    riser = r"e,,1.. ~ | e,,4. ~ e,,4. ~ e,,4 ~ e,,4. r4."
     s.set("eperc", patterns.join([four] * 6) + " " + riser + " |", r"\mp")
     edits.append(
         Edit("lowpass", s.bar(1), 1, length=7 * 8 - 1.5, stems=("drums", "bass", "gtr", "keys",
@@ -88,7 +88,7 @@ def write(work: Work) -> None:
     # "Two, one, fire. Lift off." The word "fire" is on the first beat of the next bar.
     fire = 2.43 - 0.7  # seconds from the start of the part of the recording to the word
     beat = 1 + 7 - fire * m.FAST / 60.0
-    cues.append(Cue("mercury3-548", s.bar(8), beat, offset=0.7, seconds=3.7, gain_db=-7.0,
+    cues.append(Cue("mercury3-548", s.bar(8), beat, offset=0.7, text="Two, one, fire. Lift off.", seconds=3.7, gain_db=-7.0,
                     radio=True))  # fmt: skip
     s.close()
 
@@ -119,7 +119,7 @@ def write(work: Work) -> None:
         shape = ["abcdec abcdec abcd ecabcd ecabcd", "edcbae dcbaed cbae dcbaed cbaedc"][number % 2]
         arps.append(patterns.pitched(shape, m.CLAVE, table))
     s.set("chip", arps, r"\mf", r'\switch "chip pulse"')
-    impact = r"<< { r4. bes,,4.\mf r4 r4. bes,,4. } \\ { ges,,1*7/4\f } >>"
+    impact = r"<< { r4. es,4.\mf r4 r4. es,4. } \\ { ges,,1..\f } >>"
     claps = drums.steps("ms  ------ c----- ---- ------ c-----", m.CLAVE)
     s.set("eperc", patterns.join([impact] + [claps] * 7))
     s.close()

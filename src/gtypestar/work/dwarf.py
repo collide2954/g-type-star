@@ -62,11 +62,11 @@ def write(work: Work) -> None:
     )  # fmt: skip
     s.set(
         "vn1",
-        r"d''''1*7/4\pp\sultasto ~ | d''''1*7/4 ~ | d''''1*7/4 ~ | d''''1*7/4 ~ | d''''1*7/4 ~ | d''''1*7/4 ~ | d''''1*7/4 ~ | d''''1*7/4\> ~ | d''''1*7/4 ~ | d''''1*7/4 ~ | d''''1*7/4 ~ | d''''1*7/4\ppp |",
+        r"d''''1..\pp\sultasto ~ | d''''1.. ~ | d''''1.. ~ | d''''1.. ~ | d''''1.. ~ | d''''1.. ~ | d''''1.. ~ | d''''1..\> ~ | d''''1.. ~ | d''''1.. ~ | d''''1.. ~ | d''''1..\ppp |",
     )
     s.set(
         "vn2",
-        r"g'''1*7/4\pp\sultasto ~ | g'''1*7/4 ~ | g'''1*7/4 ~ | g'''1*7/4 ~ | g'''1*7/4 ~ | g'''1*7/4 ~ | g'''1*7/4 ~ | g'''1*7/4\> ~ | g'''1*7/4 ~ | g'''1*7/4 ~ | g'''1*7/4 ~ | g'''1*7/4\ppp |",
+        r"g'''1..\pp\sultasto ~ | g'''1.. ~ | g'''1.. ~ | g'''1.. ~ | g'''1.. ~ | g'''1.. ~ | g'''1.. ~ | g'''1..\> ~ | g'''1.. ~ | g'''1.. ~ | g'''1.. ~ | g'''1..\ppp |",
     )
     s.set("pad.rh", m.pad_bars(symbols, low=67, high=91), r"\pp", r'\switch "pad glass"')
     cues += [
@@ -101,7 +101,16 @@ def write(work: Work) -> None:
     cues += [
         Cue("static", s.bar(6), 1, seconds=14.0, gain_db=-27.0, fade=4.0, seed=13),
         Cue("quindar on", s.bar(9), 1, gain_db=-22.0),
-        Cue("mercury3-548", s.bar(9), 1.6, offset=20.55, seconds=0.5, gain_db=-12.0, radio=True),
+        Cue(
+            "mercury3-548",
+            s.bar(9),
+            1.6,
+            offset=20.55,
+            text="Roger.",
+            seconds=0.5,
+            gain_db=-12.0,
+            radio=True,
+        ),
         Cue("quindar off", s.bar(9), 3, gain_db=-22.0),
     ]
     s.close()

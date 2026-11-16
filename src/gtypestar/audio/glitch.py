@@ -45,6 +45,29 @@ class Edit:
     hold: int = 6  # crush: each sample is held for this number of samples
     share: float = 0.5  # gate: the open share of each piece
 
+    @property
+    def label(self) -> str:
+        """Return the text of the edit in the score."""
+        values = {4.0: "whole", 2.0: "half", 1.0: "quarter", 0.5: "eighth", 0.25: "sixteenth",
+                  0.125: "thirty-second"}  # fmt: skip
+        piece = values.get(float(self.slice), f"{float(self.slice):g} quarter")
+        if self.kind == "stutter":
+            text = f"Repeat one {piece} note"
+            if self.pitch:
+                text += f", the pitch goes {'up' if self.pitch > 0 else 'down'}"
+        elif self.kind == "gate":
+            text = f"Cut the sound in {piece} notes"
+        elif self.kind == "crush":
+            text = f"Low resolution ({self.bits:g} bits)"
+        elif self.kind in ("lowpass", "highpass"):
+            name = "Low-pass" if self.kind == "lowpass" else "High-pass"
+            text = f"{name} filter, {self.start:.0f} Hz to {self.end:.0f} Hz"
+        else:
+            text = {"tapestop": "Tape stop", "reverse": "Reverse", "mute": "Silence"}[self.kind]
+        if self.stems != ("",):
+            text += " (" + ", ".join(self.stems) + ")"
+        return f"{text}, {float(self.length):g} quarter notes"
+
 
 def _matches(name: str, edit: Edit) -> bool:
     return any(name.startswith(prefix) for prefix in edit.stems)
