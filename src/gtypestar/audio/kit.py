@@ -37,6 +37,7 @@ from pathlib import Path
 import numpy as np
 import soundfile
 import soxr
+from scipy import signal
 
 from ..perform.feel import Event
 from . import dsp, sfzkit
@@ -75,6 +76,10 @@ class KitSpec:
     # The recordings of such a kit have one level for all forces of a stroke:
     # the amplitude of a stroke is its loudness (0 to 1) to this power.
     power_curve: float = 0.0
+    # Filters for a group of microphones (the rows of `console.filters`): they bring the
+    # tone of the group near the tone of the same group of the CrocellKit, because the
+    # channel strips of the mixer are made for that kit.
+    tone: dict[str, tuple] = field(default_factory=dict)
 
 
 CROCELL = KitSpec(
@@ -188,6 +193,17 @@ NAKED = KitSpec(
           "tom 5": 41},
     channels_db={"Far Rooms L": -6.0, "Far Rooms R": -6.0},
     power_curve=1.1,
+    # Measured against the CrocellKit on bars 87 to 102 (the same strokes): this kit has
+    # 7 to 9 dB more level from 180 Hz to 1.4 kHz in the kick drum, 6 to 9 dB less below
+    # 180 Hz in the snare drum, and 5 to 9 dB more above 5.6 kHz in all cymbal microphones.
+    tone={
+        "kick": (("bell", 60.0, 3.0, 1.0), ("bell", 500.0, -7.0, 0.6),
+                 ("high shelf", 5000.0, -6.0)),
+        "snare": (("low shelf", 180.0, 5.0),),
+        "cymbals": (("high shelf", 2000.0, -7.0),),
+        "overheads": (("bell", 250.0, -6.0, 0.9), ("high shelf", 6000.0, -6.0)),
+        "room": (("high shelf", 6000.0, -4.0),),
+    },
 )  # fmt: skip
 SFZ_SWITCH = 12  # the key switch of the kit for hi-hat strokes with a fixed opening
 KITS = {"crocell": CROCELL, "drs": DRS, "naked": NAKED}
@@ -426,4 +442,10 @@ def render(
             stems[group][first : first + length, 1] += part * right
     for group, level in spec.mics_db.items():
         stems[group] *= np.float32(dsp.db(level))
+    if spec.tone:
+        from .console import filters
+
+        for group, rows in spec.tone.items():
+            shaped = signal.sosfilt(np.vstack(filters(rows)), stems[group], axis=0)
+            stems[group] = shaped.astype(np.float32)
     return stems
