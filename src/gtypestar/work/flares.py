@@ -525,13 +525,17 @@ def write(work: Work) -> None:
     octaves[16] = tools.first(octaves[16], r"\f", note=True)
     s.set("keys.lh", octaves, r"\mf")
     heavy = riff(RIFF_SOLO_3, guitar_table("c,"))
+    # The solo and the first turn sound one octave lower than they were written at
+    # first: the highest octave of the guitar is thin, and the owner wants a full sound.
+    turn_1 = [tools.octave(bar, -1) for bar in GUITAR_TURN_1]
     turns = [
         tools.first(heavy[0], r"\ff\highgain", note=True), heavy[1],
-        tools.first(GUITAR_TURN_1[0], r"\leadtone\pmoff", note=True), GUITAR_TURN_1[1],
+        tools.first(turn_1[0], r"\leadtone\pmoff", note=True), turn_1[1],
         tools.first(heavy[4], r"\highgain", note=True), heavy[5],
         tools.first(GUITAR_TURN_2[0], r"\leadtone\pmoff", note=True), GUITAR_TURN_2[1],
     ]  # fmt: skip
-    s.set("gtr", SOLO_1 + SOLO_2 + turns, r"\f\leadtone\pmoff")
+    solo = [tools.octave(bar, -1) for bar in SOLO_1 + SOLO_2]
+    s.set("gtr", solo + turns, r"\f\leadtone\pmoff")
     s.set("tsax", [None] * 11 + [r"r2 r8 e8->\f e-> r", None, None, None,
                                  r"r2 bes,8->\ff bes,-> b,-> b,->",
                                  tools.first(SAX_TURN_1[0], r"\ff", note=True), SAX_TURN_1[1],

@@ -145,8 +145,8 @@ MODELS = {
         "b34b371d093faf5631e0e9c340e1600f95af043bb1e73cfd028ba775e228b1df",
     "Phillipe P Bug333-Clean-Cab-ESR0,007.nam":
         "684fc395e606ed46ab0af128189e02b0f769af872df9ec8bc7a046a340b12f95",
-    "Phillipe P Bug333-Lead-NoDrive-Cab-ESR0,007.nam":
-        "8130669434bcf1e3a05843ae7f9f4144abfff64c2555b264b1dd893bd3b646cf",
+    "Phillipe P JVM-OD2-RD-NoDrive-Cab-ESR0,006.nam":
+        "46d41f2dbde33d443ab4a2ef76d2782ea7609a778c4af0305f1f257f8cdcf4a9",
 }  # fmt: skip
 # The guitar library METAL-GTX of Unreal Instruments (a file on Google Drive, linked from
 # https://unreal-instruments.wixsite.com/unreal-instruments/metal-gtx).

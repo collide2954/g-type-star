@@ -16,6 +16,7 @@ Sources of sound:
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -26,7 +27,7 @@ from . import amp, banks, drumsynth, dsp, dubstep, effects, guitar, kernels, pat
 
 RATE = dsp.RATE
 CACHE_DIR = Path(".cache/render")
-VERSION = 12  # a change of this number makes all kept stems invalid
+VERSION = 13  # a change of this number makes all kept stems invalid
 PHRASE_GAP = 0.03  # a line with a rest longer than this starts a new phrase (seconds)
 
 
@@ -313,6 +314,8 @@ def render_machine(events: list[Event], seconds: float) -> np.ndarray:
 # ----------------------------------------------------------------------------
 
 AMPS = {"clean": amp.CLEAN, "crunch": amp.CRUNCH, "high gain": amp.HIGH_GAIN, "lead": amp.LEAD}
+LEAD_ECHO_SECONDS = 0.257  # an eighth note with a dot at 175 quarter notes in a minute
+LEAD_ECHO_DB = -15.0
 
 
 def _string_notes(events: list[Event], shift: float = 0.0, seed: int = 0) -> list[amp.StringNote]:
@@ -402,9 +405,14 @@ def render_guitar(events: list[Event], seconds: float) -> np.ndarray:
                         wet = _clean_level(wet)
                     canvas.add(0.0, effects.pan(wet, side_place * (2 * side - 1)))
             else:
-                dry = guitar.direct(_strokes(group), seconds, 0, 5)
-                wet = guitar.amplify(dry, tone)[: len(canvas.data)]
-                canvas.add(0.0, effects.stereo(wet) * 1.41)
+                # The lead tone: one guitar in the centre, a wider vibrato on its long
+                # notes, and soft echoes on the two sides.
+                lead = [replace(stroke, vibrato=1.7 * stroke.vibrato) for stroke in _strokes(group)]
+                dry = guitar.direct(lead, seconds, 0, 5)
+                wet = effects.stereo(guitar.amplify(dry, tone)[: len(canvas.data)]) * 1.41
+                canvas.add(0.0, wet)
+                echoes = effects.delay(wet, LEAD_ECHO_SECONDS, 0.32, damping=0.6)
+                canvas.add(0.0, echoes[: len(canvas.data)] * dsp.db(LEAD_ECHO_DB))
         return canvas.data
     for tone, group in by_tone.items():
         settings = AMPS[tone]

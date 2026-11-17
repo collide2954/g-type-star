@@ -91,6 +91,7 @@ ROWS: dict[str, dict[str, int]] = {
     "mt": {"t": 45, "z": 56, "n": 31},  # tom, zap, noise burst
 }
 FEET_ROWS = {"bd", "mk"}
+CYMBAL_ROWS = {"hh", "rd", "cy", "mh"}
 REST = "-."
 
 
@@ -109,8 +110,8 @@ def _length_text(steps: int, unit: Fraction) -> list[str] | None:
     return [value] if value else None
 
 
-POWERS = [Fraction(1), Fraction(1, 2), Fraction(1, 4), Fraction(1, 8), Fraction(1, 16),
-          Fraction(1, 32)]  # fmt: skip
+POWERS = [Fraction(4), Fraction(2), Fraction(1), Fraction(1, 2), Fraction(1, 4), Fraction(1, 8),
+          Fraction(1, 16), Fraction(1, 32)]  # fmt: skip
 
 
 def division(pulse: Fraction, count: int) -> tuple[Fraction, int]:
@@ -139,8 +140,10 @@ def _pulse_text(columns: list[list[tuple[int, bool]]], pulse: Fraction) -> str:
     while index < count:
         strokes = columns[index]
         run = 1
-        # In a plain division, a stroke or a rest takes the empty steps after it.
-        while not normal and index + run < count and not columns[index + run]:
+        # A stroke or a rest takes the empty steps after it, if a note value has that
+        # length: in a group of 11 notes, the strokes 2 + 2 + 3 + 2 + 2 are four eighth
+        # notes and one eighth note with a dot.
+        while index + run < count and not columns[index + run]:
             if _length_text(run + 1, written) is None:
                 break
             run += 1
@@ -187,40 +190,73 @@ def steps(pattern: str, pulses: tuple[int, ...] | list[int], unit: int = 8) -> s
         if len(groups) != len(pulses):
             raise ValueError(f"row {name}: {len(groups)} groups for {len(pulses)} pulses")
         rows[name] = groups
-    voices = []
-    for feet in (False, True):
-        texts = []
-        used = False
-        for number, length in enumerate(pulses):
-            pulse = Fraction(4 * length, unit)
-            sizes = {len(groups[number]) for name, groups in rows.items()
-                     if (name in FEET_ROWS) == feet}  # fmt: skip
-            if not sizes:
-                sizes = {1}
-            count = 1
-            for size in sizes:
-                count = count * size // _gcd(count, size)
-            columns: list[list[tuple[int, bool]]] = [[] for _ in range(count)]
-            for name, groups in rows.items():
-                if (name in FEET_ROWS) != feet:
+    # The voices of the bar. Usually: the hands, and the feet. The rows of one voice
+    # must agree in each pulse: the division of one row is a multiple of the others.
+    # If the cymbals and the drums of the hands do not agree (11 cymbal notes against 4
+    # snare notes), the cymbals get their own voice and the snare drum goes to the feet.
+    cymbals = [name for name in rows if name in CYMBAL_ROWS]
+    hands = [name for name in rows if name not in CYMBAL_ROWS and name not in FEET_ROWS]
+    feet = [name for name in rows if name in FEET_ROWS]
+    if _agree(rows, cymbals + hands):
+        layout = [cymbals + hands, feet]
+    elif _agree(rows, hands + feet):
+        layout = [cymbals, hands + feet]
+    else:
+        layout = [cymbals, hands, feet]
+    texts = [_voice_text(rows, names, pulses, unit) for names in layout]
+    used = [text for text in texts if text is not None]
+    if not used:
+        return _voice_text(rows, list(rows), pulses, unit, keep_empty=True) or ""
+    if len(used) == 1:
+        return used[0]
+    return "<< " + " \\\\ ".join(f"{{ {text} }}" for text in used) + " >>"
+
+
+def _sizes(rows: dict[str, list[str]], names: list[str], number: int) -> set[int]:
+    """Return the divisions of one pulse in the rows that have a stroke there."""
+    return {
+        len(rows[name][number])
+        for name in names
+        if any(letter not in REST for letter in rows[name][number])
+    }
+
+
+def _agree(rows: dict[str, list[str]], names: list[str]) -> bool:
+    """Return True if the rows fit in one voice: in each pulse one grid has all strokes."""
+    if not names:
+        return True
+    for number in range(len(rows[names[0]])):
+        sizes = _sizes(rows, names, number)
+        if sizes and any(max(sizes) % size for size in sizes):
+            return False
+    return True
+
+
+def _voice_text(
+    rows: dict[str, list[str]], names: list[str], pulses, unit: int, keep_empty: bool = False
+) -> str | None:
+    """Return the music text of one voice for one bar, or None if the voice has no stroke."""
+    texts = []
+    used = False
+    for number, length in enumerate(pulses):
+        pulse = Fraction(4 * length, unit)
+        count = 1
+        # A row with no stroke in this pulse does not change the grid of the pulse.
+        for size in _sizes(rows, names, number):
+            count = count * size // _gcd(count, size)
+        columns: list[list[tuple[int, bool]]] = [[] for _ in range(count)]
+        for name in names:
+            group = rows[name][number]
+            for place, letter in enumerate(group):
+                if letter in REST:
                     continue
-                group = groups[number]
-                for place, letter in enumerate(group):
-                    if letter in REST:
-                        continue
-                    midi = ROWS[name].get(letter.lower())
-                    if midi is None:
-                        raise ValueError(f"row {name}: unknown letter {letter!r}")
-                    columns[place * count // len(group)].append((midi, letter.isupper()))
-                    used = True
-            texts.append(_pulse_text(columns, pulse))
-        voices.append((" ".join(texts), used))
-    hands, feet_text = voices
-    if not feet_text[1]:
-        return hands[0]
-    if not hands[1]:
-        return feet_text[0]
-    return f"<< {{ {hands[0]} }} \\\\ {{ {feet_text[0]} }} >>"
+                midi = ROWS[name].get(letter.lower())
+                if midi is None:
+                    raise ValueError(f"row {name}: unknown letter {letter!r}")
+                columns[place * count // len(group)].append((midi, letter.isupper()))
+                used = True
+        texts.append(_pulse_text(columns, pulse))
+    return " ".join(texts) if used or keep_empty else None
 
 
 def _gcd(first: int, second: int) -> int:

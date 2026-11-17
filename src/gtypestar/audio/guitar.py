@@ -26,7 +26,7 @@ Amplifier models: the collection https://github.com/pelennor2170/NAM_models
 from __future__ import annotations
 
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -60,6 +60,7 @@ class Rig:
     push_db: float
     output_db: float
     post: tuple[tuple, ...] = ()
+    tone_hz: float = 0.0  # the tone control of the guitar: a low-pass filter before the amplifier
 
 
 # The captured cabinet has much level near 130 Hz and from 3 to 5 kHz, and less in the
@@ -72,6 +73,11 @@ HEAVY_POST = (
     ("bell", 4000.0, -6.0, 1.0),
     ("high shelf", 6000.0, -2.0),
 )
+LEAD_POST = (
+    ("bell", 500.0, 4.0, 0.6),
+    ("bell", 3500.0, -8.0, 0.9),
+    ("lowpass", 4800.0, 4),
+)
 RIGS = {
     "high gain": Rig("Phillipe_P_Bugera6262-Lead-NoDrive-Cab-ESR0.009.nam", -8.0, 110.0, 6.0,
                      9.5, HEAVY_POST),
@@ -79,14 +85,26 @@ RIGS = {
                   HEAVY_POST),
     "clean": Rig("Phillipe_P_Bug333-Clean-Cab-ESR0.007.nam", -12.0, 70.0, 0.0, 2.5,
                  (("bell", 3600.0, -4.0, 1.0),)),
-    "lead": Rig("Phillipe_P_Bug333-Lead-NoDrive-Cab-ESR0.007.nam", -8.0, 120.0, 6.0, 9.1,
-                HEAVY_POST),
+    # The lead tone: full in the middle, with no sharp top. The owner: "I really just
+    # want a nice full bodied sound from the guitar that shreds in a jazz metal way."
+    # The tone control of the guitar is turned down before the amplifier (less
+    # distortion of the high partials), and the filters after it cut near 3.5 kHz.
+    "lead": Rig("Phillipe_P_JVM-OD2-RD-NoDrive-Cab-ESR0.006.nam", -8.0, 90.0, 4.0, 11.5,
+                LEAD_POST, tone_hz=2200.0),
 }  # fmt: skip
 
 FAST = 0.22  # seconds: notes that follow faster than this get up and down strokes in turn
 STRUM = 0.006  # seconds between the strings of a chord
 CUT = 0.02  # seconds: the end of a note that the hand stops
-SKIP_ATTACK = 0.028  # seconds: a note that the left hand starts has no stroke of the pick
+# A note that the left hand starts (hammer-on, pull-off) has no stroke of the pick. As in
+# the hammer-on patch of the library, it starts inside the recording, where the string
+# rings with no sound of the pick, and its pitch comes from the note before it.
+LEGATO_START = 0.55  # seconds into the recording
+LEGATO_RISE = 0.007
+LEGATO_GLIDE = 0.03
+LEGATO_LEVEL = 0.85  # the level of such a note against a note with a stroke
+OVERLAP = 0.012  # seconds: a note of a line rings on into the start of the next note
+JOIN = 0.05  # seconds: a gap shorter than this between two notes of a line is closed
 
 
 def available() -> bool:
@@ -163,13 +181,22 @@ def _one(stroke: Stroke, down: bool, take: int, side: int) -> np.ndarray:
     length = int(min(max(stroke.seconds, 0.03), LONGEST) * RATE)
     if stroke.dead:
         length = min(length, int(0.07 * RATE))
-    begin = int(SKIP_ATTACK * RATE) if stroke.hammer else 0
+    begin = 0
+    level = 1.0
+    if stroke.hammer and kind == "Sus" and len(sound) > int((LEGATO_START + 0.3) * RATE):
+        begin = int(LEGATO_START * RATE)
+        # The string is softer there than at its start: bring it to the level of a stroke.
+        window = RATE // 10
+        early = float(np.sqrt(np.mean(sound[RATE // 30 : RATE // 30 + window] ** 2)))
+        late = float(np.sqrt(np.mean(sound[begin : begin + window] ** 2)))
+        level = LEGATO_LEVEL * min(6.0, early / max(late, 1e-6))
     piece = sound[begin : begin + length + RATE // 4].copy()
     # The pitch: a slide into the note, a bend, a vibrato, and the part of a semitone.
     cents = np.full(len(piece), 100.0 * (stroke.midi - midi))
     time = np.arange(len(piece)) / RATE
     if stroke.slide_from is not None:
-        cents += 100.0 * (stroke.slide_from - stroke.midi) * np.clip(1.0 - time / 0.07, 0.0, 1.0)
+        glide = LEGATO_GLIDE if stroke.hammer else 0.07
+        cents += 100.0 * (stroke.slide_from - stroke.midi) * np.clip(1.0 - time / glide, 0.0, 1.0)
     if stroke.bend:
         knots = np.linspace(0.0, max(stroke.seconds, 0.05), len(stroke.bend))
         cents += 100.0 * np.interp(time, knots, stroke.bend)
@@ -180,15 +207,13 @@ def _one(stroke: Stroke, down: bool, take: int, side: int) -> np.ndarray:
         piece = _bent(piece, cents)
     piece = piece[:length]
     if stroke.hammer:
-        rise = min(len(piece), int(0.008 * RATE))
+        rise = min(len(piece), int(LEGATO_RISE * RATE))
         piece[:rise] *= np.linspace(0.0, 1.0, rise, dtype=np.float32)
     fade = min(len(piece), int(CUT * RATE))
     piece[-fade:] *= np.linspace(1.0, 0.0, fade, dtype=np.float32)
     # A soft stroke is 14 dB under a hard stroke. (The library has one loudness.)
     gain = 10.0 ** ((float(np.clip(stroke.level, 0.0, 1.0)) - 1.0) * 14.0 / 20.0)
-    if stroke.hammer:
-        gain *= 0.8
-    return piece * np.float32(gain)
+    return piece * np.float32(gain * level)
 
 
 def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> np.ndarray:
@@ -209,6 +234,19 @@ def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> n
             chords[-1].append(stroke)
         else:
             chords.append([stroke])
+    # A line of single notes: a note rings to the start of the next note (no gap between
+    # the notes of a line), and a note that the left hand starts gets its pitch from the
+    # note before it.
+    for index in range(len(chords) - 1):
+        now, later = chords[index], chords[index + 1]
+        if len(now) != 1 or len(later) != 1 or now[0].mute or now[0].dead:
+            continue
+        gap = later[0].start - (now[0].start + now[0].seconds)
+        if later[0].hammer or gap < JOIN:
+            now[0] = replace(now[0], seconds=later[0].start - now[0].start + OVERLAP)
+        if later[0].hammer and later[0].slide_from is None:
+            step = float(np.clip(now[0].midi - later[0].midi, -3.0, 3.0))
+            later[0] = replace(later[0], slide_from=later[0].midi + step)
     last_take: dict[tuple[int, bool], int] = {}
     previous_start = -10.0
     down = False
@@ -238,6 +276,8 @@ def amplify(dry: np.ndarray, tone: str) -> np.ndarray:
     filters = [dsp.highpass(rig.low_cut, 2)]
     if rig.push_db:
         filters.append(dsp.peaking(800.0, rig.push_db, 0.7))
+    if rig.tone_hz:
+        filters.append(dsp.lowpass(rig.tone_hz, 2))
     shaped = signal.sosfilt(np.vstack(filters), dry.astype(np.float64)) * dsp.db(rig.input_db)
     wet = nam.load(str(MODELS_DIR / rig.model)).play(shaped.astype(np.float32))
     if rig.post:

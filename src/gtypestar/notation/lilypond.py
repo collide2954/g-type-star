@@ -392,6 +392,62 @@ def _with_clefs(
     return elements
 
 
+# A crescendo or a decrescendo with no written end goes on to the next dynamic mark. If
+# the player has a rest of this length (in quarter notes) or more before that mark, the
+# sign ends at the rest: a crescendo through bars of rest has no meaning.
+HAIRPIN_REST = Fraction(2)
+
+
+def end_hairpins(elements: list[music.Element], is_open: bool = False) -> list[music.Element]:
+    """Return the music with an end for each crescendo that would go through a long rest."""
+    result, _state = _end_hairpins(elements, is_open)
+    return result
+
+
+def _end_hairpins(elements: list[music.Element], is_open: bool) -> tuple[list[music.Element], bool]:
+    result: list[music.Element] = []
+    for index, element in enumerate(elements):
+        marked = isinstance(element, music.Note | music.Rest) and any(
+            post.kind in _DYNAMIC_KINDS for post in element.posts
+        )
+        if is_open and not marked and isinstance(element, music.Rest) and element.kind != "s":
+            # The rests that follow with no note between them count as one rest.
+            total = Fraction(0)
+            full_bar = False
+            for later in elements[index:]:
+                if isinstance(later, music.Rest) and later.kind != "s":
+                    total += later.duration
+                    full_bar = full_bar or later.kind == "R"
+                elif not isinstance(later, music.BarCheck | music.Command):
+                    break
+            if full_bar or total >= HAIRPIN_REST:
+                end = music.Post("hairpin", "\\!", "!")
+                element = replace(element, posts=[*element.posts, end])
+                is_open = False
+        if isinstance(element, music.Note | music.Rest):
+            for post in element.posts:
+                if post.kind == "hairpin":
+                    is_open = post.value in "<>"
+                elif post.kind == "dynamic":
+                    is_open = False
+        elif isinstance(element, music.Group):
+            if element.kind == "parallel":
+                # Each voice has its own signs. The first voice goes on after the group.
+                voices = []
+                after = is_open
+                for number, child in enumerate(element.children):
+                    children, state = _end_hairpins(child.children, is_open)
+                    voices.append(replace(child, children=children))
+                    if number == 0:
+                        after = state
+                element, is_open = replace(element, children=voices), after
+            else:
+                children, is_open = _end_hairpins(element.children, is_open)
+                element = replace(element, children=children)
+        result.append(element)
+    return result, is_open
+
+
 def _emitter(work: Work, player: Player, *, for_part: bool) -> _Emitter:
     """Return the writer for the music of a player."""
     emitter = _Emitter(work, for_part, left_hand=player.id.endswith(".lh"))
@@ -409,8 +465,9 @@ def _player_music(work: Work, player: Player, *, for_part: bool) -> str:
     emitter.set_instrument(instrument)
     chunks = [chunk for _first_bar, chunk in work.chunks.get(player.id, [])]
     if emitter.drums:
-        return drum_music(emitter, [element for chunk in chunks for element in chunk.children])
-    return emitter.emit(_with_clefs(work, player, chunks, emitter, instrument))
+        elements = [element for chunk in chunks for element in chunk.children]
+        return drum_music(emitter, end_hairpins(elements))
+    return emitter.emit(end_hairpins(_with_clefs(work, player, chunks, emitter, instrument)))
 
 
 # ----------------------------------------------------------------------------
@@ -1264,7 +1321,7 @@ def video_file(work: Work, index: int, staff_size: float, *, mobile: bool = Fals
         emitter = _emitter(work, player, for_part=False)
         instrument = _instrument_at(work, player, index)
         emitter.set_instrument(instrument)
-        children = work.chunks[player.id][index][1].children
+        children = end_hairpins(work.chunks[player.id][index][1].children)
         if player.instruments[0] == TAPE:
             body = tape_music(work, first, last)
         elif emitter.drums:
