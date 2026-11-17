@@ -68,7 +68,11 @@ def write_audio(audio, directory: Path, name: str) -> list[Path]:
 
 
 def build_audio(
-    bars: tuple[int, int] | None, muse: bool | None, name: str | None, export: bool = False
+    bars: tuple[int, int] | None,
+    muse: bool | None,
+    name: str | None,
+    export: bool = False,
+    parts: tuple[int, int] | None = None,
 ) -> Path:
     """Render the audio master, or an excerpt of it. Return the path of the FLAC file.
 
@@ -78,7 +82,7 @@ def build_audio(
     from .work import build
 
     export_to = BUILD_DIR / "stems" if export and bars is None else None
-    audio, report = render.render(build(), bars, muse=muse, export_to=export_to)
+    audio, report = render.render(build(), bars, muse=muse, export_to=export_to, only=parts)
     if export_to is not None:
         print(f"stems: {export_to}")
     name = name or (NAME if bars is None else f"excerpt-{bars[0]}-{bars[1]}")
@@ -220,6 +224,11 @@ def main(argv: list[str] | None = None) -> int:
         help="do not use MuseScore: synthesizer patches play the wind and string parts",
     )
     parser.add_argument(
+        "--parts",
+        metavar="FIRST-LAST",
+        help="a test of the full render: only its parts inside these bars (command: audio)",
+    )
+    parser.add_argument(
         "--export-stems",
         action="store_true",
         help="write the stems of the full work into build/stems (command: audio)",
@@ -270,7 +279,11 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "parts":
         build_pdfs(parts=True)
     elif args.command == "audio":
-        build_audio(bars, muse, args.name, args.export_stems)
+        parts = None
+        if args.parts:
+            first, _, last = args.parts.partition("-")
+            parts = (int(first), int(last))
+        build_audio(bars, muse, args.name, args.export_stems, parts)
     elif args.command in ("stems", "levels"):
         write_stems(bars, muse, show_only=args.command == "levels")
     elif args.command == "compare":

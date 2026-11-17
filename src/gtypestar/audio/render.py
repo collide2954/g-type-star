@@ -26,7 +26,8 @@ from ..perform.events import perform
 from . import band, console, dsp
 
 RATE = dsp.RATE
-TAIL_SECONDS = 5.0
+TAIL_SECONDS = 5.0  # the time after the last bar of a render, for the sound that rings on
+RING_SECONDS = 3.0  # the time after the end of the longest note
 SUBSTITUTE_GAIN = 3.5  # a patch in place of a real instrument, relative to Muse Sounds
 LEAD_SECONDS = 0.5  # time before the first bar of an excerpt
 
@@ -113,8 +114,19 @@ def render_stems(
     kicks: list[float] = []
     muse_events: dict[str, list[feel.Event]] = {}
     keys_events: list[feel.Event] = []
+    gathered = {
+        player.id: _inside(player_events(work, player.id), begin, end, last)
+        for player in work.orchestra.players
+    }
+    # A long note that starts in these bars must sound to its end: the render has more
+    # time after the last bar, if a note needs it.
+    longest = max(
+        (event.start + event.seconds for events in gathered.values() for event in events),
+        default=0.0,
+    )
+    seconds = max(seconds, longest + RING_SECONDS)
     for player in work.orchestra.players:
-        events = _inside(player_events(work, player.id), begin, end, last)
+        events = gathered[player.id]
         if not events:
             continue
         first = events[0].note.instrument
@@ -318,6 +330,7 @@ def render(
     stems_to: Path | None = None,
     workers: int = WORKERS,
     export_to: Path | None = None,
+    only: tuple[int, int] | None = None,
 ) -> tuple[np.ndarray, console.MasterReport]:
     """Render the work or an excerpt. Return the master and its report.
 
@@ -330,6 +343,9 @@ def render(
     reverberation). The sum of the stems is the mix before the master. All
     stems get the same gain: the gain of the master, or less if a stem
     would be too loud for the file.
+
+    `only`: render only the parts of the full work inside these bars (a test
+    of the full render; the rest of the result is silent).
     """
     import multiprocessing
 
@@ -339,7 +355,7 @@ def render(
         muse = musestems.available()
     gains = reference_gains(work, muse)
     begin, end = window(work, bars)
-    if bars is not None:
+    if bars is not None and only is None:
         mixed, _gains = mix_bars(work, bars, muse=muse, gains=gains, stems_to=stems_to)
         return console.master(mixed, tone=(end - begin) > 20.0)
 
@@ -354,6 +370,8 @@ def render(
     exports: dict[str, np.memmap] = {}
     try:
         parts = chunks(work)
+        if only is not None:
+            parts = [part for part in parts if only[0] <= part[0] and part[1] <= only[1]]
         if workers <= 1:
             results = map(_chunk, parts)
         else:

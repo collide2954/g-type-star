@@ -180,13 +180,14 @@ def write(work: Work) -> None:
         table = {k: chords.names((n,), symbol) for k, n in zip("abcd", notes, strict=True)}
         eleven.append(patterns.pitched("ab-cd--ab-c d-ab-c--d-a", HALVES, table))
     s.set("chip", eleven, r"\pp", r'\switch "chip pulse 25"')
-    # The seam with the flares: the guitar holds the new root, loud at first, and its
-    # sound dies away under the chorale; noise falls from the first beat.
+    # The seam with the flares: their last strokes become softer (to mezzo forte). The
+    # guitar holds the new root at that level and its sound dies away under the chorale;
+    # noise falls from the first beat.
     s.set(
         "gtr",
-        r"<es, bes, es>1\ff\>\highgain\pmoff ~ | <es, bes, es>1 ~ | <es, bes, es>1\! | R1*13 |",
+        r"<es, bes, es>1\mf\>\highgain\pmoff ~ | <es, bes, es>1 ~ | <es, bes, es>1\! | R1*13 |",
     )
-    s.set("eperc", r"<< { f,,1\mf } \\ { es,,1\mf } >> | R1*15 |")
+    s.set("eperc", r"<< { f,,1\mp } \\ { es,,1\mp } >> | R1*15 |")
     s.close()
 
     # ------------------------------------------------- the solo of the synthesizer, in F
