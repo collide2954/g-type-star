@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pytest
 
@@ -220,3 +222,15 @@ def test_a_soft_stroke_is_softer_and_duller_and_a_muted_note_is_shorter() -> Non
     assert float(np.sqrt(np.mean(muted[late] ** 2))) < 0.3 * float(
         np.sqrt(np.mean(full[late] ** 2))
     )
+
+
+def test_a_copy_of_a_process_with_a_sampler_stops_and_does_not_wait_for_ever(monkeypatch) -> None:
+    # The first process that makes a sampler is its owner.
+    monkeypatch.setattr(sfzguitar, "_OWNER", None)
+    sfzguitar._check_owner()
+    sfzguitar._check_owner()
+    assert os.getpid() == sfzguitar._OWNER
+    # A worker that starts as a copy of that process has a different number.
+    monkeypatch.setattr(sfzguitar, "_OWNER", os.getpid() + 1)
+    with pytest.raises(RuntimeError, match="must not play the guitar"):
+        sfzguitar._check_owner()

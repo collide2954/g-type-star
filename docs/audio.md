@@ -117,6 +117,8 @@ The controllers of the program stay at the values of the makers, with one except
 
 The sampler has its own random numbers (the loudness of each stroke, the start of the small sounds). The first render of a new process is always the same; a second render in the same process is a little different.
 
+The sampler has threads of its own (they read the recordings from the disk). A worker of the full render starts as a copy of the main process, and a copy does not get the threads of its parent. If the main process made a sampler before it started the workers, the sampler of each worker waited for these threads for ever. This was the case when the levels of the groups were not in the cache: the main process rendered the reference passage for them, with the guitar. On the computer of the composer the levels were always in the cache; the first full render on a build server did not end. Now that passage is rendered in a process of its own (`render._gains_apart`), and a worker that is a copy of a process with a sampler stops with a message (`sfzguitar._check_owner`).
+
 The environment variable `GTYPESTAR_PLAYER=plain` selects the player of `guitar.py`. The level of each tone in the mix is the same with the two players within 1.6 dB (`tools/diagnose/guitar_levels.py`).
 
 ## The drums

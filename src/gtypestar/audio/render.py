@@ -374,6 +374,31 @@ def reference_gains(work: Work, muse: bool) -> dict[str, float]:
     return gains
 
 
+def _gains_job(_nothing: None) -> dict[str, float]:
+    return reference_gains(_JOB["work"], _JOB["muse"])
+
+
+def _gains_apart(work: Work, muse: bool) -> dict[str, float]:
+    """Return the gains of the groups, from a process of its own.
+
+    If the gains are not in the cache, the reference passage is rendered for
+    them, with the guitar. The guitar sampler has threads, and a worker that
+    starts as a copy of a process with a sampler waits for these threads for
+    ever (see `sfzguitar._check_owner`). Thus the process that starts the
+    workers of the full render does not render this passage itself. (On a
+    computer with a full cache the fault did not show. The first full render
+    on a build server did not end.)
+    """
+    import multiprocessing
+
+    _JOB.update(work=work, muse=muse)
+    try:
+        with multiprocessing.get_context("fork").Pool(1) as pool:
+            return pool.apply(_gains_job, (None,))
+    finally:
+        _JOB.clear()
+
+
 def render(
     work: Work,
     bars: tuple[int, int] | None = None,
@@ -408,7 +433,10 @@ def render(
         kit.CACHE.limit = 600_000_000
         banks.CACHE_BYTES = 300_000_000
         guitar.CACHE_BYTES = 250_000_000
-    gains = reference_gains(work, muse)
+    # The full work with workers: the gains come from a process of their own (see
+    # `_gains_apart`).
+    apart = bars is None and workers > 1
+    gains = _gains_apart(work, muse) if apart else reference_gains(work, muse)
     begin, end = window(work, bars)
     if bars is not None and only is None:
         mixed, _gains = mix_bars(work, bars, muse=muse, gains=gains, stems_to=stems_to)

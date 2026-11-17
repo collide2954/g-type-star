@@ -154,8 +154,33 @@ def signature() -> str:
     return "-program-" + hashlib.sha1(text.encode()).hexdigest()[:6]  # noqa: S324
 
 
+_OWNER: int | None = None  # the process that made the first sampler
+
+
+def _check_owner() -> None:
+    """Stop if this process is a copy of a process that made a sampler.
+
+    The sampler has threads of its own (they read the recordings from the
+    disk). A process that starts as a copy of another process (a worker of
+    the full render) does not get the threads of that process, but it gets
+    the belief of the sampler that they are there. A sampler in such a copy
+    waits for them for ever. Thus a process that starts workers must not
+    make a sampler before it starts them (see `render.render`).
+    """
+    global _OWNER
+    if _OWNER is None:
+        _OWNER = os.getpid()
+    elif os.getpid() != _OWNER:
+        raise RuntimeError(
+            "the guitar sampler was in use in the process that started this worker: the "
+            "sampler of the worker would wait for ever. The process that starts the workers "
+            "of a render must not play the guitar."
+        )
+
+
 def _new():
     """Return a new sampler with the program of the library."""
+    _check_owner()
     sampler = _module().Synth(RATE, BLOCK)
     # With "freewheeling", the sampler waits for each recording from the disk. Without
     # it, a render faster than the clock loses the starts of notes.
@@ -170,12 +195,7 @@ _SAMPLER: tuple[int, object] | None = None
 
 
 def _sampler():
-    """Return the sampler of this process.
-
-    A sampler has threads of its own. A process that starts as a copy of
-    another process (a worker of the full render) does not get them: each
-    process makes its own sampler.
-    """
+    """Return the sampler of this process. Each process makes its own sampler."""
     global _SAMPLER
     if _SAMPLER is None or _SAMPLER[0] != os.getpid():
         _SAMPLER = (os.getpid(), _new())

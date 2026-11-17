@@ -90,7 +90,7 @@ jobs:
     name: Audio master and stems
     runs-on: ubuntu-latest
     container: fedora:45
-    timeout-minutes: 300
+    timeout-minutes: 180
     permissions:
       # The audio master of the composer is in a draft release. A build can read a
       # draft release only with the right to write.
@@ -158,6 +158,7 @@ jobs:
 
       - name: Build the audio
         if: steps.master.outputs.found != 'true'
+        timeout-minutes: 120
         run: uv run --no-sync gtypestar audio --no-muse --export-stems
 
       - name: Collect the files
@@ -194,7 +195,7 @@ jobs:
     needs: audio
     runs-on: ubuntu-latest
     container: fedora:45
-    timeout-minutes: 150
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
