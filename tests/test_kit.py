@@ -175,6 +175,12 @@ def test_a_layer_plays_under_the_strokes_that_are_loud_enough(tmp_path):
 
     # The soft stroke has no layer; the loud stroke has it.
     assert level(0.1) < 1e-3 and level(0.5) > 0.2
+    # With a loudness for the full level, a stroke between the two has a part of it.
+    partly = replace(spec, layers={36: replace(layer, floor=0.5, full=0.9)})
+    middle = kit.render([stroke(0.5, 0.7)], 1.0, partly)["kick"][:, 0]
+    alone = kit.render([stroke(0.5, 0.7)], 1.0, spec)["kick"][:, 0]
+    size = float(np.max(np.abs((middle - alone)[int(0.5 * RATE) : int(0.55 * RATE)])))
+    assert 0.3 * level(0.5) < size < 0.75 * level(0.5)
 
 
 def test_a_kit_takes_a_sound_that_it_does_not_have_from_another_kit(tmp_path, monkeypatch):

@@ -67,6 +67,7 @@ class Layer:
     group: str = "kick"  # the group of microphones that gets the sound
     gain_db: float = 0.0
     floor: float = 0.0  # softer strokes than this have no layer (ghost notes stay natural)
+    full: float = 0.0  # from this loudness on, the layer has all of its level
     dynamics: float = 0.0  # 0 = one level for all strokes; 1 = the level follows the loudness
     inverted: bool = False  # turn the signal over, if it works against the microphones
 
@@ -332,12 +333,12 @@ AASIMONSTER = KitSpec(
 # snare (a 14 x 6 inch drum) has eight layers of loudness with six recordings each.
 TMKD_KICK = Layer(
     folder="tmkd/TMKD_Kicks_Pack/TMKD_Kick7_Fate/WAV", files="TMKD07 - Fate_kick_{hit:02d}.wav",
-    hits=6, group="kick", gain_db=-12.5, floor=0.2, dynamics=0.35, inverted=True,
+    hits=6, group="kick", gain_db=-12.5, floor=0.4, full=0.62, dynamics=0.35, inverted=True,
 )  # fmt: skip
 TMKD_SNARE = Layer(
     folder="tmkd/TMKD_Snares_Pack/TMKD_Snare1_BB14x6/WAV",
     files="TMKD_SNARE1_BB14x6_L{layer}_{hit:02d}.wav", hits=6, layers=8, group="snare",
-    gain_db=-19.5, floor=0.4, dynamics=0.5,
+    gain_db=-19.5, floor=0.4, full=0.62, dynamics=0.5,
 )  # fmt: skip
 # The CrocellKit with these samples under its kick drums and its snare drum. A layer has
 # about the level of the microphones of its drum (tools/diagnose/kit_levels.py), and
@@ -620,6 +621,10 @@ def render(
             data = CACHE.get(path, 1.5)
             length = min(len(data), limit)
             amount = dsp.db(layer.gain_db) * float(level**layer.dynamics)
+            if layer.full > layer.floor:
+                # A soft stroke has less of the layer: in a soft passage the kit sounds
+                # as the microphones have it, with no sound of a metal record.
+                amount *= float(np.clip((level - layer.floor) / (layer.full - layer.floor), 0, 1))
             sound = data[:length] * np.float32(-amount if layer.inverted else amount)
             if sound.shape[1] == 1:
                 sound = np.repeat(sound, 2, axis=1) * np.float32(0.7071)
