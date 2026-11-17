@@ -421,7 +421,9 @@ def write(work: Work) -> None:
     s = Bars(work, 16)
     structure.mark(s.bar(1), "C")
     symbols = m.LOOP_A * 4
-    s.set("tsax", m.THEME_LOW + m.THEME_LOW_RISE, r"\mf")
+    # The first note of the theme comes on the first beat here: the saxophone started
+    # the phrase in the last bar of the ignition.
+    s.set("tsax", [r"g4.) ~ g4. c'4( d'4. ~ d'4.", *m.THEME_LOW[1:], *m.THEME_LOW_RISE])
     figures, bass = _figures(C_FIGURES, symbols)
     # The last bar has the riff of D, soft and growing: the riff starts before the mark.
     figures.append(RIFFS[0])

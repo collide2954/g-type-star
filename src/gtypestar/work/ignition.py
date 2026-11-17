@@ -112,7 +112,8 @@ def write(work: Work) -> None:
     s.set(
         "drums",
         m.drum_bars(m.MAIN_OPEN, 8, "ignition", amount=1.0, crash=(1, 3, 5, 7),
-                    fills={4: "snare 1", 8: "toms 2"}),
+                    fills={4: "snare 1", 8: "toms 2"}, kicks=[RIFF[n] for n in order],
+                    kick_letters="ag"),
         r"\ff",
     )  # fmt: skip
     s.set("keys.rh", [m.comp("G9sus", STABS[n % 4], low=53, high=74)[0] for n in range(8)], r"\f")
@@ -144,5 +145,7 @@ def horns_line() -> list[str | None]:
         r"r4. r4. r4 d''4.->\f r4.",
         r"r4. f''4.-> ~ f''4 r4. r4.",
         r"r4. r4. f''4-> ~ f''4. r4.",
-        r"d''4.-> f''4.-> d''4-> f''4.-> d''4.->",
+        # The last bar: three strokes, then the first notes of the theme before the bar
+        # line (D, E, and the G of the next bar): the theme starts out of the ignition.
+        r"d''4.-> f''4.-> d''4-> r4. r8 d8\mf( e",
     ]  # fmt: skip

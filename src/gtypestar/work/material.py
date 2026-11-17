@@ -218,7 +218,7 @@ KICK_PULSES = (0, 2, 3)  # the pulses in which the kick drum follows the bass
 def drum_bars(
     base: Groove, count: int, key: str, *, amount: float = 1.0, crash: tuple[int, ...] = (1,),
     fills: dict[int, str] | None = None, grooves: dict[int, Groove] | None = None,
-    kicks: list[str | None] | None = None,
+    kicks: list[str | None] | None = None, kick_letters: str = "ab",
 ) -> list[str]:  # fmt: skip
     """Return `count` bars of a groove. No two bars are fully the same.
 
@@ -228,9 +228,10 @@ def drum_bars(
 
     `kicks` gives the bass figure of each bar (a pattern of `patterns.pitched`,
     or None). The kick drum then plays with the low notes of the bass (the
-    letters a and b: the root) in the first, the third and the fourth pulse:
-    bass player and drummer play as one. The other two pulses start with
-    the snare drum: there the kick drum of the groove stays.
+    letters a and b: the root; `kick_letters` gives other letters) in the
+    first, the third and the fourth pulse: bass player and drummer play as
+    one. The other two pulses start with the snare drum: there the kick drum
+    of the groove stays.
     """
     source = random("drums", key)
     result = []
@@ -244,7 +245,7 @@ def drum_bars(
                 for pulse, group in enumerate(figure.split()):
                     if pulse in KICK_PULSES and len(group) == len(bar.rows["bd"][pulse]):
                         bar.rows["bd"][pulse] = "".join(
-                            "x" if char.lower() in "ab" else "-" for char in group
+                            "x" if char.lower() in kick_letters else "-" for char in group
                         )
             if number in crash:
                 bar.put("cy", 0, 0, "c")
