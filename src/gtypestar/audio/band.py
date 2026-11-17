@@ -23,7 +23,19 @@ import numpy as np
 from scipy import signal
 
 from ..perform.feel import Event
-from . import amp, banks, drumsynth, dsp, dubstep, effects, guitar, kernels, patches, synth
+from . import (
+    amp,
+    banks,
+    drumsynth,
+    dsp,
+    dubstep,
+    effects,
+    guitar,
+    kernels,
+    patches,
+    sfzguitar,
+    synth,
+)
 
 RATE = dsp.RATE
 CACHE_DIR = Path(".cache/render")
@@ -412,6 +424,26 @@ def fader(events: list[Event], count: int, range_db: float) -> np.ndarray:
     return (10.0 ** (samples / 20.0)).astype(np.float32)
 
 
+def guitar_direct(strokes: list[guitar.Stroke], seconds: float, side: int, seed: int) -> np.ndarray:
+    """Return the direct signal of one performance of the guitar, from the player of the work.
+
+    The player is the program of the library in a sampler (`sfzguitar.py`),
+    if the sampler is on the computer. If not, it is the player of
+    `guitar.py`.
+    """
+    player = sfzguitar if sfzguitar.selected() else guitar
+    return player.direct(strokes, seconds, side, seed)
+
+
+def _take(seed: int) -> int:
+    """Return the seed for the small differences of time and loudness of one performance.
+
+    The sampler does not get such differences from the code (the seed 0):
+    the recordings of its program have their own.
+    """
+    return 0 if sfzguitar.selected() else seed
+
+
 def _clean_level(wet: np.ndarray) -> np.ndarray:
     """A clean guitar has large peaks: a compressor makes its level even."""
     both = np.stack([wet, wet], axis=1)
@@ -440,7 +472,7 @@ def render_guitar(events: list[Event], seconds: float) -> np.ndarray:
                 # and right for the heavy tones, nearer for the clean tone.
                 side_place = 0.92 if tone != "clean" else 0.6
                 for side, seed in ((0, 11), (1, 23)):
-                    dry = guitar.direct(_strokes(group, seed), seconds, side, seed)
+                    dry = guitar_direct(_strokes(group, _take(seed)), seconds, side, seed)
                     wet = guitar.amplify(dry, tone)[: len(canvas.data)]
                     wet = wet * follow[: len(wet)]
                     if tone == "clean":
@@ -450,7 +482,7 @@ def render_guitar(events: list[Event], seconds: float) -> np.ndarray:
                 # The lead tone: one guitar in the centre, a wider vibrato on its long
                 # notes, and soft echoes on the two sides.
                 lead = [replace(stroke, vibrato=1.7 * stroke.vibrato) for stroke in _strokes(group)]
-                dry = guitar.direct(lead, seconds, 0, 5)
+                dry = guitar_direct(lead, seconds, 0, 5)
                 wet = effects.stereo(guitar.amplify(dry, tone)[: len(canvas.data)]) * 1.41
                 canvas.add(0.0, wet)
                 echoes = effects.delay(wet, LEAD_ECHO_SECONDS, 0.32, damping=0.6)

@@ -98,7 +98,7 @@ def render_stems(
     (default: yes, if the computer has them). `muse_full` are the stems of
     MuseScore for the full work: the function takes the part for the bars.
     """
-    from . import guitar, kit, musestems, perc, tape
+    from . import guitar, kit, musestems, perc, sfzguitar, tape
 
     begin, end = window(work, bars)
     lead = LEAD_SECONDS if begin > 0 else 0.0
@@ -148,7 +148,9 @@ def render_stems(
             # The recorded guitar and the string model are two different sounds. (The
             # name of the kept stems has a word that changes with the settings of the
             # guitar: see `guitar.signature`.)
-            name = f"gtr-recorded-{guitar.signature()}" if guitar.available() else "gtr"
+            name = "gtr"
+            if guitar.available():
+                name = f"gtr-recorded-{guitar.signature()}{sfzguitar.signature()}"
             stems["gtr"] = band.cached(
                 name, events, seconds, lambda e=events: band.render_guitar(e, seconds)
             )

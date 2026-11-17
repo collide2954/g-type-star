@@ -351,6 +351,18 @@ def _release(stroke: Stroke, number: int, side: int) -> np.ndarray | None:
     return sound * np.float32(dsp.db(level_db))
 
 
+def chords_of(ordered: list[Stroke]) -> list[list[Stroke]]:
+    """Return notes in groups. The notes in sequence of time that start at the same
+    moment are one group: one stroke of the pick (a chord)."""
+    groups: list[list[Stroke]] = []
+    for stroke in ordered:
+        if groups and abs(stroke.start - groups[-1][0].start) < 0.012:
+            groups[-1].append(stroke)
+        else:
+            groups.append([stroke])
+    return groups
+
+
 def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> np.ndarray:
     """Return the direct signal of the pickup for all notes of one performance.
 
@@ -362,13 +374,7 @@ def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> n
     random = np.random.default_rng((seed, side))
     out = np.zeros(int(seconds * RATE) + RATE // 2, dtype=np.float32)
     ordered = sorted(strokes, key=lambda item: (round(item.start, 3), item.midi))
-    # The notes that start at the same moment are one stroke of the pick (a chord).
-    chords: list[list[Stroke]] = []
-    for stroke in ordered:
-        if chords and abs(stroke.start - chords[-1][0].start) < 0.012:
-            chords[-1].append(stroke)
-        else:
-            chords.append([stroke])
+    chords = chords_of(ordered)
     # A line of single notes: a note rings to the start of the next note (no gap between
     # the notes of a line), and a note that the left hand starts gets its pitch from the
     # note before it.
