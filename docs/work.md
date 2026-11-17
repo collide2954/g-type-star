@@ -19,7 +19,7 @@ The audio is in [`audio.md`](audio.md).
 - Length: 340 bars, 13:00 minutes.
 - The dubstep passage (part 6): bars 271 to 286, 27.4 seconds.
 - The one sudden pause: bar 270, from beat 3.5, 0.77 seconds, before the first beat of part 6.
-- Recorded sounds: 41 cues; 20 of them are voices of the flight Mercury-Redstone 3.
+- Recorded sounds: 34 cues; 13 of them are voices of the flight Mercury-Redstone 3.
 <!-- facts: end -->
 
 ## The form
@@ -41,12 +41,12 @@ The Sun is a star of the type G. The form follows the life of such a star.
 
 | Part | In the star | In the music |
 | --- | --- | --- |
-| 1 | A cloud of gas and dust falls together. | No steady groove: the sound of the Sun, radio noise, chords of fourths, single high notes. The drums go faster by division, from one to eight notes in a beat. One dense chord of all players. |
+| 1 | A cloud of gas and dust falls together. | No steady groove: the sound of the Sun, radio noise, chords of fourths, single high notes. The noise of the solar wind goes through narrow filters at the notes of the motto: pitch comes out of the noise. The drums go faster by division (1, 2, 3, 4, 6, 8 notes in a beat). One dense chord of all players. |
 | 2 | The fusion of hydrogen starts. | The riff of the work comes in behind a filter that opens. A voice counts: "two, one, fire". On "fire", all players start. The riff has no major third yet. |
-| 3 | The star burns hydrogen in a stable state. | The theme; the theme again with a riff of the band against it; a drum-and-bass beat in the same bar of seven, with the bridge melody above it; the saxophone and the guitar take turns (four bars each, two, one); bass and drums in turns; a quiet middle; and the theme with five notes in each long pulse. |
+| 3 | The star burns hydrogen in a stable state. | C: the theme, plain, with a line of the violins. D: the theme again, with a riff of bass guitar and guitar against it; the chords go up. E: a drum-and-bass beat in the same bar of seven, with the motto upside down above it. F: the saxophone and the guitar take turns (four bars each, two, one). G: bass and drums in turns. H: the motto as a canon of the saxophone with a delay. J: the theme at full force (trumpet, alto saxophone, violins); the riff of part 4 crosses the bars of seven, the motto goes up by whole tones in four parts, and the drums go over to four beats. |
 | 4 | Spots and flares. | A heavy rock groove in plain 4/4: double pedal kick drum, the low string of the guitar, a guitar solo, a line of all lead players. The key goes up by minor thirds. |
-| 5 | The star swells and becomes cooler. | The long pulse becomes the beat of a slow bar. The theme is a chorale of horns and strings. A solo of the lead synthesizer. Then ten bars of build-up on the note D. |
-| 6 | Helium starts to burn, all at one time. | The one dubstep passage of the work. |
+| 5 | The star swells and becomes cooler. | The long pulse becomes the beat of a slow bar. The theme is a chorale in four real voices (trumpet, alto saxophone, trombone, baritone saxophone; then the strings with them), under a reverb that adds the octave above. A solo of the lead synthesizer. The chorale again in G. Then ten bars of build-up on the note D. |
+| 6 | Helium starts to burn, all at one time. | The one dubstep passage of the work, as a band plays it: one riff from the motto in a minor key (G, C, D, E-flat) for bass guitar, bass synthesizer and guitar, with the kick drum on each note and the snare drum in half time. |
 | 7 | Pulses of a burning shell; then the burning stops. | The most driving music of the work: the kick drum never stops. Then the fall: tempo, pitch, and register go down, faster and faster. |
 | 8 | A white dwarf. | A low held tone, the sound of the Sun, a chord of three fourths, and one last high note. |
 
@@ -76,13 +76,15 @@ The theme has eight bars with few, long notes. Each time it comes back, the teno
 | Place | Form (in [`work/material.py`](../src/gtypestar/work/material.py)) | Range |
 | --- | --- | --- |
 | C, bars 1 to 8 | `THEME_LOW` | The middle and low register, G3 to G4 |
-| C, bars 9 to 16 | `THEME_LOW_RISE` | Starts low, breaks into the high octave at its highest phrase, falls two octaves |
-| D | `THEME_WIDE`, `THEME_CLOSE_WIDE` | A start from the low D, a leap of an eleventh, up to B-flat 5, a fall to the low B |
-| H (the quiet middle) | `THEME_DEEP` | The low register with much air; the last note is A2 |
-| J | `THEME_LEAPS` | The motto low, each answer high; the highest note is B5 |
-| N, P (part 5) | The chorale, in E-flat and in G | Trumpet and strings; the saxophone has the second voice |
-| S (part 7) | `THEME_FORCE` (in [`work/agb.py`](../src/gtypestar/work/agb.py)) | Accented low notes, leaps of two octaves, the highest note C6 |
+| C, bars 9 to 16 | `THEME_LOW_RISE` | Starts low, goes to the high octave (to F5) at its highest phrase, falls two octaves |
+| D | `THEME_WIDE`, `THEME_CLOSE_WIDE` | A start from the low D, a leap of an eleventh, an answer two octaves lower, the highest phrase to F5, a fall to the low B |
+| H | The motto alone, as a canon with a delay | Low, then one octave higher, then from A, C and D |
+| J | `THEME` | Trumpet, alto saxophone and violins; the tenor saxophone one octave lower |
+| N, P (part 5) | The chorale, in E-flat and in G | Four voices of the horns and the strings |
+| S (part 7) | `THEME_FORCE` (in [`work/agb.py`](../src/gtypestar/work/agb.py)) | Accented low notes, leaps of two octaves, the highest note F5; the trumpet above, to B-flat 5 |
 | W (part 8) | The first three notes of the motto | Low and soft |
+
+The tenor saxophone of the audio has no note above F5 (the sound library stops there; a player has notes to C6). No line of the saxophone goes higher: where the music needs higher notes, the trumpet or the alto saxophone has them.
 
 ### The lines
 
