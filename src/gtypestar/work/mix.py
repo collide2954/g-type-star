@@ -52,7 +52,7 @@ STRIPS = {
     ),
     # Hand percussion: in the group of the cymbals (no strong compression), a little room.
     "perc": Strip(
-        gain_db=-6.0, bus="cymbals", eq=(("highpass", 160.0), ("lowpass", 14000.0, 2)),
+        gain_db=5.0, bus="cymbals", eq=(("highpass", 160.0), ("lowpass", 14000.0, 2)),
         width=1.4, room=0.12,
     ),
     "eperc": Strip(
