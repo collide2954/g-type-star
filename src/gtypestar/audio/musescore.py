@@ -153,7 +153,8 @@ def render(
 # with all notes of each range gave these values.
 HIGHEST_NOTE = {
     "flute": 97, "alto flute": 87, "bass clarinet": 80, "contrabass clarinet": 64,
-    "bassoon": 75, "harp": 102, "violin": 101, "viola": 86, "double bass": 61,
+    "bassoon": 75, "harp": 102, "violin": 101, "viola": 85, "double bass": 61,
+    "tenor saxophone": 77, "alto saxophone": 83,
 }  # fmt: skip
 
 

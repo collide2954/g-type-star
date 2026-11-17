@@ -81,3 +81,25 @@ guitar = "heavy guitar somewhere too"
 # - Measured against the reference tracks, the first master had 9 dB too much level above
 #   11 kHz, a guitar tone with no body, a bass with too much middle, and an electric piano
 #   that was 19 dB under the saxophone. See docs/audio.md.
+
+# Decisions of the owner between the second and the third version (2026-11-16).
+[second_version_heard]
+guitar_and_drums = "I don't like the sound of the guitar or the drums. The drums are acceptable, but the guitar is really bad. Look for samples or VST or something."
+guitar_amplifier = "use a neural amp guitar instead"
+lead_guitar = "it sounds unconvincing and tinny. I really just want a nice full bodied sound from the guitar that shreds in a jazz metal way"
+score_hairpins = "you have crescendoes running over multiple measures of rest in the score."
+drum_notation = "this is bad notation"  # a drum staff with groups of 44 notes
+astronaut = "If you can find a good spot to throw in an audio sample of an astronaut swearing over the radio or something that would be both funny and tasteful, do that too."
+boring = "Everything from 2:30-4:30 is pretty boring."
+
+# The owner listened to the full second version and gave this judgement (2026-11-16).
+# It is the brief of the third version.
+[third_version]
+judgement = "I think that there is a lot of solid material and ideas in here, but I think the arrangement is sloppy and amateurish."
+playing = "There are range issues with instruments, some passages basically unplayable because of range or completely impossible to follow rhythms. Understand, yes, I do want you to play for the ideal highest quality musician who can do anything... to a limit."
+electronics = "I think the electronics could be used better"
+dubstep = "I think the dubstep section sounds corny."
+development = "I think you could make use of motivic development better, and not just arrive at transitions but actually work to transitions."
+plan = "I think everything needs basically reorganized and planned with purpose to really elevate this work."
+sounds = "Explore other samples too for sounds, other ideas for live processing of sound."
+# The plan of the third version is in design/plan.md.

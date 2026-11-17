@@ -183,12 +183,14 @@ range = [54, 86]
 [instrument."alto saxophone"]
 transposition = 9
 clef = "treble"
-range = [49, 84]
+range = [49, 83]   # the sound library has no note above B5
 
 [instrument."tenor saxophone"]
 transposition = 14
 clef = "treble"
-range = [44, 84]   # with the altissimo register, to C6
+# A player has notes to C6 (the altissimo register). The sound library of the audio
+# stops at F5: a higher note has no sound (tools/diagnose/muse_ranges.py).
+range = [44, 77]
 
 [instrument."tenor trombone"]
 transposition = 0

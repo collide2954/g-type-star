@@ -270,6 +270,25 @@ def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> n
     return out
 
 
+PAUSE_SECONDS = 0.5  # the amplifier model does not run in a silence that is longer
+RING_SECONDS = 0.15  # the time of the amplifier sound after the last sample of a note
+
+
+def _playing(dry: np.ndarray) -> list[tuple[int, int]]:
+    """Return the parts of the direct signal that are not silent: (first, last) samples."""
+    loud = np.flatnonzero(np.abs(dry) > 1e-6)
+    if len(loud) == 0:
+        return []
+    breaks = np.flatnonzero(np.diff(loud) > int(PAUSE_SECONDS * RATE))
+    firsts = [int(loud[0]), *(int(loud[index + 1]) for index in breaks)]
+    lasts = [*(int(loud[index]) for index in breaks), int(loud[-1])]
+    ring = int(RING_SECONDS * RATE)
+    return [
+        (max(0, first - 256), min(len(dry), last + ring))
+        for first, last in zip(firsts, lasts, strict=True)
+    ]
+
+
 def amplify(dry: np.ndarray, tone: str) -> np.ndarray:
     """Send the direct signal through the amplifier of a tone. Return one channel."""
     rig = RIGS[tone]
@@ -279,7 +298,19 @@ def amplify(dry: np.ndarray, tone: str) -> np.ndarray:
     if rig.tone_hz:
         filters.append(dsp.lowpass(rig.tone_hz, 2))
     shaped = signal.sosfilt(np.vstack(filters), dry.astype(np.float64)) * dsp.db(rig.input_db)
-    wet = nam.load(str(MODELS_DIR / rig.model)).play(shaped.astype(np.float32))
+    shaped = shaped.astype(np.float32)
+    # The model of the amplifier needs much time. It runs only where the guitar plays:
+    # in a long excerpt, a tone often has notes in some bars only.
+    model = nam.load(str(MODELS_DIR / rig.model))
+    wet = np.zeros(len(shaped), dtype=np.float32)
+    edge = int(0.005 * RATE)
+    for first, last in _playing(dry):
+        part = model.play(shaped[first:last])
+        size = min(edge, len(part) // 2)
+        ramp = np.linspace(0.0, 1.0, size, dtype=np.float32)
+        part[:size] *= ramp
+        part[len(part) - size :] *= ramp[::-1]
+        wet[first:last] = part
     if rig.post:
         from .console import filters as rows
 
