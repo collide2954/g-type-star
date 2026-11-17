@@ -396,9 +396,9 @@ def write(work: Work) -> None:
     symbols = m.LOOP_A * 2
     s.set("tsax", THEME_FORCE, r"\ff\normaltone")
     s.set("tpt", THEME_FORCE_TRUMPET, r"\ff")
-    second = [tools.tr(bar, -3) if n % 4 != 1 else tools.tr(bar, -4)
-              for n, bar in enumerate(THEME_FORCE_TRUMPET)]  # fmt: skip
-    s.set("asax", tools.true_ties(second), r"\f")
+    # The alto saxophone has the line of the trumpet one octave lower: the theme in
+    # three octaves, with no second voice that leaves the key.
+    s.set("asax", [tools.octave(bar, -1) for bar in THEME_FORCE_TRUMPET], r"\ff")
     guitar, bass = [], []
     for number, symbol in enumerate(symbols):
         guitar_notes, bass_notes = riff_tables(bass_root(symbol), symbol[1:2] == "b")
@@ -420,22 +420,12 @@ def write(work: Work) -> None:
         [drum_bar(HANDS_OPEN[n % 4], KICKS_8[n % 4], fills.get(n + 1, "")) for n in range(8)],
         r"\ff",
     )
-    s.set("keys.rh", mainseq._comp(symbols, mainseq.C_KEYS), r"\f")
     s.set("pad.rh", m.pad_bars(symbols, low=60, high=84), r"\f", r'\switch "supersaw"')
     s.set("sbass", m.roots(symbols, "a_____ ______ a___ ______ ______"), r"\f",
           r'\switch "bass sub"')  # fmt: skip
-    arps = []
-    for number, symbol in enumerate(symbols):
-        notes = chords.voice(symbol, 4, low=79, high=98)
-        table = {k: chords.names((n,), symbol) for k, n in zip("abcd", notes, strict=True)}
-        shape = ["abcdab cdabcd abcd abcdab cdabcd", "dcbadc badcba dcba dcbadc badcba"][number % 2]
-        arps.append(patterns.pitched(shape, m.CLAVE, table))
-    s.set("chip", arps, r"\mf", r'\switch "chip pulse"')
-    machine = drums.steps("ms  ------ c----- ---- ------ c-----\nmh  xxxxxx xxxxxx xxxx xxxxxx xxxxxx",
-                          m.CLAVE)  # fmt: skip
-    # A low stroke and a falling low tone on the first beat: the start after the helium flash.
-    arrival = r"<< { " + machine + r" } \\ { <es,, ges,,>1.. } >>"
-    s.set("eperc", [arrival] + [machine] * 7, r"\mf")
+    # A low stroke and a falling low tone on the first beat: the start after the helium
+    # flash. The band has the theme, the riff and the drums: no other layer here.
+    s.set("eperc", [r"<es,, ges,,>1..\mf"] + [None] * 7)
     s.close()
 
     # ------------------------------------------------- T: the longest line
@@ -465,7 +455,6 @@ def write(work: Work) -> None:
     for player, bars in strings.items():
         s.set(player, bars, r"\f")
     s.set("sbass", m.roots(symbols, "a_____ ______ a___ ______ ______"), r"\f")
-    s.set("eperc", [machine] * 8, r"\mf")
     s.close()
 
     # ------------------------------------------------- U: three thermal pulses

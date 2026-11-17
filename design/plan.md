@@ -38,7 +38,9 @@ This file is the plan. Each rule here has a check or a place in the code.
 5. **Rhythm that the ear follows.** The pulse is always clear in one layer. A complex
    device comes alone, above a plain layer. Divisions of a pulse are 2, 3, 4, 6 and 8.
    Five in the time of four comes one time, as the link from the tempo 140 to the tempo
-   175, with all players together. `gtypestar check` lists other divisions.
+   175, with all players together. In the fall the divisions become coarse step by step
+   (6, 5, 4, 3, 2, 1) while the tempo falls: there the ear follows the fall, not a beat.
+   `gtypestar check` lists all other divisions in 5, 7 or 11.
 6. **Work to the transition.** The last bars before each change of part take the material
    of the old part to pieces and bring in the rhythm, the key or the sound of the new
    part. Rising noise alone is not a transition.
@@ -65,8 +67,8 @@ short notes (the runs), the answer as a sequence, the thirds as a line of the ba
 
 ## The form
 
-The eight parts and their order stay: they are the life of the star. The bar numbers of
-the parts stay too, with two exceptions (marks H and J). What each part is for:
+The eight parts, their order and their bar numbers stay: they are the life of the star.
+What each part is for:
 
 | Part | What the star does | What the music does | In front | Electronics | How it works to the next part |
 | --- | --- | --- | --- | --- | --- |
