@@ -89,11 +89,27 @@ What each part is for:
   Done: the player "Percussion" (`audio/perc.py`).
 - A real grand piano for the chorale and the white dwarf.
 
-## The sequence of the work
+## The state of the work (2026-11-16)
 
-1. Ranges, the checks of rule 4 and rule 5, tools for section writing.
-2. The main sequence (marks C to J). Render, measure, send.
-3. The red giant, the helium flash and the build-up before it. Render, measure, send.
-4. The flares, the last burning and the fall. Render, measure, send.
-5. The nebula, the ignition and the white dwarf with the new electronics. Render, send.
-6. The full render, the stems, the score and the parts, the documents.
+Done:
+
+- The checks of rule 4 and rule 5 (`gtypestar check`: 265 problems in the second version,
+  none now), a search for held notes that clash with the bass
+  (`tools/diagnose/clashes.py`), a test of the saxophone stem for notes with no sound
+  (`tools/diagnose/silent_notes.py`), and a table of the stems that are in front in each
+  part (`tools/diagnose/front.py`).
+- The main sequence (marks C to J), composed anew.
+- The red giant: the chorale in four real voices, the reverb with the octave above.
+- The helium flash: one riff from the motto that the band plays.
+- The ranges of the saxophone in all parts; the trumpet has the highest notes.
+- Live processing: echo, held sound, reverb with the octave above, ringing filters.
+- A percussion player (shaker, tambourine, congas).
+- A second drum kit for a comparison: the owner has the two sounds.
+
+Open:
+
+- The owner selects the drum kit.
+- The flares, the last burning and the nebula keep most of their music of the second
+  version (ranges, clashes and the number of layers are changed). A new version of a
+  part comes if the owner asks for it.
+- The score video and the release for the third version.
