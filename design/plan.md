@@ -130,6 +130,8 @@ Done:
   tone near real recordings; the kit has processed samples under its kick drums and
   its snare drum. The owner has the guitar in four forms (A to D) and the drums in
   five (A to E), and the flares in the full mix in three. See docs/audio.md.
+- Version 3.4 (the full work) is with the owner: the notes of version 3.3 with the new
+  guitar (C) and the kit with layers (E). The two videos have its audio.
 
 Open:
 
