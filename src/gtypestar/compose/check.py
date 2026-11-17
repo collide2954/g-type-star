@@ -7,6 +7,9 @@ The checks are:
 - A wind player must have a rest to breathe.
 - The drummer has two hands and two feet.
 - Each note of the drums and of the drum machine must be a sound that exists.
+- A pulse is divided in 2, 3, 4, 6 or 8: the ear and the player can follow these
+  divisions. A division in 5, 7 or 11 is a problem, but not in the bars that the
+  work names (`work.extras["free_divisions"]`).
 
 The synthesizers, the drum machine, and the recorded sounds have no limits:
 a sequencer or the studio plays them.
@@ -77,6 +80,36 @@ def _limb_problems(work: Work, player: str, notes: list[PerfNote]) -> list[Probl
     return problems
 
 
+def _division(value: Fraction) -> int:
+    """Return the largest prime number other than 2 and 3 in the denominator, or 0."""
+    rest = value.denominator
+    for prime in (2, 3):
+        while rest % prime == 0:
+            rest //= prime
+    for prime in (11, 7, 5):
+        if rest % prime == 0:
+            return prime
+    return rest if rest > 1 else 0
+
+
+def _division_problems(work: Work, player: str, notes: list[PerfNote]) -> list[Problem]:
+    """Find the bars with a division of the pulse that is hard to follow (5, 7, 11)."""
+    allowed: set[int] = work.extras.get("free_divisions", set())  # type: ignore[assignment]
+    found: dict[int, int] = {}
+    for note in notes:
+        if note.grace:
+            continue
+        size = max(_division(note.start), _division(note.duration))
+        if size:
+            bar = work.structure.bar_at(note.start).number
+            if bar not in allowed:
+                found[bar] = max(found.get(bar, 0), size)
+    return [
+        Problem(player, bar, f"a division of the pulse in {size}")
+        for bar, size in sorted(found.items())
+    ]
+
+
 def check(work: Work) -> list[Problem]:
     """Return the problems in the work, in the sequence of the score."""
     problems: list[Problem] = []
@@ -88,6 +121,7 @@ def check(work: Work) -> list[Problem]:
             problems.extend(_breath_problems(work, player.id, notes))
         if player.id == "drums":
             problems.extend(_limb_problems(work, player.id, notes))
+        problems.extend(_division_problems(work, player.id, notes))
         for note in notes:
             bar = structure.bar_at(note.start).number
             if player.id in DRUM_TABLES and int(note.midi) not in DRUM_TABLES[player.id]:

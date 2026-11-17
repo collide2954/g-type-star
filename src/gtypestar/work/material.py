@@ -212,15 +212,25 @@ FILLS: dict[str, dict[str, list[str]]] = {
 }  # fmt: skip
 
 
+KICK_PULSES = (0, 2, 3)  # the pulses in which the kick drum follows the bass
+
+
 def drum_bars(
     base: Groove, count: int, key: str, *, amount: float = 1.0, crash: tuple[int, ...] = (1,),
     fills: dict[int, str] | None = None, grooves: dict[int, Groove] | None = None,
+    kicks: list[str | None] | None = None,
 ) -> list[str]:  # fmt: skip
     """Return `count` bars of a groove. No two bars are fully the same.
 
     `crash` are the bars that start with a crash cymbal. `fills` gives the
     name of a fill for a bar number (the first bar is 1). `grooves` gives a
     different base groove for some bars.
+
+    `kicks` gives the bass figure of each bar (a pattern of `patterns.pitched`,
+    or None). The kick drum then plays with the low notes of the bass (the
+    letters a and b: the root) in the first, the third and the fourth pulse:
+    bass player and drummer play as one. The other two pulses start with
+    the snare drum: there the kick drum of the groove stays.
     """
     source = random("drums", key)
     result = []
@@ -229,6 +239,13 @@ def drum_bars(
         groove = (grooves or {}).get(number, base)
         for _attempt in range(8):
             bar = groove.vary(source, amount)
+            figure = kicks[number - 1] if kicks else None
+            if figure and "bd" in bar.rows:
+                for pulse, group in enumerate(figure.split()):
+                    if pulse in KICK_PULSES and len(group) == len(bar.rows["bd"][pulse]):
+                        bar.rows["bd"][pulse] = "".join(
+                            "x" if char.lower() in "ab" else "-" for char in group
+                        )
             if number in crash:
                 bar.put("cy", 0, 0, "c")
                 bar.put("hh", 0, 0, "-")
@@ -329,21 +346,22 @@ THEME_LOW_RISE = [
     r"e'4.( ~ e'4. ~ e'4 d'4. b4. ~",
     r"b4. a4. ~ a4) r4. r8 d'8( e'",
     r"g'4.) ~ g'4. c''4( d''4. e''4. ~",
-    r"e''4.) g''4.( ~ g''4 f''4. d''4.)",
+    r"e''4.) c''4.( ~ c''4 f''4. d''4.)",
     r"e''4.( ~ e''4. d''4 b'4. a'4.",
     r"g'4. e'4. d'4 b4. g4.)",
 ]
-# The second statement: a start from the low D, a leap of an eleventh to the high C,
-# the answer up to A5 and B-flat 5, and a fall to the low B at the end of the phrase.
+# The second statement: a start from the low D and a leap of an eleventh to the high C.
+# The answer is two octaves lower (G3), not higher: the highest note of the saxophone in
+# the audio is F5. The highest phrase goes to that F, and the low B ends the first half.
 THEME_WIDE = [
     r"r4 d16( e g4. c''4 d''4. ~ d''4.",
     r"d''4.) r4. r4 a'8( b' d'' e''4. ~",
-    r"e''4. ~ e''4.) g''4( a''4. fis''4. ~",
-    r"fis''4. d''4. b'4) r4. g8( d b,)",
+    r"e''4. ~ e''4.) g4( a4. fis4. ~",
+    r"fis4. d'4. b'4) r4. g8( d b,)",
     r"r4 d16( e g4. c''4 d''4. e''4. ~",
-    r"e''4.) g''4.( ~ g''4 a''4. bes''4.)",
-    r"a''4.( ~ a''4. g''4 e''4. d''4. ~",
-    r"d''4. b'4. a'4 g'4.) r4.",
+    r"e''4.) c''4.( ~ c''4 d''4. f''4.)",
+    r"e''4.( ~ e''4. d''4 b'4. a'4. ~",
+    r"a'4. g'4. e'4 d'4.) r4.",
 ]
 # The last eight bars of the second statement: the answer of the second bar is one
 # octave lower, the motto of the fifth bar is low, and a leap of a tenth goes to the
@@ -354,7 +372,7 @@ THEME_CLOSE_WIDE = [
     r"e''4.( ~ e''4. ~ e''4 d''4. b'4. ~",
     r"b'4. a'4. ~ a'4) r4. r4.",
     r"r4. g4.( c'4 d'4. e'4. ~",
-    r"e'4.) g''4.( ~ g''4 f''4. d''4.)",
+    r"e'4.) c''4.( ~ c''4 f''4. d''4.)",
     *LINE_1,
 ]
 # The quiet middle: the low register with much air in the tone. The second phrase is a

@@ -35,10 +35,15 @@ class Edit:
     """One change of the recording.
 
     `kind` is one of: stutter, tapestop, reverse, mute, gate, crush, lowpass,
-    highpass, and the long kinds sink, narrow, darken. `bar` and `beat` give
+    highpass, echo, and the long kinds sink, narrow, darken. `bar` and `beat` give
     the start (the beat is in quarter notes, 1 = start of the bar). `length`
     is the length of the changed part in quarter notes. `stems` are the first
     parts of the names of the stems that change ("" = all stems).
+
+    "echo" is a delay on the changed part, as a player does it with a pedal: the sound
+    of the part comes again after `slice` quarter notes, some times, each time softer
+    (`fade` is the level of each echo relative to the one before; `share` is the level
+    of the first echo). The echoes go on after the end of the part.
 
     The long kinds: "sink" moves the pitch from `pitch_start` to `pitch`
     (semitones; the time does not change). "narrow" moves the stereo width
@@ -70,7 +75,9 @@ class Edit:
         values = {4.0: "whole", 2.0: "half", 1.0: "quarter", 0.5: "eighth", 0.25: "sixteenth",
                   0.125: "thirty-second"}  # fmt: skip
         piece = values.get(float(self.slice), f"{float(self.slice):g} quarter")
-        if self.kind == "stutter":
+        if self.kind == "echo":
+            text = f"Echoes, one {piece} note apart"
+        elif self.kind == "stutter":
             text = f"Repeat one {piece} note"
             if self.pitch:
                 text += f", the pitch goes {'up' if self.pitch > 0 else 'down'}"
@@ -297,6 +304,11 @@ def apply(
             part = stem[first:last].astype(np.float64)
             piece_seconds = structure.seconds(position + Fraction(edit.slice)) - start_seconds
             piece = max(32, int(piece_seconds * RATE))
+            if edit.kind == "echo":
+                echoes = effects.delay(part, piece / RATE, edit.fade, 0.55, repeats=7)
+                echoes = echoes[: len(stem) - first] * (edit.share / max(edit.fade, 1e-6))
+                stem[first : first + len(echoes)] += echoes.astype(np.float32)
+                continue
             if edit.kind == "stutter":
                 changed = stutter(part, piece, edit.pitch, edit.fade)
             elif edit.kind == "tapestop":

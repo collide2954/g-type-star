@@ -52,6 +52,24 @@ def octave(text: str, count: int) -> str:
     return tr(text, 12 * count, 7 * count)
 
 
+def within(text: str, low: int, high: int) -> str:
+    """Return the music with each note inside a range: a note outside moves by octaves.
+
+    This is for a line that all lead players have together: a player whose
+    instrument does not have the highest notes of the line takes them one
+    octave lower.
+    """
+
+    def change(pitch: Pitch) -> Pitch:
+        while pitch.midi > high:
+            pitch = replace(pitch, octave=pitch.octave - 1)
+        while pitch.midi < low:
+            pitch = replace(pitch, octave=pitch.octave + 1)
+        return pitch
+
+    return _apply(text, change)
+
+
 def invert(text: str, axis: str) -> str:
     """Return the mirror of the music around the pitch `axis`.
 

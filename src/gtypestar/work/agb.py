@@ -420,7 +420,7 @@ def write(work: Work) -> None:
         [drum_bar(HANDS_OPEN[n % 4], KICKS_8[n % 4], fills.get(n + 1, "")) for n in range(8)],
         r"\ff",
     )
-    s.set("keys.rh", mainseq._keys(symbols, "last theme"), r"\f")
+    s.set("keys.rh", mainseq._comp(symbols, mainseq.C_KEYS), r"\f")
     s.set("pad.rh", m.pad_bars(symbols, low=60, high=84), r"\f", r'\switch "supersaw"')
     s.set("sbass", m.roots(symbols, "a_____ ______ a___ ______ ______"), r"\f",
           r'\switch "bass sub"')  # fmt: skip
@@ -527,7 +527,7 @@ def write(work: Work) -> None:
         hold = patterns.pitched("a_____ ______ ____ ______ ______", m.CLAVE, {"a": chord_text})
         five = patterns.pitched("A_____ A_____ A___ A_____ A_____", m.CLAVE, {"a": turn_text})
         run_keys = sixteenths(scale_up(55 + step, 16, key), flats)
-        parts["keys.rh"] += [*mainseq._keys([name] * 2, f"pulse {number}"),
+        parts["keys.rh"] += [*mainseq._comp([name] * 2, mainseq.F_KEYS),
                              f"{chord_text}2.-> {run_keys}", five]  # fmt: skip
         parts["pad.rh"] += [hold, hold, hold, five]
         sub = m.roots([name] * 3, "a_____ ______ a___ ______ ______")

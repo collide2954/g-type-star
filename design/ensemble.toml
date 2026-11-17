@@ -364,7 +364,7 @@ range = [55, 100]
 [instrument."viola"]
 transposition = 0
 clef = "alto"
-range = [48, 88]
+range = [48, 85]   # the sound library has no note above D-flat 6
 
 [instrument."violoncello"]
 transposition = 0
