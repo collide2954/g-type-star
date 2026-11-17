@@ -36,7 +36,9 @@ LOW_STEMS = ("drums", "eperc", "bass", "sbass", "gtr", "keys")
 ALL_PLAYERS = (*LOW_STEMS, "tsax", "lead", "pad", "chip", "horns", "strings", "tpt", "asax",
                "tbn", "bsax", "vn", "va", "vc")  # fmt: skip
 
-# The theme as a chorale in E-flat, in bars of four beats (16 bars).
+# The theme as a chorale in E-flat, in bars of four beats (16 bars): the motto in long
+# notes (E-flat, A-flat, B-flat, C). No note of the melody is held into a chord in
+# which it is the minor ninth.
 CHORALE = [
     r"r2 es'2(",
     r"as'2 bes'2 ~",
@@ -47,14 +49,72 @@ CHORALE = [
     r"g'2 f'2 ~",
     r"f'2) r2",
     r"r2 es'2(",
-    r"as'4 bes'4 c''2 ~",
-    r"c''2) es''2( ~",
+    r"as'4 bes'4 c''2)",
+    r"r2 es''2( ~",
     r"es''2 des''4 bes'4)",
     r"c''1( ~",
     r"c''4 bes'4 g'4 f'4 ~",
     r"f'2 es'2 ~",
     r"es'2.) r4",
 ]
+# The other three voices of the chorale: the alto saxophone, the trombone, and the
+# baritone saxophone. Each voice moves by small steps; an inner voice moves when the
+# melody holds a note (bars 5 and 13: E-flat to D, the raised fourth of the chord).
+CHORALE_ALTO = [
+    r"r2 bes2(",
+    r"f'2 g'2",
+    r"dis'2.) r4",
+    r"cis'2( b2)",
+    r"g'1( ~",
+    r"g'2 g'4 es'4 ~",
+    r"es'2 c'2 ~",
+    r"c'2 d'4) r4",
+    r"r2 bes2(",
+    r"f'4 g'4 g'2)",
+    r"dis'2( ais'2 ~",
+    r"ais'2 gis'4 fis'4)",
+    r"g'1( ~",
+    r"g'4 g'4 es'4 d'4",
+    r"c'2 bes2",
+    r"c'2.) r4",
+]
+CHORALE_TROMBONE = [
+    r"r2 g2(",
+    r"c'2 d'2",
+    r"fis2.) r4",
+    r"ais2( fis2)",
+    r"es'2( d'2",
+    r"es'2 es'4 c'4",
+    r"as2 bes2",
+    r"as2 as4) r4",
+    r"r2 g2(",
+    r"c'4 d'4 d'2)",
+    r"fis2( fis'2 ~",
+    r"fis'2 dis'4 cis'4)",
+    r"es'2( d'2",
+    r"es'4 d'4 c'4 bes4",
+    r"as2 g2",
+    r"as2.) r4",
+]
+CHORALE_BARITONE = [
+    r"r2 es2(",
+    r"es1",
+    r"b,2.) r4",
+    r"b,1",
+    r"as,1( ~",
+    r"as,1)",
+    r"f,1(",
+    r"bes,2.) r4",
+    r"r2 es2(",
+    r"es2 es2)",
+    r"b,1( ~",
+    r"b,1)",
+    r"as,1( ~",
+    r"as,1)",
+    r"f,1(",
+    r"bes,2.) r4",
+]
+CHORALE_VOICES = [CHORALE, CHORALE_ALTO, CHORALE_TROMBONE, CHORALE_BARITONE]
 # The solo of the lead synthesizer: eight bars in F, then eight bars in G.
 SOLO_F = [
     r"r4 c''8( d'' f''4 g''4 ~",
@@ -76,21 +136,15 @@ SOLO_G = [
     r"e'''8( d''' c'''16 a'' g'' e'' d''8 c'' a'4)",
     r"r8 d''16( e'' fis'' a'' b'' d''' e'''4 ~ e'''4)",
 ]
-SHIMMER = m.Groove(
+# The first eight bars of the chorale: the ride cymbal on each beat, a cross-stick on
+# the third beat, the kick drum on the first.
+BROAD = m.Groove(
     """
-    hh  x-x-x--x-x- x-x-x--x-x-
-    sn  ----------- x----------
-    bd  x---------- -----------
+    rd  x--- x--- x--- x---
+    sn  ---- ---- x--- ----
+    bd  x--- ---- ---- ----
     """,
-    HALVES,
-)
-SHIMMER_FULL = m.Groove(
-    """
-    hh  x-x-x--x-x- x-x-x--x-x-
-    sn  ----------- o----------
-    bd  x---------- ---------x-
-    """,
-    HALVES,
+    BEATS,
 )
 SLOW = m.Groove(
     """
@@ -150,38 +204,29 @@ def write(work: Work) -> None:
     structure = work.structure
     cues: list[Cue] = work.extras.setdefault("cues", [])  # type: ignore[assignment]
 
-    # ------------------------------------------------- the chorale
+    # ------------------------------------------------- N: the chorale
     s = Bars(work, 16, COMMON)
     structure.mark(s.bar(1), "N")
     structure.tempo(s.bar(1), 1, m.GIANT, "Broad and heavy (the long pulse is the new beat)")
     loop = ["Ebmaj9", "Ebmaj9", "Bmaj7#11", "Bmaj7#11", "Abmaj9#11", "Abmaj9#11", "Fm11", "Bb13sus"]
     symbols = loop * 2
-    s.set("tpt", CHORALE, r"\mf\dolce")
-    s.set("vn1", [tools.octave(bar, 1) for bar in CHORALE], r"\mp")
-    second = [tools.tr(bar, -3) if i not in (2, 3) else tools.tr(bar, -4)
-              for i, bar in enumerate(CHORALE[8:])]  # fmt: skip
-    s.set("tsax", [None] * 8 + tools.true_ties(second), r"\mp\subtone")
-    low_horns = m.layers(symbols, ["a___ ____"], ("bsax", "tbn", "asax"), "horns3", HALVES)
-    for player, bars in low_horns.items():
-        s.set(player, bars, r"\p")
-    low_strings = m.layers(symbols, ["a___ ____"], ("vc", "va", "vn2"), "strings3", HALVES)
-    for player, bars in low_strings.items():
-        s.set(player, bars, r"\p")
+    # Four real voices: the trumpet has the motto in long notes, and the alto saxophone,
+    # the trombone and the baritone saxophone each have a line of their own. The strings
+    # play the same four voices from the ninth bar.
+    for player, voice in zip(("tpt", "asax", "tbn", "bsax"), CHORALE_VOICES, strict=True):
+        s.set(player, voice, r"\mf\dolce" if player == "tpt" else r"\mp")
+    s.set("vn1", [None] * 8 + [tools.octave(bar, 1) for bar in CHORALE[8:]], r"\mp")
+    for player, voice in zip(("vn2", "va", "vc"), CHORALE_VOICES[1:], strict=True):
+        s.set(player, [None] * 8 + voice[8:], r"\mp")
     s.set("keys.rh", chord_bars(symbols, "a___ ____"), r"\p")
     s.set("bass", m.roots(symbols, "a___ __c_", HALVES), r"\mf")
     s.set("sbass", m.roots(symbols, "a___ ____", HALVES), r"\mf", r'\switch "bass sub"')
     s.set(
         "drums",
-        slow_bars(SHIMMER, 8, "chorale 1", amount=0.0, crash=(1,), fills={})
-        + slow_bars(SHIMMER_FULL, 8, "chorale 2", amount=0.3, crash=(1,), fills={8: "slow 2"}),
+        slow_bars(BROAD, 8, "chorale 1", amount=0.0, crash=(1,), fills={})
+        + slow_bars(SLOW, 8, "chorale 2", amount=0.3, crash=(1,), fills={8: "slow 2"}),
         r"\mp",
     )
-    eleven = []
-    for symbol in symbols:
-        notes = chords.voice(symbol, 4, low=79, high=98)
-        table = {k: chords.names((n,), symbol) for k, n in zip("abcd", notes, strict=True)}
-        eleven.append(patterns.pitched("ab-cd--ab-c d-ab-c--d-a", HALVES, table))
-    s.set("chip", eleven, r"\pp", r'\switch "chip pulse 25"')
     # The seam with the flares: their last strokes become softer (to mezzo forte). The
     # guitar holds the new root at that level and its sound dies away under the chorale;
     # noise falls from the first beat.
@@ -248,20 +293,19 @@ def write(work: Work) -> None:
     # ------------------------------------------------- the theme, in G, by all players
     s = Bars(work, 8, COMMON)
     structure.mark(s.bar(1), "P")
-    theme = [tools.tr(bar, 4) for bar in CHORALE[8:]]
+    # The second half of the chorale, in G: the four voices of the horns, the tenor
+    # saxophone one octave under the trumpet, and the strings with the same voices.
+    voices = [[tools.tr(bar, 4) for bar in voice[8:]] for voice in CHORALE_VOICES]
+    theme = voices[0]
     s.set("tpt", theme, r"\f")
-    s.set("tsax", theme, r"\f\normaltone")
-    second = [tools.tr(bar, -3) if i not in (2, 3) else tools.tr(bar, -4)
-              for i, bar in enumerate(theme)]  # fmt: skip
-    s.set("asax", tools.true_ties(second), r"\f")
+    s.set("tsax", [tools.octave(bar, -1) for bar in theme], r"\f\normaltone")
     s.set("lead", [tools.octave(bar, 1) for bar in theme], r"\f")
     s.set("vn1", [tools.octave(bar, 1) for bar in theme], r"\f")
-    low_horns = m.layers(symbols, ["a___ ____"], ("bsax", "tbn"), "horns2", HALVES)
-    for player, bars in low_horns.items():
-        s.set(player, bars, r"\f")
-    low_strings = m.layers(symbols, ["a___ ____"], ("vc", "va", "vn2"), "strings3", HALVES)
-    for player, bars in low_strings.items():
-        s.set(player, bars, r"\f")
+    for horn, string, voice in zip(
+        ("asax", "tbn", "bsax"), ("vn2", "va", "vc"), voices[1:], strict=True
+    ):
+        s.set(horn, voice, r"\f")
+        s.set(string, voice, r"\f")
     s.set("keys.rh", chord_bars(symbols, "a_a_ --a_"), r"\f")
     s.set("bass", m.roots(symbols, "a_xc b_ac", HALVES), r"\f")
     s.set("sbass", m.roots(symbols, "a___ ____", HALVES), r"\f")
@@ -334,12 +378,14 @@ def write(work: Work) -> None:
         bars[9] = tools.first(bars[9], r"\fff", note=True)
         s.set(player, tools.first(patterns.join(bars), r"\mf\<", note=True))
     horns = m.layers([None] * 4 + symbols[4:], held, m.HORNS, "horns", HALVES)
+    # The trumpet takes the line of the saxophone on from its highest note (F5).
+    horns["tpt"][7:] = [r"r2 f''2(", r"fis''2 a''2 ~", r"a''2 a''8->) r8 r4"]
     for player, bars in horns.items():
         bars[9] = tools.first(bars[9], r"\fff", note=True)
         s.set(player, bars, r"\mf\<")
     # The saxophone climbs through the notes of the chord to its highest note.
-    s.set("tsax", [None] * 4 + [r"a'1\mf\<( ~", r"a'2 c''2 ~", r"c''2 es''2 ~", r"es''2 f''2",
-                                r"fis''2 a''2 ~", r"a''2 c'''8->\fff) r8 r4"])  # fmt: skip
+    s.set("tsax", [None] * 4 + [r"a'1\mf\<( ~", r"a'2 c''2 ~", r"c''2 es''2 ~", r"es''2 f''2 ~",
+                                r"f''1 ~", r"f''2 f''8->\fff) r8 r4"])  # fmt: skip
     # Chords of the synthesizer in eighth notes: a filter opens from bar 5 to the stop.
     pulse = chord_bars(symbols[4:9], "aaaa aaaa", low=60, high=84)
     pulse += chord_bars(symbols[9:], "a_a_a_a_ " + stop, low=60, high=84)
