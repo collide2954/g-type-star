@@ -567,9 +567,12 @@ def write(work: Work) -> None:
     )  # fmt: skip
     drums[16] = tools.first(drums[16], r"\ff", note=True)
     s.set("drums", drums, r"\f")
-    colours = ["F#m11", "F#m11", "Gmaj7#11", "Gmaj7#11", "F#m11", "F#m11", "Amaj7#11", "C7#11",
-               "Am11", "Am11", "Bbmaj7#11", "Bbmaj7#11", "Am11", "Am11", "Cmaj7#11", "Eb7#11",
-               "Cm11", "Cm11", "Dbmaj7#11", "Dbmaj7#11", "Cm11", "Cm11", "Ebmaj7#11", "D7#11"]  # fmt: skip
+    # The chord one semitone above the root stays above the root of the riff: the lowest
+    # horn has the note of the bass, not the root of that chord.
+    colours = ["F#m11", "F#m11", "Gmaj7#11/F#", "Gmaj7#11/F#", "F#m11", "F#m11", "Amaj7#11",
+               "C7#11", "Am11", "Am11", "Bbmaj7#11/A", "Bbmaj7#11/A", "Am11", "Am11",
+               "Cmaj7#11", "Eb7#11", "Cm11", "Cm11", "Dbmaj7#11/C", "Dbmaj7#11/C", "Cm11", "Cm11",
+               "Ebmaj7#11", "D7#11"]  # fmt: skip
     pad = m.pad_bars(colours, whole, HALVES)
     pad[8] = tools.first(pad[8], r"\mf\<", note=True)
     pad[16] = tools.first(pad[16], r"\f", note=True)

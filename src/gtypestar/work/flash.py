@@ -146,7 +146,7 @@ HORN_BARS = {
 LAST_HORNS = {"bsax": "g, bes, c d fis", "tbn": "d f g a c'", "tsax": "g bes c' d' fis'",
               "asax": "bes d' es' fis' a'", "tpt": "g' bes' c'' d'' fis''"}  # fmt: skip
 # The strings rise in the second eight bars: two bars on each note, then the last bar.
-RISE = ["g''", "g''", "as''", "as''", "bes''", "bes''"]
+RISE = ["g''", "g''", "bes''", "bes''", "d'''", "d'''"]
 
 
 def five(notes: str | tuple[str, ...], marks: str = "->") -> str:
@@ -224,7 +224,7 @@ def write(work: Work) -> None:
     # ------------------------------------------------- strings and synthesizers
     for player, shift in (("vn1", 0), ("vn2", -1), ("va", -2), ("vc", -2)):
         line = [f"{name}1 ~" if number % 2 == 0 else f"{name}1" for number, name in enumerate(RISE)]
-        line += [r"c'''2 d'''2", five("g'' bes'' c''' d''' fis'''")]
+        line += [r"es'''2 d'''2", five("g'' bes'' c''' d''' fis'''")]
         moved = [tools.octave(bar, shift) for bar in line]
         s.set(player, [None] * 8 + moved, r"\mf\<")
     # Chords of the synthesizer: one long chord at each start, and under the motto.

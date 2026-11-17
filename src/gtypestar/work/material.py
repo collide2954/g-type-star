@@ -388,7 +388,7 @@ THEME_LOW_RISE = [
 # the audio is F5. The highest phrase goes to that F, and the low B ends the first half.
 THEME_WIDE = [
     r"r4 d16( e g4. c''4 d''4. ~ d''4.",
-    r"d''4.) r4. r4 a'8( b' d'' e''4. ~",
+    r"d''4.) r4. r4 r4. a'8( b' d''",
     r"e''4. ~ e''4.) g4( a4. fis4. ~",
     r"fis4. d'4. b'4) r4. g8( d b,)",
     r"r4 d16( e g4. c''4 d''4. e''4.)",

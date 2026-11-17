@@ -64,8 +64,8 @@ from .material import Bars
 # in the audio (to F5): accented low notes (D3, G3), leaps of a ninth and of two
 # octaves, and the highest note (F5) in bar 6. The trumpet has the notes above.
 THEME_FORCE = [
-    r"d8-> g-> r g'4.( c''4 d''4. e''4. ~",
-    r"e''4.) r4. r4 a'4.->( g4.->)",
+    r"d8-> g-> r g'4.( c''4 d''4. e''4.)",
+    r"r4. r4. r4 a'4.->( g4.->)",
     r"e'4.->( e''4. ~ e''4 d''4.-> b'4. ~",
     r"b'4. a'4. ~ a'4) r4. r8 d8->( e",
     r"g4.->) g'4.( c''4 d''4. e''4.)",
