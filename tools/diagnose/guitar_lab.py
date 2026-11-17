@@ -105,6 +105,19 @@ LAB: dict[str, Rig] = {
     "5150-d": Rig("Helga_B_5150_BlockLetter_-_Boosted.nam", -20.0, 80.0, 0.0, 0.0,
                   (("bell", 4000.0, -4.0, 1.0), ("lowpass", 5200.0, 4)),
                   cabinet=EDGE),
+    # Lead tones: a Mesa Mark IV and a Marshall JVM with no cabinet, with a real cabinet
+    # response (the microphone far from the centre of the cone: a darker tone).
+    "markiv": Rig("Roman_A_LT_MESA_MARKIV_1.nam", -8.0, 90.0, 3.0, 0.0,
+                  (("bell", 500.0, 2.0, 0.7), ("lowpass", 5500.0, 4)), tone_hz=3000.0,
+                  cabinet=GODS + "SM57/NO-TS/57_1_inch_cone_far_pres_2.wav"),
+    "markiv-edge": Rig("Roman_A_LT_MESA_MARKIV_1.nam", -8.0, 90.0, 3.0, 0.0,
+                       (("lowpass", 5500.0, 4),), tone_hz=3000.0, cabinet=EDGE),
+    "jvm-cab": Rig("Phillipe_P_JVM-OD2-RD-NoDrive-ESR0.003.nam", -8.0, 90.0, 4.0, 0.0,
+                   (("bell", 500.0, 2.0, 0.7), ("lowpass", 5500.0, 4)), tone_hz=2600.0,
+                   cabinet=GODS + "SM57/NO-TS/57_1_inch_cone_far_pres_2.wav"),
+    "5150-lead": Rig("Helga_B_5150_BlockLetter_-_Boosted.nam", -14.0, 90.0, 0.0, 0.0,
+                     (("bell", 600.0, 3.0, 0.7), ("lowpass", 5200.0, 4)), tone_hz=2600.0,
+                     cabinet=GODS + "SM57/NO-TS/57_1_inch_cone_far_pres_2.wav"),
 }  # fmt: skip
 
 
