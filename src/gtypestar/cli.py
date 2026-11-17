@@ -82,13 +82,21 @@ def build_audio(
     from .work import build
 
     export_to = BUILD_DIR / "stems" if export and bars is None else None
-    audio, report = render.render(build(), bars, muse=muse, export_to=export_to, only=parts)
+    work = build()
+    audio, report = render.render(work, bars, muse=muse, export_to=export_to, only=parts)
     if export_to is not None:
         print(f"stems: {export_to}")
     name = name or (NAME if bars is None else f"excerpt-{bars[0]}-{bars[1]}")
     paths = write_audio(audio, BUILD_DIR / "audio", name)
     for path in paths:
         print(f"audio: {path}")
+    if name == NAME and bars is None and parts is None:
+        # The master of the work: a text says for which music it is and which sounds
+        # play it, and the stems are in one file (as in the release: see `release.py`).
+        from . import release
+
+        packed = release.pack_stems(export_to, paths[0].parent / release.STEMS) if export else None
+        release.write_record(work, paths[0].parent, render.sources(muse), packed is not None)
     print(
         f"{report.seconds / 60:.2f} minutes, {report.loudness_lufs:.1f} LUFS, loudness range "
         f"{report.loudness_range:.1f} LU, peak {report.peak_db:.1f} dB, crest factor "
@@ -264,8 +272,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "fetch-audio":
             # The exit code 1 says: the release has no master for this music.
             return 0 if release.fetch(build(), directory) else 1
-        release.publish(build(), directory, "Muse Sounds for the saxophone, horns and strings")
-        print("publish-audio: the release 'audio' has the new master")
+        from .audio import render
+
+        files = release.publish(build(), directory, render.sources(), BUILD_DIR / "stems")
+        names = ", ".join(path.name for path in files)
+        print(f"publish-audio: the draft release '{release.TAG}' has the new master ({names})")
         return 0
     if args.command == "stats":
         show_stats()

@@ -447,6 +447,25 @@ def render(
     return final, report
 
 
+def sources(muse: bool | None = None) -> str:
+    """Return one sentence that says which sounds play the work on this computer."""
+    from . import guitar, kit, musestems, sfzguitar
+
+    if muse is None:
+        muse = musestems.available()
+    winds = "MuseScore Studio with Muse Sounds plays" if muse else "Synthesizer patches play"
+    if not guitar.available():
+        strings = "a string model plays the guitar"
+    elif sfzguitar.selected():
+        strings = "the program of the guitar library plays the recorded guitar in a sampler"
+    else:
+        strings = "the recorded guitar plays"
+    return (
+        f"{winds} the saxophone, the horns and the strings; {strings}; "
+        f"the drum kit is {kit.kit().name}."
+    )
+
+
 def _write_exports(exports: dict[str, np.memmap], directory: Path, drive_db: float) -> None:
     """Write the stems of the full work as FLAC files, all with the same gain."""
     block = 1 << 20

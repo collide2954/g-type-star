@@ -1,0 +1,271 @@
+# Build the score, the parts, the MIDI file, the audio master, the stems, and the two videos.
+#
+# Each build keeps these files as artifacts of the workflow run:
+#
+#   score-parts-midi   g-type-star-score.pdf, g-type-star-parts.zip, g-type-star.mid
+#   audio              g-type-star.flac, g-type-star.mp3, audio.json (where the audio is from)
+#   stems              one FLAC file for each group of players
+#   video              g-type-star.mp4 (1920 x 1080)
+#   video-mobile       g-type-star-mobile.mp4 (1080 x 1920, for a telephone)
+#
+# A build that a person starts by hand ("Run workflow") can also put the files in the
+# public release "latest".
+name: Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/gtypestar/**"
+      - "design/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Put the files in the public release 'latest'"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# A build is long. A new change does not stop the build that is in progress.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  score:
+    name: Score, parts, and MIDI file
+    runs-on: ubuntu-latest
+    # The container has the same tool versions as the computer of the composer.
+    container: fedora:45
+    timeout-minutes: 45
+    steps:
+      - name: Install the tools
+        run: >
+          dnf install -y --setopt=install_weak_deps=False
+          git uv lilypond fontconfig urw-base35-fonts zip
+
+      - name: Get the source
+        uses: actions/checkout@v7
+
+      - name: Permit git in the work directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Install the Python environment
+        run: |
+          uv python install 3.13
+          uv sync --locked --no-dev
+
+      - name: Build the score and the parts
+        run: uv run --no-sync gtypestar parts
+
+      - name: Write the MIDI file
+        run: uv run --no-sync gtypestar midi
+
+      - name: Collect the files
+        run: |
+          mkdir -p build/release
+          cp build/score/score.pdf build/release/g-type-star-score.pdf
+          (cd build/parts && zip -q ../release/g-type-star-parts.zip *.pdf)
+          cp build/midi/g-type-star.mid build/release/
+          ls -l build/release
+
+      - name: Keep the score, the parts, and the MIDI file
+        uses: actions/upload-artifact@v7
+        with:
+          name: score-parts-midi
+          path: build/release/
+          if-no-files-found: error
+
+  audio:
+    name: Audio master and stems
+    runs-on: ubuntu-latest
+    container: fedora:45
+    timeout-minutes: 300
+    permissions:
+      # The audio master of the composer is in a draft release. A build can read a
+      # draft release only with the right to write.
+      contents: write
+    steps:
+      - name: Install the tools
+        run: >
+          dnf install -y --setopt=install_weak_deps=False
+          git uv gh ffmpeg-free libatomic curl zip unzip tar gzip findutils
+
+      - name: Get the source
+        uses: actions/checkout@v7
+
+      - name: Permit git in the work directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Install the Python environment
+        run: |
+          uv python install 3.13
+          uv sync --locked --no-dev
+
+      # The saxophone, the horns and the strings of the audio master are Muse Sounds.
+      # A build server cannot install them. The computer of the composer makes the
+      # master and the stems and puts them in the draft release "audio" (`gtypestar
+      # publish-audio`). If they are for the music of this commit, the build uses
+      # them. If not, the build makes the audio itself, with synthesizer patches for
+      # the wind and string parts, a string model for the guitar, and a smaller drum kit.
+      - name: Get the audio master of the composer
+        id: master
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if uv run --no-sync gtypestar fetch-audio; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            if [ -f build/audio/g-type-star-stems.zip ]; then
+              unzip -q -o build/audio/g-type-star-stems.zip -d build
+            fi
+          fi
+
+      - name: Restore the sound files
+        if: steps.master.outputs.found != 'true'
+        id: sounds
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            .cache/samples
+            .cache/media
+          key: sounds-v2-${{ hashFiles('src/gtypestar/audio/assets.py', 'src/gtypestar/audio/kit.py', 'src/gtypestar/audio/banks.py', 'src/gtypestar/audio/perc.py') }}
+
+      - name: Get the sound files
+        if: steps.master.outputs.found != 'true'
+        run: uv run --no-sync gtypestar fetch --small
+
+      - name: Save the sound files
+        if: steps.master.outputs.found != 'true' && steps.sounds.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            .cache/samples
+            .cache/media
+          key: ${{ steps.sounds.outputs.cache-primary-key }}
+
+      - name: Build the audio
+        if: steps.master.outputs.found != 'true'
+        run: uv run --no-sync gtypestar audio --no-muse --export-stems
+
+      - name: Collect the files
+        run: |
+          mkdir -p build/release
+          cp build/audio/g-type-star.flac build/audio/g-type-star.mp3 build/audio/audio.json build/release/
+          ls -l build/release build/stems
+          {
+            echo "### The audio of this build"
+            echo
+            echo '```json'
+            cat build/audio/audio.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the audio master
+        uses: actions/upload-artifact@v7
+        with:
+          name: audio
+          path: build/release/
+          if-no-files-found: error
+
+      - name: Keep the stems
+        uses: actions/upload-artifact@v7
+        with:
+          name: stems
+          path: |
+            build/stems/*.flac
+            build/stems/README.txt
+          if-no-files-found: error
+
+  video:
+    name: Video (${{ matrix.name }})
+    needs: audio
+    runs-on: ubuntu-latest
+    container: fedora:45
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: wide screen
+            option: ""
+            file: g-type-star.mp4
+            artifact: video
+          - name: telephone
+            option: "--mobile"
+            file: g-type-star-mobile.mp4
+            artifact: video-mobile
+    steps:
+      # The video encoder is OpenH264 of Cisco. Fedora has it in a repository of its own.
+      - name: Install the tools
+        run: >
+          dnf install -y --setopt=install_weak_deps=False --enablerepo=fedora-cisco-openh264
+          git uv lilypond ffmpeg-free openh264 poppler-utils fontconfig urw-base35-fonts
+
+      - name: Get the source
+        uses: actions/checkout@v7
+
+      - name: Permit git in the work directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Install the Python environment
+        run: |
+          uv python install 3.13
+          uv sync --locked --no-dev
+
+      - name: Get the audio master of this build
+        uses: actions/download-artifact@v8
+        with:
+          name: audio
+          path: build/audio
+
+      - name: Build the video
+        run: uv run --no-sync gtypestar video ${{ matrix.option }}
+
+      - name: Keep the video
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: build/video/${{ matrix.file }}
+          if-no-files-found: error
+
+  publish:
+    name: Put the files in the release "latest"
+    needs: [score, audio, video]
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Get the files of this build
+        uses: actions/download-artifact@v8
+        with:
+          path: files
+
+      - name: Collect the files
+        run: |
+          mkdir release
+          cp files/score-parts-midi/* files/audio/g-type-star.flac files/audio/g-type-star.mp3 release/
+          cp files/video/g-type-star.mp4 files/video-mobile/g-type-star-mobile.mp4 release/
+          (cd files && zip -q -0 -r ../release/g-type-star-stems.zip stems)
+          ls -l release
+
+      # The tag "latest" moves to the commit of this build.
+      - name: Publish
+        run: |
+          if gh release view latest > /dev/null 2>&1; then
+            gh api --method PATCH "repos/$GH_REPO/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true
+          else
+            gh release create latest --target "$GITHUB_SHA" --prerelease --title "Latest build" \
+              --notes "The newest build of the work in progress. A build replaces these files."
+          fi
+          gh release upload latest release/* --clobber
