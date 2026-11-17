@@ -446,6 +446,7 @@ def render(
         from .console import filters
 
         for group, rows in spec.tone.items():
-            shaped = signal.sosfilt(np.vstack(filters(rows)), stems[group], axis=0)
-            stems[group] = shaped.astype(np.float32)
+            if group in stems:
+                shaped = signal.sosfilt(np.vstack(filters(rows)), stems[group], axis=0)
+                stems[group] = shaped.astype(np.float32)
     return stems
