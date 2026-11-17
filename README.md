@@ -55,6 +55,7 @@ Code changes the written music into a performance (each player has small shifts 
 - [LilyPond](https://lilypond.org/) 2.26 or later, for the score
 - [FFmpeg](https://ffmpeg.org/), for the MP3 file and the video
 - For the saxophone, the horns, and the strings of the master: MuseScore Studio 4 with Muse Sounds. Without them, synthesizer patches play these parts (`--no-muse`).
+- For the guitar: the sampler sfizz. It comes with the Python package `pysfizz` (Linux on x86-64) and needs the system library libatomic (`sudo dnf install libatomic` on Fedora, `sudo apt install libatomic1` on Debian and Ubuntu). Without the sampler, a simpler player of the project plays the same recordings.
 
 The audio needs about 14 GB of free sound files (a sampled drum kit, hand percussion, a recorded guitar and models of its amplifiers, a bass guitar, an electric piano, and recordings of NASA). This command downloads them into the directory `.cache` (the guitar library is a RAR archive: the package `libarchive-c` unpacks it with the libarchive library of the system):
 

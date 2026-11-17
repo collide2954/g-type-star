@@ -10,7 +10,7 @@ This document says where each sound of *G-Type Star* comes from, how the mix and
 | Percussion (shaker, tambourine, congas) | Samples of real instruments: the *Versilian Community Sample Library*. The code plays the strokes ([`audio/perc.py`](../src/gtypestar/audio/perc.py)); the shaker takes the move away and the move back in turn. | Each computer (the code downloads the samples) |
 | Bass guitar | Samples of a five-string bass, the direct signal of the pickup: Karoryfer *Black And Blue Basses*. An amplifier model of the project comes after them. | Each computer |
 | Electric piano | Samples of a 1977 Rhodes Mark I: *jRhodes3d* by Jeff Learman | Each computer |
-| Guitar (8 strings) | Recordings of a real guitar, note by note (the direct signal of the pickup): the library *METAL-GTX* of Unreal Instruments. Then a model of a real amplifier with its cabinet and microphone, from the Neural Amp Modeler project ([`audio/guitar.py`](../src/gtypestar/audio/guitar.py), [`audio/nam.py`](../src/gtypestar/audio/nam.py)). The two rhythm guitars, left and right, are two different recordings of each note. If the library is not there: a model of a plucked string and of an amplifier ([`audio/amp.py`](../src/gtypestar/audio/amp.py)). | Each computer (the code downloads the library and the models) |
+| Guitar (8 strings) | Recordings of a real guitar, note by note (the direct signal of the pickup): the library *METAL-GTX* of Unreal Instruments. The program that its makers wrote for the library plays the recordings, in the sampler sfizz ([`audio/sfzguitar.py`](../src/gtypestar/audio/sfzguitar.py)). Then a model of a real amplifier with its cabinet and microphone, from the Neural Amp Modeler project ([`audio/guitar.py`](../src/gtypestar/audio/guitar.py), [`audio/nam.py`](../src/gtypestar/audio/nam.py)). The two rhythm guitars, left and right, are two different recordings of each note. If the sampler is not there: the player of `guitar.py` plays the recordings. If the library is not there: a model of a plucked string and of an amplifier ([`audio/amp.py`](../src/gtypestar/audio/amp.py)). | Each computer (the code downloads the library and the models). The sampler: Linux on x86-64, with the system library `libatomic` |
 | Synthesizers, chip synthesizer, synthesizer bass, drum machine | Code: oscillators, filters, frequency modulation ([`audio/synth.py`](../src/gtypestar/audio/synth.py), [`audio/drumsynth.py`](../src/gtypestar/audio/drumsynth.py), [`audio/dubstep.py`](../src/gtypestar/audio/dubstep.py)) | Each computer |
 | Tenor saxophone, horns, strings | MuseScore Studio with Muse Sounds ([`audio/musestems.py`](../src/gtypestar/audio/musestems.py)). On a computer with no Muse Sounds, synthesizer patches play these parts (`--no-muse`). | A computer with MuseScore Studio and Muse Sounds |
 | Recorded sounds | Public recordings of space and of space flight, and sounds that code makes from physical values ([`audio/tape.py`](../src/gtypestar/audio/tape.py)) | Each computer |
@@ -72,9 +72,40 @@ The same riff, the two rhythm guitars alone (the last column: the mean of the la
 
 A model of an amplifier with no cabinet can have the response of a real cabinet (`Rig.cabinet`, a file in `.cache/models/ir`). The comparison had a Peavey 5150 with a boost pedal (capture: Helga B) and "God's Cab", the responses of a Mesa cabinet of 4 x 12 inches with a Shure SM57. For the audio model this rig is as near to the real recordings as the retuned rig (0.91 against 0.93 on the amplifier test), so the choice is for the ears of the owner. The retuned rig is the rig of the work; the environment variable `GTYPESTAR_GUITAR=5150` selects the second set (the same level in the mix).
 
-A complete SFZ player would play all of the library as its makers planned it (real hammer-on and slide samples, key switches). The package `pysfizz` is such a player; the session could not install it without the permission of the owner.
-
 The distortion of an amplifier is a compressor: after it, a soft stroke is almost as loud as a hard stroke. In the third version, a held chord with the mark *mezzo forte* and a hairpin to *pianissimo* stayed at full level for six seconds, above the first notes of the horn chorale (mark N). Now a fader after the amplifier follows the written loudness (`band.fader`), as the volume control of the player or the hand of the engineer does: 24 dB between the loudness values 0 and 1 for the high gain tone, 10 dB for the crunch tone. The build-up before the helium flash and the fall at the end of part 7 have a real change of the loudness of the guitar because of this.
+
+### The program of the library, in a sampler
+
+A complete SFZ player plays the library as its makers planned it. The session could not install one without the permission of the owner. After version 3.4 the owner gave it: "Install pysfizz", and then "Install libatomic by dnf" (a system library that the package needs). The package `pysfizz` has the sampler sfizz. [`audio/sfzguitar.py`](../src/gtypestar/audio/sfzguitar.py) writes the notes of the guitar as MIDI messages for the program of the library (a text in the format SFZ with 14 000 regions): a key switch for the way of playing of each note, and the controllers of the program. The amplifier models and the mix are the same as before.
+
+| What the program does | In the player of `guitar.py` |
+| --- | --- |
+| A down stroke and an up stroke for each note, open or with the palm on the strings, and real notes with no pitch (the left hand stops the string). | The same recordings; a note with no pitch was a muted note of 0.07 seconds. |
+| Each recording starts before the note: the pick is on the string for 15 to 45 milliseconds. Through an amplifier with much gain this is the small sound before each stroke of a real player. | Most of it stays, but the note was late (see below). |
+| A soft stroke is softer and duller (a filter follows the velocity). | A soft stroke was only softer. |
+| Notes that the left hand starts: the hammer-on and the pull-off of the makers. | A copy by hand: the note starts inside the recording. At some changes of note the level fell by up to 15 dB after the amplifier; with the program the largest fall is 4 dB. |
+| A sound for the stop of each way of playing, a soft sound of the other strings, the noise of the pick. | One kind of stop sound, and the noise of the pick. |
+| Recorded slides into a note, and a vibrato that only goes up from the note, as a finger on a string does. | A slide and a vibrato that change the pitch of the recording. |
+
+**Each note at its written time.** A key of the program does not sound at the moment of its message: first comes the time of the pick on the string, 30 to 45 milliseconds for a stroke of the pick and 5 milliseconds for a note of the left hand. `sfzguitar.latency` measures this time one time for each key, each way of playing and each of the two guitars (nine strokes for each key, 90 seconds in all) and keeps the table next to the library. Each message goes to the sampler earlier by the time of its key. The notes are then at their written times with a spread of 3 to 5 milliseconds, as the notes of a good player are; some notes are 10 to 18 milliseconds off.
+
+This measurement found a fault of all versions to 3.4. The player of `guitar.py` cut each recording at its first sample above 2% of its largest value. The pick is on the string after that point for 15 to 26 milliseconds more. Thus each note of the guitar was late by that time, with a spread of 5 to 11 milliseconds: the guitar was behind the drums. The player of `guitar.py` now puts each recording earlier by its own time.
+
+"The moment at which a note sounds" (`guitar.onset`) is the first sample of half of the largest value of the first 120 milliseconds. A lower level is wrong: some recordings have a click, a scrape, or the end of the stroke before, a quarter to a third of the size of the note. A measurement of how long the level stays up is also wrong: the sound of a low string is a row of short pulses, one in each 15 to 22 milliseconds.
+
+The guitar alone, the same notes and the same amplifier (`tools/diagnose/judge.py`; a second render of the same notes changes the sum by about 4 and the last number by 0.003):
+
+| Passage | Player of `guitar.py`: sum of five pairs | Near the real recordings | Program in the sampler: sum | Near the real recordings |
+| --- | --- | --- | --- | --- |
+| Heavy riff (mark K) | 71 | 0.912 | 75 | 0.919 |
+| Fast passage (mark K) | 57 | 0.857 | 64 | 0.888 |
+| Lead line (mark L) | 46 | 0.859 | 48 | 0.887 |
+
+The controllers of the program stay at the values of the makers, with one exception: the tone filter "Magnet" (an imitation of an active pickup) is off, as the manual says for a tone that comes from an amplifier of your own. `tools/diagnose/program_lab.py` tried other values on the riff and on the lead line: the filter at 64 and at 100, three other kinds of stop sound, the stronger recordings of the controller 23, more and less noise of the pick, and down strokes only for notes slower than 0.15 seconds. None was nearer to the real recordings.
+
+The sampler has its own random numbers (the loudness of each stroke, the start of the small sounds). The first render of a new process is always the same; a second render in the same process is a little different.
+
+The environment variable `GTYPESTAR_PLAYER=plain` selects the player of `guitar.py`. The level of each tone in the mix is the same with the two players within 1.6 dB (`tools/diagnose/guitar_levels.py`).
 
 ## The drums
 
@@ -151,6 +182,7 @@ The writer of the code cannot hear. Each render is measured against the referenc
 - `tools/diagnose/pulse.py`: how clear the pulse of each part is (the autocorrelation of the onset curve), against the reference recordings.
 - `tools/diagnose/judge.py`: a comparison of candidates for one sound (a guitar, a drum kit): pairs of descriptions ("a real electric guitar played by a guitarist" against "a fake guitar from a keyboard"), and the similarity to real recordings of the instrument.
 - `tools/diagnose/guitar_lab.py`: settings of the guitar amplifier on one passage, with the tone of real recordings next to them. `tools/diagnose/drums_alone.py`: one drum kit on some bars, as the mix has it.
+- `tools/diagnose/guitar_players.py`: the two players of the guitar before the amplifier (level, tone). `tools/diagnose/guitar_levels.py`: the level of each tone of the guitar with each player. `tools/diagnose/program_lab.py`: settings of the guitar program in the sampler.
 
 The owner of the project is the last judge: the tools only find what a number can show.
 
@@ -192,6 +224,7 @@ The tests in `tests/test_render.py` and `tests/test_tape.py` check these three i
 | Percussion | Versilian Studios, *Versilian Community Sample Library* (https://github.com/sgossner/VCSL) | CC0 1.0 |
 | Bass guitar | Karoryfer Samples, *Black And Blue Basses* | CC0 1.0 |
 | Guitar | Unreal Instruments, *METAL-GTX* (https://unreal-instruments.wixsite.com/unreal-instruments/metal-gtx) | "License free. No credit notation required." (its manual) |
+| Sampler for the guitar | sfizz (https://sfz.tools/sfizz), with the Python package pysfizz of Haokun Tian (https://github.com/tiianhk/pysfizz) | BSD 2-Clause |
 | Guitar amplifiers | Captures by Phillipe P of a Bugera 6262, a Bugera 333 and a Marshall JVM with cabinet, from the collection of the Neural Amp Modeler community (https://github.com/pelennor2170/NAM_models) | GPL 3.0 (the model files; they are not in this repository) |
 | Electric piano | *jRhodes3d* by Jeff Learman | Free for use in music; the samples themselves are CC BY-NC and are not in this repository |
 | Saxophone, horns, strings | Muse Sounds (Muse Group), played by MuseScore Studio | Free to use in music; not open |
