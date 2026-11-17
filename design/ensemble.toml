@@ -195,6 +195,10 @@ range = [49, 83]   # the sound library has no note above B5
 [instrument."tenor saxophone"]
 transposition = 14
 clef = "treble"
+# In the score in C, the treble clef for the octave below: the middle of the range of
+# the instrument is then on the staff (with the plain treble clef, one note in four
+# was below the staff, to six ledger lines).
+score_clef = "treble_8"
 # A player has notes to C6 (the altissimo register). The sound library of the audio
 # stops at F5: a higher note has no sound (tools/diagnose/muse_ranges.py).
 range = [44, 77]

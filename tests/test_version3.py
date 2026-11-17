@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from gtypestar.audio import band, glitch, perc, tape
-from gtypestar.compose import check, tools
+from gtypestar.compose import check, patterns, tools
 from gtypestar.perform.events import PerfNote
 from gtypestar.perform.feel import Event
 from gtypestar.work import material as m
@@ -175,3 +175,30 @@ def test_the_band_goes_down_under_a_voice_and_comes_back():
     assert all(cue.duck_db > 0 or "Fire three" in cue.text for cue in loud), [
         cue.text for cue in loud if not cue.duck_db
     ]
+
+
+def test_a_held_note_is_one_note_value_where_the_metre_allows_it():
+    table = {"a": "g"}
+    clave, beats = (3, 3, 2, 3, 3), (2, 2, 2, 2)
+    # A full bar of 14 eighth notes: 6 + 2 + 6, not five values with ties.
+    assert patterns.pitched("a_____ ______ ____ ______ ______", clave, table) == "g2.~ g4~ g2."
+    # A full bar of four beats is a whole note; three beats are a half note and a quarter.
+    assert patterns.pitched("a___ ____ ____ ____", beats, table) == "g1"
+    assert patterns.pitched("a___ ____ ____ ----", beats, table) == "g2~ g4 r4"
+    # A note from the second beat does not hide the middle of the bar.
+    assert patterns.pitched("---- a___ ____ ____", beats, table) == "r4 g4~ g2"
+    # Two notes are two notes.
+    assert patterns.pitched("a_____ a_____ ---- ------ ------", clave, table) == (
+        "g4. g4. r4 r4. r4."
+    )
+
+
+def test_the_key_of_a_muse_stem_is_the_music_as_it_sounds():
+    from gtypestar.audio import musestems
+    from gtypestar.work import build
+
+    work = build()
+    first = musestems.played_key(work, None, {"tsax"})
+    assert first == musestems.played_key(work, None, {"tsax"})
+    assert first != musestems.played_key(work, None, {"tpt"})
+    assert first != musestems.played_key(work, (39, 54), {"tsax"})

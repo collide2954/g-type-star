@@ -282,7 +282,8 @@ class _Emitter:
                 self.set_instrument(instrument)
                 label = name[0].upper() + name[1:]
                 parts.append(
-                    f'\\clef {self.clef_of(instrument)} <>^\\markup \\instrumentchange "{label}"'
+                    f"\\clef {clef_word(self.clef_of(instrument))} "
+                    f'<>^\\markup \\instrumentchange "{label}"'
                 )
             elif isinstance(element, music.Group) and element.kind == "parallel":
                 voices = [f"{{ {self.emit(child.children)} }}" for child in element.children]
@@ -343,6 +344,11 @@ def _pitches(elements: list[music.Element]) -> list[float]:
     return found
 
 
+def clef_word(name: str) -> str:
+    """Return the name of a clef as LilyPond reads it: a name with an octave is in quotes."""
+    return f'"{name}"' if "_" in name or "^" in name else name
+
+
 def best_clef(base: str, instrument: Instrument | None, written: list[float]) -> str:
     """Return the clef for a passage: the usual clef, or a better clef for its range."""
     if not written or instrument is None or base in ("percussion", "grand"):
@@ -388,7 +394,7 @@ def _with_clefs(
         written = [midi + shift for midi in _pitches(chunk.children)]
         clef = best_clef(emitter.clef_of(instrument), instrument, written)
         if clef != current:
-            elements.append(music.Command("clef", [clef]))
+            elements.append(music.Command("clef", [clef_word(clef)]))
             current = clef
         octave = best_ottava(clef, instrument, written)
         if octave != ottava:

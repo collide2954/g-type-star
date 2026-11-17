@@ -19,7 +19,7 @@ The audio is in [`audio.md`](audio.md).
 - Length: 340 bars, 13:00 minutes.
 - The dubstep passage (part 6): bars 271 to 286, 27.4 seconds.
 - The one sudden pause: bar 270, from beat 3.5, 0.77 seconds, before the first beat of part 6.
-- Recorded sounds: 34 cues; 13 of them are voices of the flight Mercury-Redstone 3.
+- Recorded sounds: 33 cues; 12 of them are voices of the flight Mercury-Redstone 3.
 <!-- facts: end -->
 
 ## The form

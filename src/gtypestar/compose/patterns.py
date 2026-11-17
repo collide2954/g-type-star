@@ -69,17 +69,27 @@ def pitched(
     `table` gives the pitch of each letter in the music language, for
     example {"a": "g,,", "b": "<d' g' a'>"}. Marks can follow the pitch after
     a space: {"a": "g,, -."} is a staccato note.
+
+    A note that is held through two pulses of the same length is one note
+    value, not two values with a tie (two dotted quarter notes are one
+    dotted half note), and a note through four such pulses also (four
+    quarter notes are one whole note). Thus a note through a full bar of
+    3 + 3 + 2 + 3 + 3 eighth notes has three values (6 + 2 + 6), and a note
+    through a bar of four beats is a whole note.
     """
     groups = pattern.replace("|", " ").split()
     if len(groups) != len(pulses):
         raise ValueError(f"{len(groups)} groups for {len(pulses)} pulses: {pattern!r}")
-    texts: list[str] = []
+    # For each pulse: its notes and rests as (pitch or "", note value in quarter notes,
+    # marks, tie), and the numbers of its tuplet (0 = a plain division).
+    cells: list[list[tuple[str, Fraction, str, bool]]] = []
+    tuplets: list[tuple[int, int]] = []
     sounding: tuple[str, str] | None = None  # the note that a hold continues
     for number, (group, length) in enumerate(zip(groups, pulses, strict=True)):
         pulse = Fraction(4 * length, unit)
         count = len(group)
         written, normal = drums.division(pulse, count)
-        parts: list[str] = []
+        parts: list[tuple[str, Fraction, str, bool]] = []
         index = 0
         while index < count:
             letter = group[index]
@@ -89,7 +99,7 @@ def pitched(
                     run += 1
                 sounding = None
                 for size in _split(run, written):
-                    parts.append(f"r{VALUES[size * written]}")
+                    parts.append(("", size * written, "", False))
             else:
                 if letter == HOLD:
                     if sounding is None:
@@ -105,13 +115,68 @@ def pitched(
                 tied_out = index + run == count and later.startswith(HOLD)
                 sizes = _split(run, written)
                 for place, size in enumerate(sizes):
-                    tie = "~" if place + 1 < len(sizes) or tied_out else ""
+                    tie = place + 1 < len(sizes) or tied_out
                     first = place == 0 and letter != HOLD
-                    parts.append(f"{pitch}{VALUES[size * written]}{marks if first else ''}{tie}")
+                    parts.append((pitch, size * written, marks if first else "", tie))
             index += run
-        body = " ".join(parts)
+        cells.append(parts)
+        tuplets.append((count, normal))
+    _join_pulses(cells, tuplets, [Fraction(4 * length, unit) for length in pulses])
+    texts: list[str] = []
+    for parts, (count, normal) in zip(cells, tuplets, strict=True):
+        if not parts:
+            continue  # the pulse is inside the note value of the pulse before it
+        body = " ".join(
+            f"{pitch or 'r'}{VALUES[value]}{marks}{'~' if tie else ''}"
+            for pitch, value, marks, tie in parts
+        )
         texts.append(f"\\tuplet {count}/{normal} {{ {body} }}" if normal else body)
     return " ".join(texts)
+
+
+def _join_pulses(
+    cells: list[list[tuple[str, Fraction, str, bool]]],
+    tuplets: list[tuple[int, int]],
+    lengths: list[Fraction],
+) -> None:
+    """Make one note value from a note that is held through two or four equal pulses.
+
+    The pulses of a bar are in blocks of equal length (3 + 3, 2, 3 + 3 eighth
+    notes). In a block, the pulses 1 and 2 (and 3 and 4) can be one value,
+    and then the four pulses. A value never goes from one block to the next.
+    """
+
+    def whole(place: int) -> bool:
+        """Is the pulse one note with the full length of the pulse?"""
+        return (
+            len(cells[place]) == 1
+            and bool(cells[place][0][0])
+            and cells[place][0][1] == lengths[place]
+            and not tuplets[place][1]
+        )
+
+    first = 0
+    while first < len(lengths):
+        last = first
+        while last + 1 < len(lengths) and lengths[last + 1] == lengths[first]:
+            last += 1
+        for size in (2, 4):
+            for place in range(first, last + 2 - size, size):
+                half = size // 2
+                left, right = cells[place], cells[place + half]
+                if not left or not right or any(cells[place + n] for n in range(1, size)
+                                                if n != half):  # fmt: skip
+                    continue
+                joined = lengths[place] * half
+                if not (len(left) == 1 and len(right) == 1 and left[0][0] and left[0][3]):
+                    continue
+                if left[0][1] != joined or right[0][1] != joined or 2 * joined not in VALUES:
+                    continue
+                if size == 2 and not (whole(place) and whole(place + 1)):
+                    continue
+                cells[place] = [(left[0][0], 2 * joined, left[0][2], right[0][3])]
+                cells[place + half] = []
+        first = last + 1
 
 
 class Groove:

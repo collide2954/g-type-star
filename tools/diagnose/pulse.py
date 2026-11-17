@@ -82,7 +82,9 @@ def main() -> int:
         part = envelope[int(start * RATE / HOP) : int(end * RATE / HOP)]
         # A long part: the median of its windows.
         size = int(WINDOW * RATE / HOP)
-        pieces = [part[first : first + size] for first in range(0, max(1, len(part) - size // 2), size)]
+        pieces = [
+            part[first : first + size] for first in range(0, max(1, len(part) - size // 2), size)
+        ]
         found = [clarity(piece) for piece in pieces if len(piece) > size // 2] or [clarity(part)]
         value = float(np.median(found))
         flag = "  below the references" if value < floor else ""
