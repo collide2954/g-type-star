@@ -19,7 +19,7 @@ The audio is in [`audio.md`](audio.md).
 - Length: 340 bars, 13:00 minutes.
 - The dubstep passage (part 6): bars 271 to 286, 27.4 seconds.
 - The one sudden pause: bar 270, from beat 3.5, 0.77 seconds, before the first beat of part 6.
-- Recorded sounds: 39 cues; 19 of them are voices of the flight Mercury-Redstone 3.
+- Recorded sounds: 41 cues; 20 of them are voices of the flight Mercury-Redstone 3.
 <!-- facts: end -->
 
 ## The form
@@ -102,11 +102,14 @@ two bars at the end of D, four bars at the end of F, the first line a semitone l
 | "heavy guitar" | Parts 4 and 7. |
 | "a really blood pumping section … that like falls apart, strong gravity from the dwarf star" | Part 7. |
 | "the saxophone would explore more of its range" | The table of the forms of the theme, above. |
+| "a nice full bodied sound from the guitar that shreds in a jazz metal way" | The solo of the guitar in part 4 (mark L): joined notes, a darker amplifier sound, one octave lower. See [`audio.md`](audio.md), "The guitar". |
+| "an audio sample of an astronaut swearing over the radio … both funny and tasteful" | The first bar of part 5 (mark N), after the flares: "That son of a bitch was wild." (Eugene Cernan, Apollo 10), then a radio tone. One time. |
 
 ## The recorded sounds
 
 - The oscillations of the Sun, 42 000 times faster (a recording of NASA, and a sound that code makes from the measured frequencies of the modes).
 - The radio traffic of the first American flight into space, Mercury-Redstone 3 (1961): "Trajectory okay", the numbers of the force on the pilot ("two G", "five G"), and two countdowns ("two, one, fire").
+- One sentence from the lunar module of Apollo 10 (1969). At the separation of its two stages, the module turned over and over for some seconds. Twelve minutes later, Eugene Cernan said: "That son of a bitch was wild." The sentence comes after the flares.
 - Plasma waves that Voyager 1 recorded at the edge of the Solar System, and radio waves of Saturn and of the Earth.
 - Radio noise, radio tones, and a data signal that code makes.
 

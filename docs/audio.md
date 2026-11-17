@@ -6,7 +6,7 @@ This document says where each sound of *G-Type Star* comes from, how the mix and
 
 | Player | Source | Where it runs |
 | --- | --- | --- |
-| Drums | Samples of a real kit with all its microphones: CrocellKit (DrumGizmo). If it is not there: DRSKit. The code plays the hits ([`audio/kit.py`](../src/gtypestar/audio/kit.py)). | Each computer (the code downloads the kit) |
+| Drums | Samples of a real kit with all its microphones: CrocellKit (DrumGizmo). If it is not there: DRSKit. The code plays the hits ([`audio/kit.py`](../src/gtypestar/audio/kit.py)). For a comparison, the code can also play the kit *Naked Drums* (a Yamaha Recording Custom kit): set the environment variable `GTYPESTAR_KIT` to `naked`. | Each computer (the code downloads the kit) |
 | Bass guitar | Samples of a five-string bass, the direct signal of the pickup: Karoryfer *Black And Blue Basses*. An amplifier model of the project comes after them. | Each computer |
 | Electric piano | Samples of a 1977 Rhodes Mark I: *jRhodes3d* by Jeff Learman | Each computer |
 | Guitar (8 strings) | Recordings of a real guitar, note by note (the direct signal of the pickup): the library *METAL-GTX* of Unreal Instruments. Then a model of a real amplifier with its cabinet and microphone, from the Neural Amp Modeler project ([`audio/guitar.py`](../src/gtypestar/audio/guitar.py), [`audio/nam.py`](../src/gtypestar/audio/nam.py)). The two rhythm guitars, left and right, are two different recordings of each note. If the library is not there: a model of a plucked string and of an amplifier ([`audio/amp.py`](../src/gtypestar/audio/amp.py)). | Each computer (the code downloads the library and the models) |
@@ -38,7 +38,16 @@ How the new guitar works:
 | clean | Bugera 333, clean channel, with cabinet |
 | crunch | Bugera 6262, crunch channel, with cabinet |
 | high gain | Bugera 6262, lead channel, with cabinet |
-| lead | Bugera 333, lead channel, with cabinet |
+| lead | Marshall JVM, channel OD2, with cabinet |
+
+The lead tone is for the solo lines. The owner heard the first version and said that it was "unconvincing and tinny": the solo was in the highest octave of the guitar, each note had a stroke of the pick, and the amplifier gave much level from 2.8 to 5.6 kHz. The changes:
+
+- The notes of a fast run under a slur join: only the first note has a stroke of the pick. The other notes start inside the recording, after its attack, and the pitch goes from the note before in 30 ms (hammer-on and pull-off).
+- A low-pass filter before the amplifier (as the tone control of the guitar) and filters after it give a darker sound with more body.
+- Soft echoes, left and right. A wider vibrato on long notes.
+- The solo of part 4 is one octave lower.
+
+The script `tools/diagnose/guitar_alone.py` writes the guitar part of some bars with no other player.
 
 ## The steps of a render
 
@@ -108,13 +117,15 @@ The tests in `tests/test_render.py` and `tests/test_tape.py` check these three i
 | Sound | Source | Licence |
 | --- | --- | --- |
 | Drums | CrocellKit and DRSKit. Drum samples: DrumGizmo.org | CC BY 4.0 |
+| Drums, for a comparison | *Naked Drums*, Wilkinson Audio (SFZ version: kinwie), https://github.com/sfzinstruments/WilkinsonAudio.NakedDrums | CC BY 4.0 |
 | Bass guitar | Karoryfer Samples, *Black And Blue Basses* | CC0 1.0 |
 | Guitar | Unreal Instruments, *METAL-GTX* (https://unreal-instruments.wixsite.com/unreal-instruments/metal-gtx) | "License free. No credit notation required." (its manual) |
-| Guitar amplifiers | Captures by Phillipe P of a Bugera 6262 and a Bugera 333 with cabinet, from the collection of the Neural Amp Modeler community (https://github.com/pelennor2170/NAM_models) | GPL 3.0 (the model files; they are not in this repository) |
+| Guitar amplifiers | Captures by Phillipe P of a Bugera 6262, a Bugera 333 and a Marshall JVM with cabinet, from the collection of the Neural Amp Modeler community (https://github.com/pelennor2170/NAM_models) | GPL 3.0 (the model files; they are not in this repository) |
 | Electric piano | *jRhodes3d* by Jeff Learman | Free for use in music; the samples themselves are CC BY-NC and are not in this repository |
 | Saxophone, horns, strings | Muse Sounds (Muse Group), played by MuseScore Studio | Free to use in music; not open |
 | The sound of the Sun | NASA, "Sounds of the Sun": data of the Solar and Heliospheric Observatory (ESA and NASA), sonification by A. Kosovichev, Stanford Experimental Physics Lab | NASA media guidelines |
 | Voices | Radio traffic of the flight Mercury-Redstone 3 (NASA, 1961), from the Internet Archive | Public Domain Mark 1.0 |
+| One voice | The voice recorder of the lunar module of Apollo 10 (NASA, 1969), from the Apollo Flight Journal (https://apollojournals.org/afj/ap10fj/); clip: John Stoll, NASA Johnson | Public domain (NASA) |
 | Plasma waves of Voyager 1, of Cassini, and of the Earth | Original space audio recordings provided courtesy of NASA and The University of Iowa. https://space-audio.org/ | CC BY 4.0 |
 
 No sample file and no recording is in this repository. The code downloads the free files into the directory `.cache`.
