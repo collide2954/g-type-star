@@ -11,8 +11,9 @@ a drum machine on top of the drums, and pieces of the word "fire". This
 version is bass music that a band plays:
 
 - One riff, made from the motto in a minor key (G, C, D, E-flat). The bass
-  guitar, the bass synthesizer and the guitar play it together, and the
-  kick drum plays each of its notes.
+  guitar, the bass synthesizer and the guitar play it together. The kick
+  drum plays its notes in the first eight bars, and keeps these strokes
+  when the riff gets sixteenth notes.
 - The drums play in half time: the snare drum on beat 3. The third beat of
   the riff starts with a rest: there the snare drum is alone.
 - One bass sound for the first twelve bars (out-of-tune sawtooth waves with
@@ -99,6 +100,13 @@ HANDS = [
 ]
 # The kick drum of bar 8: the riff has one long note there, and the feet end the fill.
 KICK_8 = "x--- ---- ---- x-----"
+# Bars 9 to 12: the riff has sixteenth notes, but the kick drum keeps its strokes of
+# bars 1 to 4, with one more stroke before the second beat. The groove of the drums
+# comes again each two bars: the ear has the half time, and the fast notes are for the
+# bass and the guitar. (In the third version the kick drum had each note of the riff:
+# ten strokes in a bar, and no bar like the bar before. The pulse was less clear there
+# than in any passage of the reference recordings: `tools/diagnose/pulse.py`.)
+KICK_SECOND = "x--x"
 # The long sounds of the drum machine: the bar, and its notes.
 # es,, = sub drop; ges,, = impact; as,, = cymbal that plays backwards; e,, = noise that rises.
 LONG = {
@@ -199,6 +207,8 @@ def write(work: Work) -> None:
     kit = []
     for number, (hands, bar) in enumerate(zip(HANDS, RIFF, strict=True), start=1):
         kick = KICK_8 if number == 8 else strokes(bar)
+        if 9 <= number <= 12:
+            kick = " ".join([KICK_SECOND, *strokes(RIFF[number - 9]).split()[1:]])
         kit.append(drums.steps(f"{hands}\nbd {kick}", BEATS))
     kit[14] = tools.first(kit[14], r"\<", note=True)
     kit.append(tools.first(drums.steps("cy CCCCC\nsn OOOOO\nbd xxxxx", BAR), r"\fff", note=True))
