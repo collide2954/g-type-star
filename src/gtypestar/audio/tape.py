@@ -69,6 +69,7 @@ LABELS = {
     "static": "Radio noise",
     "telemetry": "Data signal",
     "mercury3-548": "Voice (Mercury 3, 1961)",
+    "apollo10-onboard": "Voice (Apollo 10, 1969)",
     "voyager-heliosphere": "Voyager 1: plasma waves outside the heliosphere",
     "voyager-termination-shock": "Voyager 1: the termination shock",
     "earth-chorus": "Earth: radio waves of the radiation belts",
@@ -194,7 +195,10 @@ def load(name: str) -> np.ndarray | None:
             data, rate = soundfile.read(str(path), dtype="float32", always_2d=True)
             if rate != RATE:
                 data = soxr.resample(data, rate, RATE, quality="HQ")
-            # A recording with one channel stays so: it needs half of the memory.
+            # A recording with one channel stays so: it needs half of the memory. Some
+            # files have the same signal in two channels: one of them is sufficient.
+            if data.shape[1] > 1 and np.array_equal(data[:, 0], data[:, 1]):
+                data = data[:, :1]
             return np.ascontiguousarray(data[:, :2], dtype=np.float32)
     return None
 

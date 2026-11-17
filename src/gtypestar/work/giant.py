@@ -28,6 +28,8 @@ BEATS = (2, 2, 2, 2)
 # The countdown in the recording of Mercury 3: the start of the words "fire three, two,
 # one", and the start of the last word "fire", in seconds.
 COUNT_START, COUNT_FIRE = 356.78, 359.08
+# The sentence "That son of a bitch was wild." in the recording of Apollo 10, in seconds.
+WILD = 590.0
 # The stems of the players, for the changes of the recording before the helium flash.
 # (Without MuseScore, each horn and each string group has its own stem.)
 LOW_STEMS = ("drums", "eperc", "bass", "sbass", "gtr", "keys")
@@ -188,6 +190,14 @@ def write(work: Work) -> None:
         r"<es, bes, es>1\mf\>\highgain\pmoff ~ | <es, bes, es>1 ~ | <es, bes, es>1\! | R1*13 |",
     )
     s.set("eperc", r"<< { f,,1\mp } \\ { es,,1\mp } >> | R1*15 |")
+    # One sentence of an astronaut, after the flares (the owner asked for an astronaut who
+    # swears on the radio, one time). Eugene Cernan said it in the lunar module of Apollo 10,
+    # 12 minutes after the module turned over and over at the separation of its two stages.
+    cues += [
+        Cue("apollo10-onboard", s.bar(1), 2, offset=WILD, seconds=0.97, gain_db=-7.0,
+            text="That son of a bitch was wild.", radio=True, fade=0.012, pan=0.2),
+        Cue("quindar off", s.bar(1), 4.25, gain_db=-22.0),
+    ]  # fmt: skip
     s.close()
 
     # ------------------------------------------------- the solo of the synthesizer, in F

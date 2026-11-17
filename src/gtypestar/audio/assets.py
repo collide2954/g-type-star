@@ -49,6 +49,13 @@ MEDIA = [
         "NASA, radio traffic of Mercury-Redstone 3 (1961), Internet Archive, public domain",
     ),
     Media(
+        "apollo10-onboard.mp3",
+        "https://apollojournals.org/afj/ap10fj/audio/a10o-1024751.mp3",
+        "782052e7107a91436da48a309def59aebfb02f9bf47eab481beb1c53dd94c567",
+        "NASA, voice recorder of the lunar module of Apollo 10 (1969), from the Apollo "
+        "Flight Journal (clip: John Stoll, NASA Johnson), public domain",
+    ),
+    Media(
         "voyager-heliosphere.wav",
         "https://space-audio.org/vger8204-darker-3.wav",
         "9ef3e70bad46bf2e8c04c26cd7f7d0c2f515c64f71883451b4e594cd382d8dbd",
