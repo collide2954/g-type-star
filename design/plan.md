@@ -89,7 +89,7 @@ What each part is for:
   Done: the player "Percussion" (`audio/perc.py`).
 - A real grand piano for the chorale and the white dwarf.
 
-## The state of the work (2026-11-16)
+## The state of the work (2026-11-17)
 
 Done:
 
@@ -116,11 +116,20 @@ Done:
     (`tools/diagnose/playing.py`, and two new tests in `gtypestar check`).
   - The flares have their electronics: the drums lose their resolution at the end of
     three phrases.
+  - The helium flash: the kick drum keeps its strokes when the riff gets sixteenth
+    notes (`tools/diagnose/pulse.py`: the pulse of each part against the references).
+  - The weak notes of the saxophone stem come up to the level of the others (four
+    notes of the canon were 10 to 13 dB under their level in the sound library).
+- Version 3.3 (the full work) is with the owner: all of the changes above.
+- The score: larger note values for held notes; the tenor saxophone has the treble
+  clef for the octave below in the score in C. Score, parts and the two videos are
+  built from the music of version 3.3.
 
 Open:
 
 - The owner selects the drum kit.
-- The flares, the last burning and the nebula keep most of their music of the second
-  version (ranges, clashes and the number of layers are changed). A new version of a
-  part comes if the owner asks for it.
-- The score video and the release for the third version.
+- The flares, the last burning and the nebula keep most of their notes of the second
+  version (ranges, clashes, the number of layers, the electronics and the balance are
+  changed). A new version of a part comes if the owner asks for it.
+- The release for the third version (`.cache/hold/build.yml`, `gtypestar
+  publish-audio`): after the owner says that the version is good.
