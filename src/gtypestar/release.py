@@ -5,8 +5,8 @@ build server cannot make this master: it cannot install Muse Sounds. The
 computer of the composer makes the master and the stems and puts them in
 the release `audio`. The build server gets them from that release, if they
 are for the music of the present commit. If not, the build server makes
-the audio itself: synthesizer patches play the wind and string parts, a
-string model plays the guitar, and the drum kit is a smaller kit.
+the audio itself: synthesizer patches play the wind and string parts, and
+the drum kit is a smaller kit.
 
 The release `audio` is a draft: only persons and builds with the right to
 write to the repository can see it. It is a place where the build server
@@ -122,24 +122,27 @@ def fetch(work: Work, directory: Path) -> bool:
     """
     directory.mkdir(parents=True, exist_ok=True)
 
-    def download(name: str, *, check: bool = True) -> bool:
+    def download(name: str) -> str:
+        """Get one file of the release. Return "" or the words of the error."""
         arguments = ["release", "download", TAG, "--pattern", name, "--dir", str(directory),
                      "--clobber"]  # fmt: skip
-        return _gh(arguments, check=check).returncode == 0
+        result = _gh(arguments, check=False)
+        return "" if result.returncode == 0 else (result.stderr.strip() or "no such file")
 
     record = directory / RECORD
     record.unlink(missing_ok=True)
-    if not download(RECORD, check=False) or not record.exists():
-        print("fetch-audio: the release has no audio master")
+    error = download(RECORD)
+    if error or not record.exists():
+        print(f"fetch-audio: the release '{TAG}' has no audio master ({error})")
         return False
     data = json.loads(record.read_text(encoding="utf-8"))
     if data.get("music") != music_key(work):
         print("fetch-audio: the audio master of the release is for different music")
         record.unlink()
         return False
-    for name in FILES:
-        download(name)
-    if data.get("stems"):
-        download(STEMS)
+    for name in (*FILES, *([STEMS] if data.get("stems") else [])):
+        error = download(name)
+        if error:
+            raise RuntimeError(f"fetch-audio: {name} did not come from the release: {error}")
     print(f"fetch-audio: got the audio master from the release '{TAG}' ({data.get('source')})")
     return True

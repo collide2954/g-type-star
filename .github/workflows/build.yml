@@ -27,13 +27,18 @@ on:
         description: "Put the files in the public release 'latest'"
         type: boolean
         default: false
+      server_audio:
+        description: "Make the audio on the build server (do not take the master of the composer)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
-# A build is long. A new change does not stop the build that is in progress.
+# A build is long. A new change does not stop the build that is in progress: it waits.
+# A build that a person starts by hand does not wait for the builds of the changes.
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
@@ -94,7 +99,7 @@ jobs:
       - name: Install the tools
         run: >
           dnf install -y --setopt=install_weak_deps=False
-          git uv gh ffmpeg-free libatomic curl zip unzip tar gzip findutils
+          git uv gh ffmpeg-free libatomic libarchive curl zip unzip tar gzip findutils
 
       - name: Get the source
         uses: actions/checkout@v7
@@ -112,9 +117,10 @@ jobs:
       # master and the stems and puts them in the draft release "audio" (`gtypestar
       # publish-audio`). If they are for the music of this commit, the build uses
       # them. If not, the build makes the audio itself, with synthesizer patches for
-      # the wind and string parts, a string model for the guitar, and a smaller drum kit.
+      # the wind and string parts and a smaller drum kit.
       - name: Get the audio master of the composer
         id: master
+        if: ${{ !inputs.server_audio }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -134,11 +140,12 @@ jobs:
           path: |
             .cache/samples
             .cache/media
-          key: sounds-v2-${{ hashFiles('src/gtypestar/audio/assets.py', 'src/gtypestar/audio/kit.py', 'src/gtypestar/audio/banks.py', 'src/gtypestar/audio/perc.py') }}
+          key: sounds-v3-${{ hashFiles('src/gtypestar/audio/assets.py', 'src/gtypestar/audio/kit.py', 'src/gtypestar/audio/banks.py', 'src/gtypestar/audio/perc.py') }}
 
+      # The guitar library is a RAR archive: the package libarchive-c unpacks it.
       - name: Get the sound files
         if: steps.master.outputs.found != 'true'
-        run: uv run --no-sync gtypestar fetch --small
+        run: uv run --no-sync --with libarchive-c gtypestar fetch --small
 
       - name: Save the sound files
         if: steps.master.outputs.found != 'true' && steps.sounds.outputs.cache-hit != 'true'

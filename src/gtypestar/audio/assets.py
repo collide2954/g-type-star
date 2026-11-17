@@ -307,14 +307,28 @@ def fetch_guitar() -> Path:
 def fetch_all(small: bool = False) -> None:
     """Download all sound files.
 
-    `small` is for a build server: the smaller drum kit, and no recorded
-    guitar (the string model plays the guitar part).
+    `small` is for a build server: the smaller drum kit with no layers under
+    it, and no second set of guitar rigs. If the guitar library does not
+    come (its source is a file on Google Drive), such a build goes on: the
+    string model plays the guitar part.
     """
     fetch_media()
-    if not small:
+    try:
         fetch_models()
-        fetch_cabinet()
         fetch_guitar()
+    except (RuntimeError, OSError, subprocess.CalledProcessError) as error:
+        if not small:
+            raise
+        print(f"fetch: no recorded guitar, the string model plays the guitar part ({error})")
+    else:
+        from . import sfzguitar
+
+        if sfzguitar.available():
+            # The time from each key of the guitar program to its sound: measured one
+            # time (90 seconds), before the workers of a render need it.
+            sfzguitar.latency()
+    if not small:
+        fetch_cabinet()
     fetch_kit(kit.DRS if small else kit.CROCELL)
     if not small:
         fetch_layers()

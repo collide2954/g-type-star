@@ -133,15 +133,29 @@ Done:
 - Version 3.4 (the full work) is with the owner: the notes of version 3.3 with the new
   guitar (C) and the kit with layers (E). The two videos have its audio.
 
+- After version 3.4 the owner allowed a sampler ("Install pysfizz", "Install libatomic by
+  dnf"). The program that the makers of the guitar library wrote for it plays the guitar
+  in the sampler sfizz (`audio/sfzguitar.py`): real down and up strokes, the pick on the
+  string before a note, hammer-on and pull-off, a sound for each stop.
+- The work for the sampler found two faults of time in all versions to 3.4: each note
+  of the guitar was 15 to 26 ms late, and each note of the bass guitar 32 ms (a
+  recording of a note starts before the note sounds). The notes are at their written
+  times now (`tools/diagnose/on_time.py`: the stems against the written notes).
+- Version 3.6 (the full work): the notes of version 3.3, the guitar in the sampler, the
+  guitar and the bass guitar on time.
+- The owner asked for builds on GitHub ("getting it to produce the videos (including
+  the mobile one) and the score and parts and audio files"). The workflow `Build` makes
+  the score, the parts, the MIDI file, the audio master, the stems and the two videos,
+  and keeps them as artifacts of each run. The audio master of the composer is in a
+  draft release (`gtypestar publish-audio`): a build server has no Muse Sounds.
+
 Open:
 
 - The owner selects the guitar (C: the retuned rig, now in the work; D: a Peavey 5150
   with a real cabinet) and the drums (E: the kit with layers, now in the work; C or D:
   a different kit).
-- A complete SFZ player (the package `pysfizz`) for the guitar library, if the owner
-  permits the installation.
 - The flares, the last burning and the nebula keep most of their notes of the second
   version (ranges, clashes, the number of layers, the electronics and the balance are
   changed). A new version of a part comes if the owner asks for it.
-- The release for the third version (`.cache/hold/build.yml`, `gtypestar
-  publish-audio`): after the owner says that the version is good.
+- A public release: a build that the owner starts by hand with the box "Put the files
+  in the public release 'latest'" makes it. No build does this by itself.

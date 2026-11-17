@@ -91,7 +91,19 @@ A complete SFZ player plays the library as its makers planned it. The session co
 
 This measurement found a fault of all versions to 3.4. The player of `guitar.py` cut each recording at its first sample above 2% of its largest value. The pick is on the string after that point for 15 to 26 milliseconds more. Thus each note of the guitar was late by that time, with a spread of 5 to 11 milliseconds: the guitar was behind the drums. The player of `guitar.py` now puts each recording earlier by its own time.
 
-"The moment at which a note sounds" (`guitar.onset`) is the first sample of half of the largest value of the first 120 milliseconds. A lower level is wrong: some recordings have a click, a scrape, or the end of the stroke before, a quarter to a third of the size of the note. A measurement of how long the level stays up is also wrong: the sound of a low string is a row of short pulses, one in each 15 to 22 milliseconds.
+The bass guitar had the same fault. A recording of its library starts 26 milliseconds before the note sounds (the finger is on the string), and the player put each recording at the written time of its note. `tools/diagnose/on_time.py` reads the stems of a full render and the notes as the players play them. For the notes that start after a quiet moment, it shows the middle value of "sound minus written time":
+
+| Notes of | Version 3.4 | Version 3.6 |
+| --- | --- | --- |
+| Kick drums | +0.8 ms | +0.8 ms |
+| Snare drum | +0.3 ms | +0.3 ms |
+| Bass guitar | +31.8 ms | +5.3 ms |
+| Guitar | +8.1 ms (the middle half of the notes: -1 to +20 ms) | -1.1 ms (the middle half of the notes: -2.5 to +0.4 ms) |
+| Electric piano | +0.2 ms | +0.2 ms |
+
+The bass was 32 milliseconds behind the kick drum that plays its low notes. Each recording of the bass now starts earlier by its own time, as the recordings of the guitar do. (The saxophone, the horns and the strings come from MuseScore, which starts a note before its written time: their notes have half of their level near the written time.)
+
+"The moment at which a note sounds" (`dsp.onset`) is the first sample of half of the largest value of the first 120 milliseconds. A lower level is wrong: some recordings have a click, a scrape, or the end of the stroke before, a quarter to a third of the size of the note. A measurement of how long the level stays up is also wrong: the sound of a low string is a row of short pulses, one in each 15 to 22 milliseconds.
 
 The guitar alone, the same notes and the same amplifier (`tools/diagnose/judge.py`; a second render of the same notes changes the sum by about 4 and the last number by 0.003):
 
@@ -182,6 +194,7 @@ The writer of the code cannot hear. Each render is measured against the referenc
 - `tools/diagnose/pulse.py`: how clear the pulse of each part is (the autocorrelation of the onset curve), against the reference recordings.
 - `tools/diagnose/judge.py`: a comparison of candidates for one sound (a guitar, a drum kit): pairs of descriptions ("a real electric guitar played by a guitarist" against "a fake guitar from a keyboard"), and the similarity to real recordings of the instrument.
 - `tools/diagnose/guitar_lab.py`: settings of the guitar amplifier on one passage, with the tone of real recordings next to them. `tools/diagnose/drums_alone.py`: one drum kit on some bars, as the mix has it.
+- `tools/diagnose/on_time.py`: how late the notes of the drums, the bass guitar, the guitar and the electric piano are in the stems of a full render, against their written times.
 - `tools/diagnose/guitar_players.py`: the two players of the guitar before the amplifier (level, tone). `tools/diagnose/guitar_levels.py`: the level of each tone of the guitar with each player. `tools/diagnose/program_lab.py`: settings of the guitar program in the sampler.
 
 The owner of the project is the last judge: the tools only find what a number can show.

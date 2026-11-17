@@ -97,7 +97,7 @@ The saxophone, the horns and the strings of the master are Muse Sounds, and a bu
 uv run gtypestar publish-audio
 ```
 
-A build uses these files if they are for the music of its commit. If the music is newer, the build makes the audio itself: synthesizer patches play the wind and string parts, a string model plays the guitar, and the drum kit is a smaller kit. The file `audio.json` says which sounds a build has.
+A build uses these files if they are for the music of its commit. If the release has no such files, the build makes the audio itself: synthesizer patches play the wind and string parts, and the drum kit is a smaller kit. The file `audio.json` says which sounds a build has.
 
 A person can start a build by hand (the page "Actions", the workflow "Build", the button "Run workflow"). With the box "Put the files in the public release 'latest'", that build publishes its files as a release of the repository.
 
