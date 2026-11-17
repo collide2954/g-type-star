@@ -9,7 +9,7 @@ The audio is in [`audio.md`](audio.md).
 | Item | Value |
 | --- | --- |
 | Form | One piece in eight linked parts: the life of a star like the Sun |
-| Ensemble | A band (tenor saxophone, guitar with eight strings, electric piano, bass guitar, drums), four more horns, synthesizers, strings, a drum machine, and recorded sounds (see [`design/ensemble.toml`](../design/ensemble.toml)) |
+| Ensemble | A band (tenor saxophone, guitar with eight strings, electric piano, bass guitar, drums, percussion), four more horns, synthesizers, strings, a drum machine, and recorded sounds (see [`design/ensemble.toml`](../design/ensemble.toml)) |
 | Main metre | 14/8 with five pulses: 3 + 3 + 2 + 3 + 3 eighth notes |
 | Tempos | 175, 140, and 116.67 quarter notes in a minute: the ratios 15 : 12 : 10 |
 | Key centre | G |

@@ -56,7 +56,7 @@ Code changes the written music into a performance (each player has small shifts 
 - [FFmpeg](https://ffmpeg.org/), for the MP3 file and the video
 - For the saxophone, the horns, and the strings of the master: MuseScore Studio 4 with Muse Sounds. Without them, synthesizer patches play these parts (`--no-muse`).
 
-The audio needs about 14 GB of free sound files (a sampled drum kit, a recorded guitar and models of its amplifiers, a bass guitar, an electric piano, and recordings of NASA). This command downloads them into the directory `.cache` (the guitar library is a RAR archive: the package `libarchive-c` unpacks it with the libarchive library of the system):
+The audio needs about 14 GB of free sound files (a sampled drum kit, hand percussion, a recorded guitar and models of its amplifiers, a bass guitar, an electric piano, and recordings of NASA). This command downloads them into the directory `.cache` (the guitar library is a RAR archive: the package `libarchive-c` unpacks it with the libarchive library of the system):
 
 ```bash
 uv run --with libarchive-c gtypestar fetch

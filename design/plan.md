@@ -86,6 +86,7 @@ What each part is for:
 - Drums: the kit *Naked Drums* (Yamaha Recording Custom, ten strokes in each layer).
   The reader is in the code; the owner gets a comparison with the kit of version 2.
 - Hand percussion (shaker, tambourine, congas) from a free library, for the grooves.
+  Done: the player "Percussion" (`audio/perc.py`).
 - A real grand piano for the chorale and the white dwarf.
 
 ## The sequence of the work

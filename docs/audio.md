@@ -7,6 +7,7 @@ This document says where each sound of *G-Type Star* comes from, how the mix and
 | Player | Source | Where it runs |
 | --- | --- | --- |
 | Drums | Samples of a real kit with all its microphones: CrocellKit (DrumGizmo). If it is not there: DRSKit. The code plays the hits ([`audio/kit.py`](../src/gtypestar/audio/kit.py)). For a comparison, the code can also play the kit *Naked Drums* (a Yamaha Recording Custom kit): set the environment variable `GTYPESTAR_KIT` to `naked`. | Each computer (the code downloads the kit) |
+| Percussion (shaker, tambourine, congas) | Samples of real instruments: the *Versilian Community Sample Library*. The code plays the strokes ([`audio/perc.py`](../src/gtypestar/audio/perc.py)); the shaker takes the move away and the move back in turn. | Each computer (the code downloads the samples) |
 | Bass guitar | Samples of a five-string bass, the direct signal of the pickup: Karoryfer *Black And Blue Basses*. An amplifier model of the project comes after them. | Each computer |
 | Electric piano | Samples of a 1977 Rhodes Mark I: *jRhodes3d* by Jeff Learman | Each computer |
 | Guitar (8 strings) | Recordings of a real guitar, note by note (the direct signal of the pickup): the library *METAL-GTX* of Unreal Instruments. Then a model of a real amplifier with its cabinet and microphone, from the Neural Amp Modeler project ([`audio/guitar.py`](../src/gtypestar/audio/guitar.py), [`audio/nam.py`](../src/gtypestar/audio/nam.py)). The two rhythm guitars, left and right, are two different recordings of each note. If the library is not there: a model of a plucked string and of an amplifier ([`audio/amp.py`](../src/gtypestar/audio/amp.py)). | Each computer (the code downloads the library and the models) |
@@ -118,6 +119,7 @@ The tests in `tests/test_render.py` and `tests/test_tape.py` check these three i
 | --- | --- | --- |
 | Drums | CrocellKit and DRSKit. Drum samples: DrumGizmo.org | CC BY 4.0 |
 | Drums, for a comparison | *Naked Drums*, Wilkinson Audio (SFZ version: kinwie), https://github.com/sfzinstruments/WilkinsonAudio.NakedDrums | CC BY 4.0 |
+| Percussion | Versilian Studios, *Versilian Community Sample Library* (https://github.com/sgossner/VCSL) | CC0 1.0 |
 | Bass guitar | Karoryfer Samples, *Black And Blue Basses* | CC0 1.0 |
 | Guitar | Unreal Instruments, *METAL-GTX* (https://unreal-instruments.wixsite.com/unreal-instruments/metal-gtx) | "License free. No credit notation required." (its manual) |
 | Guitar amplifiers | Captures by Phillipe P of a Bugera 6262, a Bugera 333 and a Marshall JVM with cabinet, from the collection of the Neural Amp Modeler community (https://github.com/pelennor2170/NAM_models) | GPL 3.0 (the model files; they are not in this repository) |
