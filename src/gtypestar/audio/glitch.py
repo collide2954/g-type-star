@@ -118,7 +118,12 @@ class Edit:
         if self.kind in LONG_KINDS and len(self.stems) > 8:
             text += " (the band)"
         elif self.stems != ("",):
-            text += " (" + ", ".join(self.stems) + ")"
+            # The stems of the horns and the strings have two forms (one stem for the
+            # group, or one for each player): the score names the group only.
+            groups = [name for name in self.stems if name in ("horns", "strings")]
+            players = ("tpt", "asax", "tbn", "bsax", "vn", "va", "vc")
+            names = [name for name in self.stems if not (groups and name in players)]
+            text += " (" + ", ".join(names) + ")"
         return f"{text}, {float(self.length):g} quarter notes"
 
 

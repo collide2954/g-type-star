@@ -738,7 +738,7 @@ def write(work: Work) -> None:
             parts[player].append(tools.tr(last if number == 3 else answer, semitones, steps))
     for player, bars in parts.items():
         bars[8] = tools.first(bars[8] or "", r"\ff", note=True)
-        s.set(player, bars, r"\f")
+        s.set(player, bars, r"\f" if bars[0] else "")
     top = parts["tpt"]
     s.set("vn1", [tools.octave(bar or "", 1) for bar in top], r"\f")
     s.set("vn2", top, r"\f")
