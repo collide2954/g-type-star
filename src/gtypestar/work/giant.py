@@ -290,10 +290,8 @@ def write(work: Work) -> None:
     strings = m.layers(symbols, ["a___ ____"], m.STRINGS, "strings", HALVES)
     for player, bars in strings.items():
         s.set(player, bars, r"\mf")
-    horns = m.layers(symbols, ["a___ ____", "--a_ a___"], m.HORNS, "horns", HALVES)
-    for player, bars in horns.items():
-        s.set(player, bars, r"\mf")
-    s.set("gtr", chord_bars(symbols, "a___ --a_", low=57, high=79), r"\mf\crunch")
+    # The horns and the guitar wait for the chorale in G (mark P): the solo of the
+    # synthesizer stays in front.
     s.set("pad.rh", chord_bars(symbols, "a___ ____", low=60, high=84), r"\mf",
           r'\switch "supersaw"')  # fmt: skip
     both = [f"{congas}\n{m.SHAKER_FOUR}" for congas in m.CONGAS_FOUR]

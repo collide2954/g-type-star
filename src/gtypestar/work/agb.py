@@ -420,7 +420,6 @@ def write(work: Work) -> None:
         [drum_bar(HANDS_OPEN[n % 4], KICKS_8[n % 4], fills.get(n + 1, "")) for n in range(8)],
         r"\ff",
     )
-    s.set("pad.rh", m.pad_bars(symbols, low=60, high=84), r"\f", r'\switch "supersaw"')
     s.set("sbass", m.roots(symbols, "a_____ ______ a___ ______ ______"), r"\f",
           r'\switch "bass sub"')  # fmt: skip
     # A low stroke and a falling low tone on the first beat: the start after the helium
