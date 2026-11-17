@@ -280,7 +280,12 @@ def freeze(moment: np.ndarray, total: int, hold: float = 0.6, seed: int = 9) -> 
         if random.uniform() < 0.5:
             piece = piece[:, ::-1]  # the two channels change places: the sound is wide
         out[start : start + len(piece)] += piece * window[: len(piece)]
-    out = out[:total] * (2.0 * hop / grain)
+    out = out[:total]
+    # The pieces have no common phase: their sum is softer than the moment. The held
+    # sound gets the level of the moment.
+    level_in = float(np.sqrt(np.mean(moment.astype(np.float64) ** 2)))
+    level_out = float(np.sqrt(np.mean(out**2))) + 1e-12
+    out = out * (level_in / level_out)
     level = np.ones(total)
     rise = min(total, int(0.08 * RATE))
     level[:rise] = np.linspace(0.0, 1.0, rise)
