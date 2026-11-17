@@ -426,6 +426,7 @@ def write(work: Work) -> None:
     # A low stroke and a falling low tone on the first beat: the start after the helium
     # flash. The band has the theme, the riff and the drums: no other layer here.
     s.set("eperc", [r"<es,, ges,,>1..\mf"] + [None] * 7)
+    s.set("perc", m.percussion(m.TAMBOURINE, 8), r"\f")
     s.close()
 
     # ------------------------------------------------- T: the longest line

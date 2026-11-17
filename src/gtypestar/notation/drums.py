@@ -75,6 +75,21 @@ MACHINE = [
 ]
 MACHINE_BY_MIDI = {drum.midi: drum for drum in MACHINE}
 
+# Hand percussion: samples of real instruments (`audio/perc.py`). The numbers are those
+# of the General MIDI drum map.
+PERCUSSION = [
+    Drum(82, "shaker", "mar", 0),
+    Drum(54, "tambourine", "tamb", 0),
+    Drum(69, "cabasa", "cab", 0),
+    Drum(56, "cowbell", "cb", 0),
+    Drum(63, "conga, high, open", "cgho", 0),
+    Drum(62, "conga, high, muted", "cghm", 0),
+    Drum(64, "conga, low", "cgl", 0),
+    Drum(60, "bongo, high", "boh", 0),
+    Drum(61, "bongo, low", "bol", 0),
+]
+PERCUSSION_BY_MIDI = {drum.midi: drum for drum in PERCUSSION}
+
 # The rows of a pattern: the name of the row, and the drum of each letter.
 # A capital letter is a stroke with an accent.
 ROWS: dict[str, dict[str, int]] = {
@@ -89,6 +104,13 @@ ROWS: dict[str, dict[str, int]] = {
     "ms": {"o": 38, "c": 39, "x": 37, "s": 40, "r": 41},  # snare, clap, rim, heavy, roll
     "mh": {"x": 42, "o": 46},
     "mt": {"t": 45, "z": 56, "n": 31},  # tom, zap, noise burst
+    # Hand percussion.
+    "sh": {"x": 82},  # shaker
+    "tb": {"t": 54},  # tambourine
+    "ca": {"x": 69},  # cabasa
+    "cb": {"x": 56},  # cowbell
+    "cg": {"o": 63, "m": 62, "l": 64},  # congas: high open, high muted, low
+    "bo": {"h": 60, "l": 61},  # bongos
 }
 FEET_ROWS = {"bd", "mk"}
 CYMBAL_ROWS = {"hh", "rd", "cy", "mh"}

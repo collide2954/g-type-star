@@ -438,6 +438,7 @@ def write(work: Work) -> None:
     s.set("gtr", [None] * 8 + _picks(symbols[8:]), r"\mp\clean\pmoff")
     s.set("vn1", [None] * 8 + C_VIOLINS)
     s.set("vn2", [None] * 8 + [tools.octave(bar, -1) for bar in C_VIOLINS])
+    s.set("perc", [None] * 8 + m.percussion(m.SHAKER, 8), r"\mp")
     low_strings = m.layers([None] * 8 + symbols[8:], whole, ("vc", "va"), "strings")
     for player, bars in low_strings.items():
         s.set(player, bars, r"\p")
@@ -501,8 +502,8 @@ def write(work: Work) -> None:
     low_strings = m.layers([None] * 8 + CLIMB[:6] + [None] * 2, whole, ("vc", "va"), "strings")
     for player, bars in low_strings.items():
         s.set(player, bars, r"\mp\<")
-    claps = drums.steps("ms  ------ c----- ---- ------ c-----", m.CLAVE)
-    s.set("eperc", [claps] * 16, r"\mf")
+    s.set("perc", m.percussion(m.TAMBOURINE, 4) + m.percussion(m.SHAKER, 4)
+          + m.percussion(m.TAMBOURINE, 6) + [None, None], r"\mf")  # fmt: skip
     # The first line for all lead players: the last two bars.
     s.set("lead", [None] * 14 + [tools.octave(bar, 1) for bar in m.LINE_1], r"\f")
     s.set("chip", [None] * 14 + [tools.octave(bar, 2) for bar in m.LINE_1], r"\mf")
@@ -619,6 +620,8 @@ def write(work: Work) -> None:
         bars[16] = tools.first(bars[16] or "", r"\ff", note=True)
         s.set(player, bars, r"\f")
     s.set("eperc", [r"ges,,1..\mf", *[None] * 23])
+    s.set("perc", m.percussion(m.CONGAS, 16) + m.percussion(m.TAMBOURINE, 4) + [None] * 4,
+          r"\mf")  # fmt: skip
     # The second line: the last four bars.
     s.set("lead", [None] * 20 + [tools.octave(bar, 1) for bar in m.LINE_2], r"\f")
     s.set("chip", [None] * 20 + [tools.octave(bar, 2) for bar in m.LINE_2], r"\mf")
@@ -711,6 +714,7 @@ def write(work: Work) -> None:
     strings = m.layers([None] * 8 + H_CHORDS[8:], whole, m.STRINGS, "strings")
     for player, bars in strings.items():
         s.set(player, bars, r"\pp\<")
+    s.set("perc", [None] * 4 + m.percussion(m.SHAKER_SOFT, 12), r"\p")
     # The riff of part 4 starts here, very soft, on the note D: four bars before J.
     s.set("gtr", [None] * 12 + _cross(0, ["D"] * 4, 0), r"\pp\<\crunch")
     # A delay of one long pulse on the saxophone: each note of the motto comes again
@@ -749,6 +753,8 @@ def write(work: Work) -> None:
     s.set("bass", _cross(4 * 28, J_ROOTS, 1), r"\f")
     s.set("keys.rh", _comp(J_CHORDS, C_KEYS), r"\mf")
     s.set("pad.rh", m.pad_bars(J_CHORDS), r"\mf\<", r'\switch "supersaw"')
+    both = [f"{shaker}\n{m.TAMBOURINE}" for shaker in m.SHAKER]
+    s.set("perc", m.percussion(both, 8) + [None] * 8, r"\mf")
     # The drums: the groove of the theme for eight bars. Then the four beats of the riff:
     # hi-hat, snare drum on the third beat, kick drum with the riff; then the stack
     # cymbal of part 4 on each beat.

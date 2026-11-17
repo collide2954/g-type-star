@@ -263,6 +263,37 @@ def drum_bars(
 
 
 # ----------------------------------------------------------------------------
+# Hand percussion (see `audio/perc.py`)
+# ----------------------------------------------------------------------------
+
+# The main metre: one bar in each entry. The shaker has an accent on each pulse; the
+# tambourine plays with the snare drum (the second and the fifth pulse); the congas have
+# a muted stroke on each pulse and open strokes between.
+SHAKER = ["sh  X-xxx- X-xxx- X-xx X-xxx- X-xxx-", "sh  X-xxxx X-xxx- X-xx X-xxxx X-xxx-"]
+SHAKER_SOFT = "sh  x-x-x- x-x-x- x-x- x-x-x- x-x-x-"
+TAMBOURINE = "tb  ------ t----- ---- ------ t-----"
+CONGAS = [
+    "cg  m--o-- m--oo- m-o- m--o-- l--lo-",
+    "cg  m--o-- m-o-o- m--o m--o-l o--oo-",
+    "cg  m--o-o m--o-- m-oo m--o-- l-l-o-",
+]
+# Bars of four beats.
+SHAKER_FOUR = "sh  X-xx X-xx X-xx X-xx"
+SHAKER_FOUR_SOFT = "sh  x-x- x-x- x-x- x-x-"
+TAMBOURINE_FOUR = "tb  ---- t--- ---- t---"
+CONGAS_FOUR = ["cg  m-o- m-oo m-o- l-lo", "cg  m-o- m--o m-oo l-o-"]
+FOUR = (2, 2, 2, 2)
+
+
+def percussion(rows: list[str] | str, count: int, pulses: tuple = CLAVE) -> list[str]:
+    """Return `count` bars of hand percussion: the entries of `rows` come in turn."""
+    from ..notation import drums
+
+    entries = [rows] if isinstance(rows, str) else rows
+    return [drums.steps(entries[number % len(entries)], pulses) for number in range(count)]
+
+
+# ----------------------------------------------------------------------------
 # The theme
 # ----------------------------------------------------------------------------
 

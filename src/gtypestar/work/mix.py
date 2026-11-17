@@ -50,6 +50,11 @@ STRIPS = {
         gain_db=-3.0, bus="drums", eq=(("highpass", 200.0), ("lowpass", 9000.0)),
         compress=(-34.0, 6.0, 0.006, 0.14), makeup_db=8.0, width=1.8,
     ),
+    # Hand percussion: in the group of the cymbals (no strong compression), a little room.
+    "perc": Strip(
+        gain_db=-6.0, bus="cymbals", eq=(("highpass", 160.0), ("lowpass", 14000.0, 2)),
+        width=1.4, room=0.12,
+    ),
     "eperc": Strip(
         gain_db=-9.0, bus="drums", eq=(("highpass", 35.0),), plate=0.1, room=0.1,
     ),

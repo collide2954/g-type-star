@@ -24,7 +24,7 @@ PROGRAMS = {
     "pad.lh": 89, "chip": 80, "keys.rh": 4, "keys.lh": 4, "gtr": 30, "bass": 33, "sbass": 38,
     "vn1": 48, "vn2": 48, "va": 48, "vc": 48,
 }  # fmt: skip
-DRUM_PLAYERS = ("drums", "eperc")
+DRUM_PLAYERS = ("drums", "eperc", "perc")
 
 
 def position_at(work: Work, seconds: float) -> float:

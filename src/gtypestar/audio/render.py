@@ -33,8 +33,8 @@ LEAD_SECONDS = 0.5  # time before the first bar of an excerpt
 
 # The feel of each player, if the work does not give one.
 FEELS = {
-    "drums": feel.DRUMS, "bass": feel.BASS, "gtr": feel.GUITAR, "keys.rh": feel.KEYS,
-    "keys.lh": feel.KEYS, "tsax": feel.LEAD, "lead": feel.KEYS,
+    "drums": feel.DRUMS, "perc": feel.DRUMS, "bass": feel.BASS, "gtr": feel.GUITAR,
+    "keys.rh": feel.KEYS, "keys.lh": feel.KEYS, "tsax": feel.LEAD, "lead": feel.KEYS,
     "tpt": feel.SECTION, "asax": feel.SECTION, "tbn": feel.SECTION, "bsax": feel.SECTION,
     "vn1": feel.SECTION, "vn2": feel.SECTION, "va": feel.SECTION, "vc": feel.SECTION,
 }  # fmt: skip
@@ -98,7 +98,7 @@ def render_stems(
     (default: yes, if the computer has them). `muse_full` are the stems of
     MuseScore for the full work: the function takes the part for the bars.
     """
-    from . import guitar, kit, musestems, tape
+    from . import guitar, kit, musestems, perc, tape
 
     begin, end = window(work, bars)
     lead = LEAD_SECONDS if begin > 0 else 0.0
@@ -139,6 +139,11 @@ def render_stems(
                 "eperc", events, seconds, lambda e=events: band.render_machine(e, seconds)
             )
             kicks += [event.start for event in events if int(event.midi) == 36]
+        elif player.id == "perc":
+            if perc.available():
+                stems["perc"] = band.cached(
+                    "perc", events, seconds, lambda e=events: perc.render(e, seconds)
+                )
         elif first == "guitar":
             # The recorded guitar and the string model are two different sounds.
             name = "gtr-recorded" if guitar.available() else "gtr"

@@ -227,6 +227,7 @@ def write(work: Work) -> None:
         + slow_bars(SLOW, 8, "chorale 2", amount=0.3, crash=(1,), fills={8: "slow 2"}),
         r"\mp",
     )
+    s.set("perc", [None] * 8 + m.percussion(m.SHAKER_FOUR_SOFT, 8, m.FOUR), r"\p")
     # The seam with the flares: their last strokes become softer (to mezzo forte). The
     # guitar holds the new root at that level and its sound dies away under the chorale;
     # noise falls from the first beat.
@@ -274,6 +275,7 @@ def write(work: Work) -> None:
     for player, bars in strings.items():
         s.set(player, bars, r"\mp")
     s.set("gtr", chord_bars(symbols, "--a_ ____", low=57, high=79), r"\mp\clean\pmoff")
+    s.set("perc", m.percussion(m.CONGAS_FOUR, 8, m.FOUR), r"\mp")
     s.close()
 
     # ------------------------------------------------- the solo goes on, in G
@@ -294,6 +296,8 @@ def write(work: Work) -> None:
     s.set("gtr", chord_bars(symbols, "a___ --a_", low=57, high=79), r"\mf\crunch")
     s.set("pad.rh", chord_bars(symbols, "a___ ____", low=60, high=84), r"\mf",
           r'\switch "supersaw"')  # fmt: skip
+    both = [f"{congas}\n{m.SHAKER_FOUR}" for congas in m.CONGAS_FOUR]
+    s.set("perc", m.percussion(both, 8, m.FOUR), r"\mf")
     s.close()
 
     # ------------------------------------------------- the theme, in G, by all players

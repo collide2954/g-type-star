@@ -23,6 +23,7 @@ FAMILY_ORDER = ["horns", "synths", "rhythm", "strings", "media"]
 DRUM_STAVES: dict[str, tuple[list[drums.Drum], str]] = {
     "drum kit": (drums.KIT, "gts-kit-style"),
     "drum machine": (drums.MACHINE, "gts-machine-style"),
+    "hand percussion": (drums.PERCUSSION, "gts-percussion-style"),
 }
 TAPE = "tape"
 
@@ -84,6 +85,18 @@ STYLE = r"""
      (electricsnare diamond #f 1)
      (acousticsnare () #f 2)
      (ridecymbal xcircle #f 6)))
+
+% Hand percussion.
+#(define gts-percussion-style
+   '((maracas cross #f 5)
+     (tambourine xcircle #f 3)
+     (cabasa cross #f 4)
+     (cowbell triangle #f 2)
+     (openhiconga () #f 0)
+     (mutehiconga cross #f 0)
+     (loconga () #f -2)
+     (hibongo () #f 2)
+     (lobongo () #f 1)))
 
 % Dynamic marks that LilyPond does not have.
 sffz = #(make-dynamic-script "sffz")

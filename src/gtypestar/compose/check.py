@@ -30,7 +30,8 @@ BREATH_SECONDS = 0.35  # a rest of this length or more is time to breathe
 LONGEST_BREATH = 18.0  # the longest time with no such rest, in seconds
 FEET = {35, 36, 44}  # the drums that the feet play
 HANDS = 2
-DRUM_TABLES = {"drums": drums.BY_MIDI, "eperc": drums.MACHINE_BY_MIDI}
+DRUM_TABLES = {"drums": drums.BY_MIDI, "eperc": drums.MACHINE_BY_MIDI,
+               "perc": drums.PERCUSSION_BY_MIDI}  # fmt: skip
 
 
 @dataclass(frozen=True)

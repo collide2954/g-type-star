@@ -510,6 +510,7 @@ def write(work: Work) -> None:
             # audio stops at F5, and plays these four bars one octave lower.
             bars[12:16] = SAX_MELODY[4:]
         s.set(player, bars, r"\ff")
+    s.set("perc", [None] * 8 + m.percussion(m.TAMBOURINE_FOUR, 8, m.FOUR) + [None] * 8, r"\f")
     cues.append(Cue("mercury3-548", s.bar(1), 1, offset=72.1, text="Roger. Two and a half G.",
                     seconds=1.9, gain_db=-11.0, radio=True, pan=-0.3))  # fmt: skip
     s.close()

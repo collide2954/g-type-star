@@ -6,6 +6,7 @@ sources and keeps them in the directory `.cache`:
 - a drum kit of DrumGizmo (`.cache/samples`),
 - the sample banks of the bass guitar and of the electric piano,
 - the recorded guitar and the models of its amplifiers,
+- the hand percussion (`.cache/samples/vcsl`),
 - the public recordings of space and of space flight (`.cache/media`).
 
 The module verifies the checksum of each media file after the download. If
@@ -22,7 +23,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import banks, kit, tape
+from . import banks, kit, perc, tape
 
 
 @dataclass(frozen=True)
@@ -255,6 +256,7 @@ def fetch_all(small: bool = False) -> None:
         fetch_models()
         fetch_guitar()
     fetch_kit(kit.DRS if small else kit.CROCELL)
+    perc.fetch()
     if banks.fetch_bass() is None:
         raise RuntimeError("the sample bank of the bass guitar did not download")
     if banks.fetch_rhodes() is None:

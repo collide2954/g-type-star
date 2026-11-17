@@ -19,7 +19,7 @@ band = ["tenor saxophone", "guitar", "keyboards", "bass guitar", "drums"]
 horn_players = 5      # the tenor saxophone is the soloist and a part of the section
 synthesizer_players = 4
 strings = [8, 6, 4, 4]
-total_staves = 21
+total_staves = 22
 
 # ---------------------------------------------------------------- horns
 
@@ -120,6 +120,13 @@ name = "Drums"
 short = "Dr."
 family = "rhythm"
 instruments = ["drum kit"]
+
+[[player]]
+id = "perc"
+name = "Percussion"
+short = "Perc."
+family = "rhythm"
+instruments = ["hand percussion"]
 
 [[player]]
 id = "eperc"
@@ -371,5 +378,6 @@ transposition = 0
 clef = "bass"
 range = [36, 81]
 
-# The drum kit, the drum machine, and the tape have no pitch: they have no entry here.
+# The drum kit, the hand percussion, the drum machine, and the tape have no pitch: they
+# have no entry here.
 # The file design/drums.toml gives the note of each drum.
