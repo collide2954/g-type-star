@@ -81,7 +81,7 @@ make test                         # run the tests
 
 ## The builds
 
-Each change of the music or of the code starts the workflow [`Build`](.github/workflows/build.yml) on GitHub. It makes all files of the work and keeps them as artifacts of the workflow run (on the page of the run, under "Artifacts"):
+Each change of the music or of the code starts the workflow [`Build`](.github/workflows/build.yml) on GitHub. It makes all files of the work and keeps them as artifacts of the workflow run. To get the files: open the [list of the builds](https://github.com/collide2954/g-type-star/actions/workflows/build.yml), select the newest run with a green mark, and go to "Artifacts" at the end of its page.
 
 | Artifact | Files |
 | --- | --- |
