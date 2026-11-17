@@ -695,8 +695,9 @@ def write(work: Work) -> None:
     structure.mark(s.bar(1), "H")
     s.set("tsax", H_SAX)
     s.set("keys.rh", m.pad_bars(H_CHORDS, low=55, high=77), r"\p")
-    s.set("bass", m.roots(H_CHORDS[:14], "a_____ ______ ____ ______ ___c__", octave=1)
-          + _cross(2 * 28, ["D", "D"], 1), r"\p")  # fmt: skip
+    s.set("bass", [None] * 4
+          + m.roots(H_CHORDS[4:14], "a_____ ______ ____ ______ ___c__", octave=1)
+          + _cross(2 * 28, ["D", "D"], 1), r"\pp")  # fmt: skip
     shimmer: list[str | None] = [None] * 4
     for symbol in H_CHORDS[4:12]:
         notes = chords.voice(symbol, 4, low=74, high=96, rootless=False)

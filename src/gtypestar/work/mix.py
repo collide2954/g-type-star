@@ -63,7 +63,7 @@ STRIPS = {
         gain_db=0.0, bus="bass",
         eq=(("highpass", 30.0), ("low shelf", 95.0, 4.0), ("bell", 240.0, -6.0, 0.8),
             ("bell", 1000.0, -3.0, 0.7), ("high shelf", 600.0, -3.0), ("lowpass", 4500.0)),
-        compress=(-20.0, 5.0, 0.02, 0.14), makeup_db=3.0, duck_db=3.5, duck_release=0.11,
+        compress=(-18.0, 2.5, 0.02, 0.14), makeup_db=2.0, duck_db=3.5, duck_release=0.11,
     ),
     "sbass": Strip(
         # The bass sounds of the dubstep passage have their rough part up to 9 kHz. No
@@ -86,7 +86,7 @@ STRIPS = {
     ),
     # ------------------------------------------------------------ lead voices
     "tsax": Strip(
-        gain_db=4.0, eq=(("highpass", 100.0), ("bell", 250.0, 1.5, 1.0),
+        gain_db=5.5, eq=(("highpass", 100.0), ("bell", 250.0, 1.5, 1.0),
                          ("bell", 520.0, -2.5, 0.9), ("bell", 1100.0, 3.0, 0.7),
                          ("bell", 3200.0, -2.0, 0.8)),
         drive_db=2.0, compress=(-22.0, 3.5, 0.01, 0.16), makeup_db=3.0, plate=0.2, echo=0.14,

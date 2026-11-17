@@ -214,18 +214,19 @@ def write(work: Work) -> None:
     # the trombone and the baritone saxophone each have a line of their own. The strings
     # play the same four voices from the ninth bar.
     for player, voice in zip(("tpt", "asax", "tbn", "bsax"), CHORALE_VOICES, strict=True):
-        s.set(player, voice, r"\mf\dolce" if player == "tpt" else r"\mp")
-    s.set("vn1", [None] * 8 + [tools.octave(bar, 1) for bar in CHORALE[8:]], r"\mp")
+        s.set(player, voice, r"\f\dolce" if player == "tpt" else r"\mf")
+    s.set("vn1", [None] * 8 + [tools.octave(bar, 1) for bar in CHORALE[8:]], r"\mf")
     for player, voice in zip(("vn2", "va", "vc"), CHORALE_VOICES[1:], strict=True):
-        s.set(player, [None] * 8 + voice[8:], r"\mp")
+        s.set(player, [None] * 8 + voice[8:], r"\mf")
     s.set("keys.rh", chord_bars(symbols, "a___ ____"), r"\p")
-    s.set("bass", m.roots(symbols, "a___ __c_", HALVES), r"\mf")
-    s.set("sbass", m.roots(symbols, "a___ ____", HALVES), r"\mf", r'\switch "bass sub"')
+    # The horns are in front: bass guitar, low synthesizer and drums are soft.
+    s.set("bass", m.roots(symbols, "a___ __c_", HALVES), r"\p")
+    s.set("sbass", m.roots(symbols, "a___ ____", HALVES), r"\p", r'\switch "bass sub"')
     s.set(
         "drums",
         slow_bars(BROAD, 8, "chorale 1", amount=0.0, crash=(1,), fills={})
         + slow_bars(SLOW, 8, "chorale 2", amount=0.3, crash=(1,), fills={8: "slow 2"}),
-        r"\mp",
+        r"\p",
     )
     s.set("perc", [None] * 8 + m.percussion(m.SHAKER_FOUR_SOFT, 8, m.FOUR), r"\p")
     # The seam with the flares: their last strokes become softer (to mezzo forte). The

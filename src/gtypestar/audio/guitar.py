@@ -80,8 +80,8 @@ LEAD_POST = (
 )
 RIGS = {
     "high gain": Rig("Phillipe_P_Bugera6262-Lead-NoDrive-Cab-ESR0.009.nam", -8.0, 110.0, 6.0,
-                     9.5, HEAVY_POST),
-    "crunch": Rig("Phillipe_P_Bug6262-Crunch-NoDrive-Cab-ESR0.004.nam", -8.0, 90.0, 3.0, 4.6,
+                     12.5, HEAVY_POST),
+    "crunch": Rig("Phillipe_P_Bug6262-Crunch-NoDrive-Cab-ESR0.004.nam", -8.0, 90.0, 3.0, 6.6,
                   HEAVY_POST),
     "clean": Rig("Phillipe_P_Bug333-Clean-Cab-ESR0.007.nam", -12.0, 70.0, 0.0, 2.5,
                  (("bell", 3600.0, -4.0, 1.0),)),
