@@ -372,6 +372,46 @@ def _strokes(events: list[Event], seed: int = 0) -> list[guitar.Stroke]:
     ]
 
 
+# The distortion of an amplifier is a compressor: a soft stroke is nearly as loud as a
+# hard stroke after it. A fader after the amplifier follows the written loudness, as the
+# volume control of the player (or the engineer at the console) does. The numbers are
+# the range of the fader in dB between the loudness values 0 and 1, for each tone. The
+# lead tone has no soft passage, and a clean guitar has its loudness from the strokes.
+FADER_DB = {"high gain": 24.0, "crunch": 10.0, "lead": 0.0, "clean": 0.0}
+FADER_FULL = 0.83  # the loudness (fortissimo) at which the fader is at 0 dB
+
+
+def fader(events: list[Event], count: int, range_db: float) -> np.ndarray:
+    """Return the gain of a fader that follows the written loudness, for `count` samples.
+
+    The loudness of a note goes from its start to its end: a hairpin on a
+    long note is a move of the fader. Between two notes the fader stays
+    where it is.
+    """
+    if not range_db or not events:
+        return np.ones(count, dtype=np.float32)
+    step = RATE // 100
+    size = count // step + 2
+    curve = np.full(size, np.nan)
+    for event in sorted(events, key=lambda item: item.start):
+        first = int(event.start * RATE) // step
+        last = int((event.start + event.seconds) * RATE) // step
+        if first >= size or last < 0:
+            continue
+        first, last = max(first, 0), min(max(last, first + 1), size)
+        curve[first:last] = np.linspace(event.level, event.level_end, last - first)
+    known = np.flatnonzero(~np.isnan(curve))
+    if len(known) == 0:
+        return np.ones(count, dtype=np.float32)
+    places = np.maximum.accumulate(np.where(np.isnan(curve), 0, np.arange(size)))
+    places[: known[0]] = known[0]
+    curve = curve[places]
+    curve = np.convolve(np.pad(curve, 2, mode="edge"), np.ones(5) / 5.0, mode="valid")
+    gain_db = np.minimum(range_db * (curve - FADER_FULL), 3.0)
+    samples = np.interp(np.arange(count), np.arange(size) * step, gain_db)
+    return (10.0 ** (samples / 20.0)).astype(np.float32)
+
+
 def _clean_level(wet: np.ndarray) -> np.ndarray:
     """A clean guitar has large peaks: a compressor makes its level even."""
     both = np.stack([wet, wet], axis=1)
@@ -394,6 +434,7 @@ def render_guitar(events: list[Event], seconds: float) -> np.ndarray:
         by_tone.setdefault(tone if tone in AMPS else "clean", []).append(event)
     if guitar.available():
         for tone, group in by_tone.items():
+            follow = fader(group, len(canvas.data), FADER_DB[tone])
             if tone in ("crunch", "high gain", "clean"):
                 # Two performances with two different recordings of each note: far left
                 # and right for the heavy tones, nearer for the clean tone.
@@ -401,6 +442,7 @@ def render_guitar(events: list[Event], seconds: float) -> np.ndarray:
                 for side, seed in ((0, 11), (1, 23)):
                     dry = guitar.direct(_strokes(group, seed), seconds, side, seed)
                     wet = guitar.amplify(dry, tone)[: len(canvas.data)]
+                    wet = wet * follow[: len(wet)]
                     if tone == "clean":
                         wet = _clean_level(wet)
                     canvas.add(0.0, effects.pan(wet, side_place * (2 * side - 1)))

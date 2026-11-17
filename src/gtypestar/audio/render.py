@@ -148,7 +148,7 @@ def render_stems(
             # The recorded guitar and the string model are two different sounds.
             # (The number is in the name of the kept stems: a new level of an amplifier
             # makes the kept stems of the guitar invalid, and no other stems.)
-            name = "gtr-recorded-2" if guitar.available() else "gtr"
+            name = "gtr-recorded-3" if guitar.available() else "gtr"
             stems["gtr"] = band.cached(
                 name, events, seconds, lambda e=events: band.render_guitar(e, seconds)
             )
@@ -230,7 +230,7 @@ def mix_bars(
 
     `parts`: a dictionary that gets the stems for export (see `console.mix`).
     """
-    from . import glitch
+    from . import glitch, tape
 
     stems, kicks, seconds = render_stems(work, bars, muse=muse, muse_full=muse_full)
     if not stems:
@@ -240,6 +240,13 @@ def mix_bars(
     begin, end = window(work, bars)
     offset = LEAD_SECONDS - begin if begin > 0 else 0.0
     stems = glitch.apply(work, stems, offset, begin, end)
+    # A recorded voice over the band: the band goes down a little while the voice speaks.
+    under = tape.ducking(work, offset, max(len(stem) for stem in stems.values()))
+    if under is not None:
+        stems = {
+            name: stem if name == "tape" else stem * under[: len(stem), None]
+            for name, stem in stems.items()
+        }
     if stems_to is not None:
         stems_to.mkdir(parents=True, exist_ok=True)
         for name, sound in stems.items():

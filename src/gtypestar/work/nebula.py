@@ -161,8 +161,9 @@ def write(work: Work) -> None:
             offset=33.6,
             text="One and a half G.",
             seconds=1.0,
-            gain_db=-13.0,
+            gain_db=-10.0,
             radio=True,
+            duck_db=3.0,
         ),
         Cue(
             "mercury3-548",
@@ -171,8 +172,9 @@ def write(work: Work) -> None:
             offset=50.2,
             text="Two G.",
             seconds=0.75,
-            gain_db=-12.0,
+            gain_db=-7.0,
             radio=True,
+            duck_db=4.0,
         ),
         Cue("static", s.bar(5), 1, seconds=6.0, gain_db=-22.0, seed=5),
     ]

@@ -75,7 +75,7 @@ What each part is for:
 | 1 Nebula | Gas falls together | Pitch comes out of noise: the recorded sounds go through filters that ring on the notes of the motto. Single events come closer and closer. | Recorded sounds, then the electric piano | Resonant filters and a vocoder give the recordings the notes of the motto | The events become the clave; the bass note G grows |
 | 2 Ignition | Fusion starts | The clave as a groove. The motto as a riff of all players. | The riff | The first chord, backwards, leads to the start | The riff becomes thin; the saxophone starts the theme before the bar line |
 | 3 Main sequence | A long stable state: gravity against pressure | C: the theme, plain. D: the theme against a riff. E: the bar of seven as a breakbeat, with the motto upside down. F: saxophone and guitar in turns. G: bass and drums. H: the motto as a canon of the saxophone with its own echoes. J: the theme at full force; a riff of four beats crosses the bar of seven. | Saxophone; then guitar; then bass | D: the ends of the riff repeat (the band samples itself). E: filter, repeats, a reverse. F: the last note of each turn echoes under the next turn. H: a delay makes the canon | The riff of four beats in J is the metre of part 4: the drums go over to it in the last bars |
-| 4 Flares | Magnetic storms | A rock groove in 4/4 with double kick. Riffs of guitar, bass, trombone and baritone saxophone. The guitar solo. | Guitar | Low resolution and ring modulation on the drums in the breaks | The riff gets longer notes (sixteenth, eighth, quarter, half): the dotted quarter of the old tempo is the beat of part 5 |
+| 4 Flares | Magnetic storms | A rock groove in 4/4 with double kick. Riffs of guitar, bass, trombone and baritone saxophone. The guitar solo. | Guitar | The storm breaks the signal three times: the drums have a low resolution for the last two beats before the gallop, before the turns and before the climb, each time lower | The riff gets longer notes (sixteenth, eighth, quarter, half): the dotted quarter of the old tempo is the beat of part 5 |
 | 5 Red giant | The star swells and cools | The motto in long notes: a chorale in four real voices. A solo of the lead synthesizer. Then the build-up on D. | Horns and strings; then the synthesizer | A reverb that adds the octave above (a "shimmer") on the chorale | The voice counts the force on the pilot; the low sounds go away; the one pause |
 | 6 Helium flash | Helium burns all at once | Bass music in half time, 30 seconds: one riff from the motto for bass guitar, synthesizer bass and guitar together; the real drums play it. | The bass riff | The sound of the bass moves slowly inside each note; the band is cut and repeated at the ends of phrases | Five notes in four beats: the new tempo |
 | 7 Last burning and fall | Pulses, then the outer layers go | The theme, the riff and the run at the same time. Then the gravity of the white dwarf pulls all of it down. | All players | The pitch and the tempo of the recording fall; echoes grow | The last chord stays as a frozen sound |
@@ -105,6 +105,17 @@ Done:
 - Live processing: echo, held sound, reverb with the octave above, ringing filters.
 - A percussion player (shaker, tambourine, congas).
 - A second drum kit for a comparison: the owner has the two sounds.
+- Version 3.1 (the full work) is with the owner.
+- After version 3.1, from the numbers of its stems:
+  - The amplified guitar follows the written loudness (a fader after the amplifier). A
+    held chord of the guitar covered the first six seconds of the chorale.
+  - The recorded voices are above the band (more level; the band goes down a little
+    while a voice speaks). 10 of the 13 voices were under the band.
+  - A fast line of all lead players goes one octave lower for the saxophone by whole
+    bars, and has slurs; wide chords of the electric piano are for two hands
+    (`tools/diagnose/playing.py`, and two new tests in `gtypestar check`).
+  - The flares have their electronics: the drums lose their resolution at the end of
+    three phrases.
 
 Open:
 

@@ -96,7 +96,7 @@ STRIPS = {
         compress=(-20.0, 3.0, 0.01, 0.15), chorus=0.25, plate=0.14, echo=0.2,
     ),
     "horns": Strip(
-        gain_db=3.0, eq=(("highpass", 110.0), ("bell", 2500.0, 2.0, 0.8),
+        gain_db=5.0, eq=(("highpass", 110.0), ("bell", 2500.0, 2.0, 0.8),
                          ("high shelf", 7000.0, -2.0)),
         compress=(-22.0, 3.0, 0.01, 0.15), plate=0.16, room=0.12,
     ),

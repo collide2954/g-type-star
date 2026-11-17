@@ -50,6 +50,8 @@ The lead tone is for the solo lines. The owner heard the first version and said 
 
 The script `tools/diagnose/guitar_alone.py` writes the guitar part of some bars with no other player.
 
+The distortion of an amplifier is a compressor: after it, a soft stroke is almost as loud as a hard stroke. In the third version, a held chord with the mark *mezzo forte* and a hairpin to *pianissimo* stayed at full level for six seconds, above the first notes of the horn chorale (mark N). Now a fader after the amplifier follows the written loudness (`band.fader`), as the volume control of the player or the hand of the engineer does: 24 dB between the loudness values 0 and 1 for the high gain tone, 10 dB for the crunch tone. The build-up before the helium flash and the fall at the end of part 7 have a real change of the loudness of the guitar because of this.
+
 ## The steps of a render
 
 1. The performance layer changes the written music into events with times in seconds. Each player gets small shifts of time and loudness (the "feel"): the measured timing spread of the reference drums is 8 to 12 ms.
@@ -72,6 +74,7 @@ These are the changes of step 3: what a player or an engineer does to the sound 
 | Reverse | One beat plays backwards. | The end of the bridge melody (mark E), bar 12 of the dubstep passage. |
 | Filter that opens | The sound starts dull and becomes bright. | The riff of the ignition, the drums at the start of mark E, the chords of the build-up. |
 | Gate | Chords are cut into eighth notes. | The last two bars of mark E. |
+| Low resolution | The sound has few bits and a low sample rate, as a digital radio link with errors. | The flares, three times: the last two beats of the drums before the gallop, before the turns, and before the climb. Each time the resolution is lower. |
 | Reverb with the octave above ("shimmer") | A long room whose sound is one octave higher than the horns and strings that go in. | The chorale (mark N). |
 | Held sound ("freeze") | One moment of a chord goes on as a sound that does not move. | The electric piano in the white dwarf. |
 | Ringing filters | Noise goes through narrow filters at the notes of the motto: the noise gets pitch. | The solar wind in the nebula. |
@@ -85,6 +88,7 @@ These are the changes of step 3: what a player or an engineer does to the sound 
 - The mixer sets the loudness of the groups to the mean of the separated stems of the reference tracks: drums -4.2 LU, bass -6.9 LU, music -4.2 LU relative to the full mix.
 - The drum group has a copy with strong compression under it. That copy has no high frequencies, and the microphones of the cymbals do not go through it.
 - The kick drum makes the bass and the chords softer for a short time at each stroke.
+- A recorded voice with words brings all other sounds down by 3 or 4 dB while it speaks (`Cue.duck_db`). A voice on a radio has a narrow band of frequencies (300 to 3400 Hz), and a guitar covers it: in the third version, 10 of the 13 voices were under the level of the band in that range, some of them by 12 dB. `tools/diagnose/voices.py` shows the level of each voice against the band.
 
 ## The master
 
@@ -101,6 +105,8 @@ The writer of the code cannot hear. Each render is measured against the referenc
 - `tools/diagnose/mixlab.py`: each group of the mix against the reference stems, for some bars.
 - `tools/listen.py`: an audio model (CLAP) says how near each ten seconds are to the references.
 - `tools/diagnose/pauses.py` and `seams.py`: the pauses and the level at each change of part.
+- `tools/diagnose/front.py`: the stems that are in front after each rehearsal mark (the level between 250 Hz and 6 kHz). `tools/diagnose/part_stems.py` makes the stems of some parts for this, with no full render.
+- `tools/diagnose/voices.py`: the level of each recorded voice against the band.
 
 The owner of the project is the last judge: the tools only find what a number can show.
 

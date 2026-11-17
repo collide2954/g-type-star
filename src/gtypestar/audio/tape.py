@@ -51,6 +51,10 @@ class Cue:
     # the octaves above them. With these, noise gets the pitch of the music.
     ring: tuple[int, ...] = ()
     ring_mix: float = 0.8  # the share of the filtered sound (the rest is the plain sound)
+    # A voice over the band: all other sounds go down by this number of dB while the
+    # voice speaks (for `duck_seconds`, or for the full length of the cue).
+    duck_db: float = 0.0
+    duck_seconds: float | None = None
 
     @property
     def label(self) -> str:
@@ -236,6 +240,46 @@ def ring(sound: np.ndarray, notes: tuple[int, ...], mix: float = 0.8) -> np.ndar
 
 
 CROSS_SECONDS = 0.02  # two parts of the render change over in this time
+
+
+DUCK_ATTACK = 0.08  # seconds: the band goes down before the first word
+DUCK_RELEASE = 0.35  # seconds: the band comes back after the last word
+
+
+def ducking(work: Work, offset: float, count: int) -> np.ndarray | None:
+    """Return the gain of the band under the recorded voices: one value for each sample.
+
+    A voice on a radio is in a narrow band of frequencies, and a band with a
+    guitar covers it. The engineer at the console moves the faders of the
+    band down a little while the voice speaks: `Cue.duck_db`. `offset` is
+    added to the time of the work. The result is None if no cue does this
+    in the first `count` samples.
+    """
+    structure = work.structure
+    depth = np.zeros(count)
+    found = False
+    for cue in work.extras.get("cues", []):  # type: ignore[union-attr]
+        if not cue.duck_db:
+            continue
+        position = structure.bar(cue.bar).start + Fraction(cue.beat) - 1
+        start = structure.seconds(position) + offset
+        length = cue.duck_seconds
+        if length is None and cue.length is not None:
+            length = structure.seconds(position + Fraction(cue.length)) + offset - start
+        if length is None:
+            length = cue.seconds if cue.seconds is not None else 1.0
+        first = max(0, int((start - DUCK_ATTACK) * RATE))
+        last = min(count, int((start + length + DUCK_RELEASE) * RATE))
+        if last <= first:
+            continue
+        time = np.arange(first, last) / RATE - start
+        down = np.clip((time + DUCK_ATTACK) / DUCK_ATTACK, 0.0, 1.0)
+        back = np.clip((length + DUCK_RELEASE - time) / DUCK_RELEASE, 0.0, 1.0)
+        depth[first:last] = np.maximum(depth[first:last], cue.duck_db * down * back)
+        found = True
+    if not found:
+        return None
+    return (10.0 ** (-depth / 20.0)).astype(np.float32)
 
 
 def render(work: Work, begin: float, end: float, seconds: float, lead: float) -> np.ndarray | None:

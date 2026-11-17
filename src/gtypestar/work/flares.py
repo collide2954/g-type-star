@@ -39,7 +39,12 @@ Each key is a minor third above the key before it (F-sharp, A, C, E-flat),
 and the bass goes up by two semitones in the last bar before each new key.
 The last eight bars before B-flat do the same thing more slowly.
 
-No sound stops in this part, and the recording has no cuts.
+No sound stops in this part. The electronics do one thing, three times: at
+the end of a phrase the storm breaks the signal of the drums (a low
+resolution, as a digital radio link with errors) for two beats, and the
+full sound comes back on the first beat of the next phrase. Each time the
+resolution is lower: bar 8 (the gallop comes), bar 40 (the turns of
+saxophone and guitar come), bar 56 (the climb comes).
 
 Style profile: "Heavy" (see research/tables/profiles.csv). The sources for
 the plain metre and the half-time groove under a saxophone melody are in
@@ -50,7 +55,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..audio.tape import Cue
+from ..audio.glitch import Edit
 from ..compose import chords, patterns, tools
 from ..compose.patterns import Groove
 from ..notation import music
@@ -468,9 +473,20 @@ def hit_bars(note: str) -> list[str]:
     ]
 
 
+# The storm breaks the signal of the drums: the number of bits and the number of
+# samples that have one value, for the first, the second and the third time.
+STORMS = [(6.0, 6), (5.0, 9), (4.0, 13)]
+
+
+def storm(section: Bars, bar: int, number: int) -> Edit:
+    """Return the edit for the last two beats of a bar: the drums with a low resolution."""
+    bits, hold = STORMS[number]
+    return Edit("crush", section.bar(bar), 3, length=2, stems=("drums",), bits=bits, hold=hold)
+
+
 def write(work: Work) -> None:
     structure = work.structure
-    cues: list[Cue] = work.extras.setdefault("cues", [])  # type: ignore[assignment]
+    edits: list[Edit] = work.extras.setdefault("edits", [])  # type: ignore[assignment]
     guitar, bass = guitar_table(), bass_table()
     whole = "a___ ____"
 
@@ -536,8 +552,7 @@ def write(work: Work) -> None:
             bars[12:16] = SAX_MELODY[4:]
         s.set(player, bars, r"\ff")
     s.set("perc", [None] * 8 + m.percussion(m.TAMBOURINE_FOUR, 8, m.FOUR) + [None] * 8, r"\f")
-    cues.append(Cue("mercury3-548", s.bar(1), 1, offset=72.1, text="Roger. Two and a half G.",
-                    seconds=1.9, gain_db=-11.0, radio=True, pan=-0.3))  # fmt: skip
+    edits.append(storm(s, 8, 0))
     s.close()
 
     # ------------------------------------------------- L: the solo of the guitar
@@ -614,6 +629,7 @@ def write(work: Work) -> None:
         parts[16] = tools.first(parts[16], r"\ff", note=True)
         s.set(player, parts)
     s.set("eperc", r"R1*22 | e,,1\mf\< ~ | e,,1\f |")
+    edits.append(storm(s, 16, 1))
     s.close()
 
     # ------------------------------------------------- M: the third line, the climb, the end
@@ -709,5 +725,6 @@ def write(work: Work) -> None:
     sub += [patterns.pitched(figure, BEATS, {"a": "bes,,"}), *hit_bars("bes,,")]
     s.set("sbass", sub, r"\f")
     s.set("eperc", r"ges,,1\f | R1*13 | e,,1\mf\< ~ | e,,1\f | ges,,1\ff | R1*5 |")
+    edits.append(storm(s, 8, 2))
     s.close()
     structure.double_bar(s.section.last_bar)

@@ -99,8 +99,10 @@ def write(work: Work) -> None:
     # "Two, one, fire. Lift off." The word "fire" is on the first beat of the next bar.
     fire = 2.43 - 0.7  # seconds from the start of the part of the recording to the word
     beat = 1 + 7 - fire * m.FAST / 60.0
-    cues.append(Cue("mercury3-548", s.bar(8), beat, offset=0.7, text="Two, one, fire. Lift off.", seconds=3.7, gain_db=-4.0,
-                    radio=True))  # fmt: skip
+    # The band goes down a little under "Two, one": it is back at the word "fire".
+    cues.append(Cue("mercury3-548", s.bar(8), beat, offset=0.7, text="Two, one, fire. Lift off.",
+                    seconds=3.7, gain_db=0.0, radio=True, duck_db=4.0,
+                    duck_seconds=fire - 0.35))  # fmt: skip
     s.close()
 
     # ------------------------------------------------- all players

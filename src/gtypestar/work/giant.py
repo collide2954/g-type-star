@@ -230,11 +230,12 @@ def write(work: Work) -> None:
     )
     s.set("perc", [None] * 8 + m.percussion(m.SHAKER_FOUR_SOFT, 8, m.FOUR), r"\p")
     # The seam with the flares: their last strokes become softer (to mezzo forte). The
-    # guitar holds the new root at that level and its sound dies away under the chorale;
-    # noise falls from the first beat.
+    # guitar holds the new root at that level and its sound dies away under the chorale
+    # (the fader after the amplifier follows the hairpin: see `band.fader`); noise falls
+    # from the first beat.
     s.set(
         "gtr",
-        r"<es, bes, es>1\mf\>\highgain\pmoff ~ | <es, bes, es>1 ~ | <es, bes, es>1\! | R1*13 |",
+        r"<es, bes, es>1\mf\>\highgain\pmoff ~ | <es, bes, es>1 ~ | <es, bes, es>2\ppp r2 | R1*13 |",
     )
     s.set("eperc", r"<< { f,,1\mp } \\ { es,,1\mp } >> | R1*15 |")
     # The chorale has a reverb with the octave above: a bright cloud over the horns and
@@ -246,10 +247,12 @@ def write(work: Work) -> None:
     # One sentence of an astronaut, after the flares (the owner asked for an astronaut who
     # swears on the radio, one time). Eugene Cernan said it in the lunar module of Apollo 10,
     # 12 minutes after the module turned over and over at the separation of its two stages.
+    # The sentence is in the half bar of rest before the first note of the trumpet: the
+    # last chord of the guitar goes down under it, and no melody is there at that time.
     cues += [
-        Cue("apollo10-onboard", s.bar(1), 2, offset=WILD, seconds=0.97, gain_db=-7.0,
-            text="That son of a bitch was wild.", radio=True, fade=0.012, pan=0.2),
-        Cue("quindar off", s.bar(1), 4.25, gain_db=-22.0),
+        Cue("apollo10-onboard", s.bar(1), 1.15, offset=WILD, seconds=0.97, gain_db=-3.5,
+            text="That son of a bitch was wild.", radio=True, fade=0.012, pan=0.2, duck_db=4.0),
+        Cue("quindar off", s.bar(1), 3.2, gain_db=-22.0),
     ]  # fmt: skip
     s.close()
 
@@ -380,7 +383,10 @@ def write(work: Work) -> None:
     guitar = [patterns.pitched("aaaa aaaa", HALVES, chug)] * 6
     guitar += [patterns.pitched("aaaaaaaa aaaaaaaa", HALVES, chug)] * 3
     guitar.append(patterns.pitched("aaaaaaaa B_------", HALVES, chug))
-    s.set("gtr", guitar, r"\f\<\highgain")
+    # The guitar starts softly: the build-up has a real rise of the loudness (the fader
+    # after the amplifier follows it), and the first words of the voice are above the band.
+    guitar[9] = tools.first(guitar[9], r"\fff", note=True)
+    s.set("gtr", guitar, r"\mp\<\highgain")
     held = ["a___ ____"] * 9 + ["a___ A---"]
     strings = m.layers(symbols, held, m.STRINGS, "strings", HALVES)
     for player, bars in strings.items():
@@ -413,9 +419,10 @@ def write(work: Work) -> None:
             offset=33.7,
             text="One and a half G.",
             seconds=0.9,
-            gain_db=-9.0,
+            gain_db=-5.0,
             radio=True,
             pan=-0.4,
+            duck_db=4.0,
         ),
         Cue(
             "mercury3-548",
@@ -424,9 +431,10 @@ def write(work: Work) -> None:
             offset=50.25,
             text="Two G.",
             seconds=0.7,
-            gain_db=-8.0,
+            gain_db=-4.0,
             radio=True,
             pan=0.4,
+            duck_db=4.0,
         ),
         Cue(
             "mercury3-548",
@@ -435,9 +443,10 @@ def write(work: Work) -> None:
             offset=73.3,
             text="Two and a half G.",
             seconds=0.85,
-            gain_db=-7.0,
+            gain_db=1.0,
             radio=True,
             pan=-0.4,
+            duck_db=4.0,
         ),
         Cue(
             "mercury3-548",
@@ -446,9 +455,10 @@ def write(work: Work) -> None:
             offset=120.85,
             text="Five G.",
             seconds=1.1,
-            gain_db=-6.0,
+            gain_db=3.0,
             radio=True,
             pan=0.4,
+            duck_db=4.0,
         ),
     ]
     # The countdown: "Fire three, two, one, fire". The recording has the last word 2.30
@@ -457,7 +467,7 @@ def write(work: Work) -> None:
     fire = COUNT_FIRE - COUNT_START
     beat = 1 + 8 - fire * m.GIANT / 60.0
     cues.append(Cue("mercury3-548", s.bar(9), beat, offset=COUNT_START, seconds=fire + 0.34,
-                    text="Fire three, two, one, fire.", gain_db=3.0, radio=True, fade=0.01))  # fmt: skip
+                    text="Fire three, two, one, fire.", gain_db=5.0, radio=True, fade=0.01))  # fmt: skip
     edits += [
         # The filter of the synthesizer chords opens.
         Edit("lowpass", s.bar(5), 1, length=22.0, stems=("pad",), start=220.0, end=15000.0),

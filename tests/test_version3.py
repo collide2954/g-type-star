@@ -5,7 +5,7 @@ from fractions import Fraction
 import numpy as np
 import pytest
 
-from gtypestar.audio import glitch, perc, tape
+from gtypestar.audio import band, glitch, perc, tape
 from gtypestar.compose import check, tools
 from gtypestar.perform.events import PerfNote
 from gtypestar.perform.feel import Event
@@ -138,3 +138,40 @@ def test_the_shaker_takes_two_kinds_of_stroke_in_turn():
     # The move away and the move back are two different recordings.
     same = float(np.corrcoef(pieces[0][:, 0], pieces[1][:, 0])[0, 1])
     assert abs(same) < 0.9
+
+
+def test_the_fader_after_the_amplifier_follows_the_written_loudness():
+    def chord(start: float, seconds: float, level: float, level_end: float) -> Event:
+        note = PerfNote("gtr", "guitar", Fraction(0), Fraction(1), 40, level, level_end)
+        return Event(note, start, seconds, level, level_end)
+
+    # A fortissimo stroke, then a chord of four seconds from mezzo forte to pianissimo.
+    events = [chord(0.0, 0.5, 0.83, 0.83), chord(1.0, 4.0, 0.59, 0.27)]
+    gain = 20.0 * np.log10(band.fader(events, 6 * RATE, 24.0))
+    assert abs(gain[RATE // 4]) < 0.1  # full level at fortissimo
+    assert abs(gain[int(1.2 * RATE)] - 24.0 * (0.59 - 0.83)) < 1.0
+    assert abs(gain[int(4.9 * RATE)] - 24.0 * (0.27 - 0.83)) < 1.0
+    assert abs(gain[-1] - gain[int(4.9 * RATE)]) < 0.5  # the fader stays after the chord
+    # A tone with no range of the fader (the lead tone) has no change.
+    assert np.all(band.fader(events, RATE, 0.0) == 1.0)
+
+
+def test_the_band_goes_down_under_a_voice_and_comes_back():
+    from gtypestar.work import build
+
+    work = build()
+    structure = work.structure
+    cue = next(cue for cue in work.extras["cues"] if "wild" in cue.text)
+    start = structure.seconds(structure.bar(cue.bar).start + Fraction(cue.beat) - 1)
+    # A part of the work that starts 5 seconds before the voice.
+    offset = 5.0 - start
+    curve = tape.ducking(work, offset, 12 * RATE)
+    assert curve is not None
+    middle = 20.0 * np.log10(curve[int((5.0 + cue.seconds / 2) * RATE)])
+    assert abs(middle + cue.duck_db) < 0.01
+    assert curve[int(4.5 * RATE)] == 1.0 and curve[int(7.5 * RATE)] == 1.0
+    # Each voice with words inside the loud parts of the work brings the band down.
+    loud = [cue for cue in work.extras["cues"] if cue.text and cue.gain_db > -11.0]
+    assert all(cue.duck_db > 0 or "Fire three" in cue.text for cue in loud), [
+        cue.text for cue in loud if not cue.duck_db
+    ]
