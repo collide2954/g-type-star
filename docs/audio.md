@@ -9,12 +9,36 @@ This document says where each sound of *G-Type Star* comes from, how the mix and
 | Drums | Samples of a real kit with all its microphones: CrocellKit (DrumGizmo). If it is not there: DRSKit. The code plays the hits ([`audio/kit.py`](../src/gtypestar/audio/kit.py)). | Each computer (the code downloads the kit) |
 | Bass guitar | Samples of a five-string bass, the direct signal of the pickup: Karoryfer *Black And Blue Basses*. An amplifier model of the project comes after them. | Each computer |
 | Electric piano | Samples of a 1977 Rhodes Mark I: *jRhodes3d* by Jeff Learman | Each computer |
-| Guitar (8 strings) | A model of a plucked string and a model of an amplifier with its loudspeaker cabinet ([`audio/amp.py`](../src/gtypestar/audio/amp.py)). The rhythm tones are played two times, left and right. | Each computer |
+| Guitar (8 strings) | Recordings of a real guitar, note by note (the direct signal of the pickup): the library *METAL-GTX* of Unreal Instruments. Then a model of a real amplifier with its cabinet and microphone, from the Neural Amp Modeler project ([`audio/guitar.py`](../src/gtypestar/audio/guitar.py), [`audio/nam.py`](../src/gtypestar/audio/nam.py)). The two rhythm guitars, left and right, are two different recordings of each note. If the library is not there: a model of a plucked string and of an amplifier ([`audio/amp.py`](../src/gtypestar/audio/amp.py)). | Each computer (the code downloads the library and the models) |
 | Synthesizers, chip synthesizer, synthesizer bass, drum machine | Code: oscillators, filters, frequency modulation ([`audio/synth.py`](../src/gtypestar/audio/synth.py), [`audio/drumsynth.py`](../src/gtypestar/audio/drumsynth.py), [`audio/dubstep.py`](../src/gtypestar/audio/dubstep.py)) | Each computer |
 | Tenor saxophone, horns, strings | MuseScore Studio with Muse Sounds ([`audio/musestems.py`](../src/gtypestar/audio/musestems.py)). On a computer with no Muse Sounds, synthesizer patches play these parts (`--no-muse`). | A computer with MuseScore Studio and Muse Sounds |
 | Recorded sounds | Public recordings of space and of space flight, and sounds that code makes from physical values ([`audio/tape.py`](../src/gtypestar/audio/tape.py)) | Each computer |
 
 Muse Sounds are free sample libraries of Muse Group, but they are not open: only MuseScore Studio can play them, and a build server cannot install them.
+
+## The guitar
+
+The first guitar of the project was all code: a model of a plucked string and a simple model of an amplifier. An audio model that compares sound with descriptions in words gave it these values, and the new guitar these (the same riff, the guitar alone; larger is nearer to the description):
+
+| Description | String model | Recorded guitar and amplifier model |
+| --- | --- | --- |
+| "heavy metal rhythm guitar with palm muted riff" | 28 | 66 |
+| "a real electric guitar through a tube amplifier" | 9 | 38 |
+| "cheap MIDI guitar sound" | 21 | 2 |
+
+How the new guitar works:
+
+1. Each note is a recording from the library: an open note or a note with the palm of the hand on the strings. Fast notes get down strokes and up strokes of the pick in turn. A note does not get the same take two times one after the other. The notes of a chord start a little one after the other.
+2. The sum of the notes is the signal of the pickup. A filter cuts its low end and makes its middle louder, as an overdrive pedal in front of a heavy amplifier.
+3. A neural network that was trained with recordings of a real amplifier does to this signal what that amplifier did ([`audio/nam.py`](../src/gtypestar/audio/nam.py)). The tool `tools/diagnose/nam_check.py` compares this code with the reference code of the Neural Amp Modeler project: the largest difference is 0.000001.
+4. Filters after the amplifier bring the middle forward: the captured cabinet has less level there than the instruments of the reference tracks.
+
+| Tone in the score | Amplifier |
+| --- | --- |
+| clean | Bugera 333, clean channel, with cabinet |
+| crunch | Bugera 6262, crunch channel, with cabinet |
+| high gain | Bugera 6262, lead channel, with cabinet |
+| lead | Bugera 333, lead channel, with cabinet |
 
 ## The steps of a render
 
@@ -64,7 +88,7 @@ The measurements in more detail found these faults, which one mean curve does no
 | Too much level above 11 kHz | 9 dB more than the references; 61% of all windows of three seconds were above their range | The strong compression of the drum group made the cymbals louder. The cymbal microphones now have their own group with no such compression, and a low-pass filter at 11.5 kHz. The master filter now works to 16 kHz. |
 | The electric piano was almost not there | 19 dB under the saxophone | 9.5 dB more level, some saturation |
 | The music group had no body | 10 dB less level from 180 to 355 Hz than the stem "other" of the references | Lower high-pass filters; no cuts near 350 Hz |
-| The guitar tone was thin and sharp | With high gain, the bands from 90 to 700 Hz were 17 to 23 dB under the band from 1.4 to 5.6 kHz | The cabinet model has a resonance at 140 Hz and a falling slope above 450 Hz; the amplifier has no cut of the middle |
+| The guitar tone was thin and sharp | With high gain, the bands from 90 to 700 Hz were 17 to 23 dB under the band from 1.4 to 5.6 kHz | First: a new cabinet model. Then the owner heard it and said: "the guitar is really bad. Look for samples or VST or something." The guitar is now a recorded guitar through a model of a real amplifier (see "The guitar"). |
 | The bass had too much middle | 5 to 9 dB more level from 180 Hz to 2.8 kHz than the bass stems of the references, 4 dB less below 45 Hz | More level below 95 Hz, less from 240 Hz up |
 | The kick drum was too low | 2.7 dB more level from 20 to 45 Hz than the drum stems of the references | High-pass filter at 40 Hz; more level at 80 and 130 Hz |
 | The drums had too much low middle | 3.4 dB more from 180 to 355 Hz | Less level of the snare drum near 210 and 550 Hz |
@@ -85,6 +109,8 @@ The tests in `tests/test_render.py` and `tests/test_tape.py` check these three i
 | --- | --- | --- |
 | Drums | CrocellKit and DRSKit. Drum samples: DrumGizmo.org | CC BY 4.0 |
 | Bass guitar | Karoryfer Samples, *Black And Blue Basses* | CC0 1.0 |
+| Guitar | Unreal Instruments, *METAL-GTX* (https://unreal-instruments.wixsite.com/unreal-instruments/metal-gtx) | "License free. No credit notation required." (its manual) |
+| Guitar amplifiers | Captures by Phillipe P of a Bugera 6262 and a Bugera 333 with cabinet, from the collection of the Neural Amp Modeler community (https://github.com/pelennor2170/NAM_models) | GPL 3.0 (the model files; they are not in this repository) |
 | Electric piano | *jRhodes3d* by Jeff Learman | Free for use in music; the samples themselves are CC BY-NC and are not in this repository |
 | Saxophone, horns, strings | Muse Sounds (Muse Group), played by MuseScore Studio | Free to use in music; not open |
 | The sound of the Sun | NASA, "Sounds of the Sun": data of the Solar and Heliospheric Observatory (ESA and NASA), sonification by A. Kosovichev, Stanford Experimental Physics Lab | NASA media guidelines |

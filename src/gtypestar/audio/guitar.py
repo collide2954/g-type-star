@@ -77,7 +77,8 @@ RIGS = {
                      9.5, HEAVY_POST),
     "crunch": Rig("Phillipe_P_Bug6262-Crunch-NoDrive-Cab-ESR0.004.nam", -8.0, 90.0, 3.0, 4.6,
                   HEAVY_POST),
-    "clean": Rig("Phillipe_P_Bug333-Clean-Cab-ESR0.007.nam", -12.0, 70.0, 0.0, 4.2),
+    "clean": Rig("Phillipe_P_Bug333-Clean-Cab-ESR0.007.nam", -12.0, 70.0, 0.0, 2.5,
+                 (("bell", 3600.0, -4.0, 1.0),)),
     "lead": Rig("Phillipe_P_Bug333-Lead-NoDrive-Cab-ESR0.007.nam", -8.0, 120.0, 6.0, 9.1,
                 HEAVY_POST),
 }  # fmt: skip
@@ -201,32 +202,33 @@ def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> n
     random = np.random.default_rng((seed, side))
     out = np.zeros(int(seconds * RATE) + RATE // 2, dtype=np.float32)
     ordered = sorted(strokes, key=lambda item: (round(item.start, 3), item.midi))
+    # The notes that start at the same moment are one stroke of the pick (a chord).
+    chords: list[list[Stroke]] = []
+    for stroke in ordered:
+        if chords and abs(stroke.start - chords[-1][0].start) < 0.012:
+            chords[-1].append(stroke)
+        else:
+            chords.append([stroke])
     last_take: dict[tuple[int, bool], int] = {}
     previous_start = -10.0
-    previous_down = False
-    down = True
-    place_in_chord = 0
-    for stroke in ordered:
-        same_moment = abs(stroke.start - previous_start) < 0.012
-        if same_moment:
-            place_in_chord += 1  # the next string of the same stroke
-        else:
-            down = not previous_down if stroke.start - previous_start < FAST else True
-            place_in_chord = 0
-        previous_start, previous_down = stroke.start, down
-        midi = int(np.clip(round(stroke.midi), LOWEST, HIGHEST))
-        take = int(random.integers(1, TAKES + 1))
-        if take == last_take.get((midi, stroke.mute)):
-            take = take % TAKES + 1
-        last_take[(midi, stroke.mute)] = take
-        piece = _one(stroke, down, take, side)
-        # An up stroke goes from the highest string to the lowest.
-        delay = place_in_chord * STRUM
-        first = int(round((stroke.start + delay) * RATE))
-        if first < 0 or first >= len(out):
-            continue
-        count = min(len(piece), len(out) - first)
-        out[first : first + count] += piece[:count]
+    down = False
+    for chord in chords:
+        down = not down if chord[0].start - previous_start < FAST else True
+        previous_start = chord[0].start
+        # A down stroke goes from the lowest string to the highest, an up stroke back.
+        strings = chord if down else chord[::-1]
+        for place, stroke in enumerate(strings):
+            midi = int(np.clip(round(stroke.midi), LOWEST, HIGHEST))
+            take = int(random.integers(1, TAKES + 1))
+            if take == last_take.get((midi, stroke.mute)):
+                take = take % TAKES + 1
+            last_take[(midi, stroke.mute)] = take
+            piece = _one(stroke, down, take, side)
+            first = int(round((stroke.start + place * STRUM) * RATE))
+            if first < 0 or first >= len(out):
+                continue
+            count = min(len(piece), len(out) - first)
+            out[first : first + count] += piece[:count]
     return out
 
 

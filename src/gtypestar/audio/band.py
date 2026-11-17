@@ -26,7 +26,7 @@ from . import amp, banks, drumsynth, dsp, dubstep, effects, guitar, kernels, pat
 
 RATE = dsp.RATE
 CACHE_DIR = Path(".cache/render")
-VERSION = 10  # a change of this number makes all kept stems invalid
+VERSION = 12  # a change of this number makes all kept stems invalid
 PHRASE_GAP = 0.03  # a line with a rest longer than this starts a new phrase (seconds)
 
 

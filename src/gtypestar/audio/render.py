@@ -242,7 +242,9 @@ def mix_bars(
 
 CHUNK_SECONDS = 40.0  # the full work is rendered in parts of about this length
 CROSS_SECONDS = 0.02  # two parts change over in this time (the stems of MuseScore)
-WORKERS = 3
+# Each worker needs 2 to 3 GB of memory. With three workers, a computer with 12 GB killed
+# one of them, and the render did not end.
+WORKERS = 2
 _JOB: dict = {}
 
 
@@ -286,6 +288,34 @@ def _chunk(bars: tuple[int, int]) -> tuple[int, np.ndarray, dict[str, np.ndarray
     begin, _end = window(work, bars)
     lead = LEAD_SECONDS if begin > 0 else 0.0
     return int(round((begin - lead) * RATE)), mixed, parts
+
+
+def _results(parts: list[tuple[int, int]], workers: int):
+    """Render the parts, some at the same time. Give the result of each part.
+
+    If the system stops a worker (not enough memory), the parts that are
+    not ready are rendered one after the other in this process.
+    """
+    import multiprocessing
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    from concurrent.futures.process import BrokenProcessPool
+
+    if workers <= 1:
+        yield from map(_chunk, parts)
+        return
+    ready: set[tuple[int, int]] = set()
+    try:
+        context = multiprocessing.get_context("fork")
+        with ProcessPoolExecutor(max_workers=workers, mp_context=context) as pool:
+            jobs = {pool.submit(_chunk, part): part for part in parts}
+            for job in as_completed(jobs):
+                result = job.result()
+                ready.add(jobs[job])
+                yield result
+    except BrokenProcessPool:
+        left = [part for part in parts if part not in ready]
+        print(f"render: a worker stopped; {len(left)} parts are rendered one after the other")
+        yield from map(_chunk, left)
 
 
 def reference_bars(work: Work) -> tuple[int, int]:
@@ -349,12 +379,15 @@ def render(
     `only`: render only the parts of the full work inside these bars (a test
     of the full render; the rest of the result is silent).
     """
-    import multiprocessing
-
-    from . import musestems
+    from . import banks, guitar, kit, musestems
 
     if muse is None:
         muse = musestems.available()
+    if bars is None and workers > 1:
+        # Each worker keeps recordings in memory: with some workers, each keeps fewer.
+        kit.CACHE.limit = 600_000_000
+        banks.CACHE_BYTES = 300_000_000
+        guitar.CACHE_BYTES = 250_000_000
     gains = reference_gains(work, muse)
     begin, end = window(work, bars)
     if bars is not None and only is None:
@@ -374,12 +407,7 @@ def render(
         parts = chunks(work)
         if only is not None:
             parts = [part for part in parts if only[0] <= part[0] and part[1] <= only[1]]
-        if workers <= 1:
-            results = map(_chunk, parts)
-        else:
-            pool = multiprocessing.get_context("fork").Pool(workers)
-            results = pool.imap_unordered(_chunk, parts)
-        for first, mixed, stems in results:
+        for first, mixed, stems in _results(parts, workers):
             cut = -first if first < 0 else 0
             first = max(first, 0)
             last = min(total, first + len(mixed) - cut)
@@ -391,9 +419,6 @@ def render(
                     exports[name] = np.memmap(export_to / f".{name}.f32", dtype=np.float32,
                                               mode="w+", shape=(total, 2))  # fmt: skip
                 exports[name][first:last] += sound[cut : cut + last - first]
-        if workers > 1:
-            pool.close()
-            pool.join()
     finally:
         _JOB.clear()
     final, report = console.master(full)

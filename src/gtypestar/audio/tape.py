@@ -181,7 +181,7 @@ def make(cue: Cue, seconds: float) -> np.ndarray:
 
 @functools.lru_cache(maxsize=4)
 def load(name: str) -> np.ndarray | None:
-    """Read a file of the media directory (two channels), or return None.
+    """Read a file of the media directory (one or two channels), or return None.
 
     The result stays in memory: many cues use the same long recording. Do not
     change the returned signal.
@@ -192,11 +192,10 @@ def load(name: str) -> np.ndarray | None:
         path = MEDIA_DIR / f"{name}{suffix}"
         if path.exists():
             data, rate = soundfile.read(str(path), dtype="float32", always_2d=True)
-            if data.shape[1] == 1:
-                data = np.repeat(data, 2, axis=1)
             if rate != RATE:
                 data = soxr.resample(data, rate, RATE, quality="HQ")
-            return data[:, :2]
+            # A recording with one channel stays so: it needs half of the memory.
+            return np.ascontiguousarray(data[:, :2], dtype=np.float32)
     return None
 
 
@@ -248,6 +247,10 @@ def render(work: Work, begin: float, end: float, seconds: float, lead: float) ->
                 missing.add(cue.sound)
                 continue
             sound = loaded[int(cue.offset * RATE) :]
+            if wanted is not None:
+                sound = sound[: int((wanted * max(cue.speed, 1.0) + 1.0) * RATE)]
+            if sound.shape[1] == 1:
+                sound = np.repeat(sound, 2, axis=1)
         if cue.speed != 1.0:
             sound = soxr.resample(sound, RATE * cue.speed, RATE, quality="HQ")
         if wanted is not None:
