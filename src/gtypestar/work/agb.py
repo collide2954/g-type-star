@@ -225,6 +225,19 @@ def scale_up(start: int, count: int, key: int) -> list[int]:
     return notes
 
 
+def slurred(bar: str) -> str:
+    """Return a bar of 28 sixteenth notes with one slur on each pulse of the clave."""
+    words = bar.split()
+    if len(words) != sum(m.STEPS):
+        raise ValueError(f"the bar has {len(words)} notes, not {sum(m.STEPS)}")
+    place = 0
+    for size in m.STEPS:
+        words[place] += "("
+        words[place + size - 1] += ")"
+        place += size
+    return " ".join(words)
+
+
 def sixteenths(notes: list[int], flats: bool, slur: bool = True) -> str:
     """Return the notes as sixteenth notes under one slur."""
     words = [note_name(midi, flats) for midi in notes]
@@ -311,6 +324,7 @@ FALL_CHORDS = [
     (0, 5, 10, 15), (0, 5, 10, 15), (0, 5, 10, 15), (0, 5, 10), (0, 5, 10), (0, 5, 10),
     (0, 2, 5), (0, 2, 5), (0, 2, 5), (0, 5),
 ]  # fmt: skip
+HAND = 14  # semitones: the widest chord of one hand of the electric piano (a ninth)
 FALL_CHORD_RHYTHM = ["A A A A A", "A A A A A", "A A - A -", "A A - A -", "A A - A -",
                      "A - - A -", "A - - A -", "A - - A -", "A - - A -", "A _ _ _ _",
                      "A _ _ _ _", "A _ _ _ _", "A _ _ _ _", "A _ _ _ _"]  # fmt: skip
@@ -432,10 +446,16 @@ def write(work: Work) -> None:
     s = Bars(work, 8)
     structure.mark(s.bar(1), "T")
     line = [bar.replace("(", "").replace(")", "") for bar in [*m.LINE_1, *m.LINE_2, *LINE_END]]
-    # The saxophone player has one bar of rest to breathe.
-    sax_line = [tools.within(bar, 44, mainseq.SAX_TOP) for bar in line]
-    s.set("tsax", [*sax_line[:3], None, *sax_line[4:]], r"\ff")
-    s.set("gtr", line, r"\ff\leadtone\pmoff")
+    # The saxophone: each bar in an octave that the instrument has (a whole bar moves,
+    # not single notes), one slur on each pulse (the tongue starts five notes in a bar,
+    # not 28), and one bar of rest to breathe.
+    sax_line = [slurred(bar) for bar in tools.fit_bars(line[:3], 44, mainseq.SAX_TOP)]
+    sax_line += [None, *[slurred(bar) for bar in tools.fit_bars(line[4:], 44, mainseq.SAX_TOP)]]
+    s.set("tsax", sax_line, r"\ff")
+    # The guitar: the last two notes are one note. The hand has the time of an eighth
+    # note for the way from the highest string to the lowest string (the riff of mark U).
+    guitar_line = [*line[:-1], line[-1].removesuffix(" g'' g''") + " g''8"]
+    s.set("gtr", guitar_line, r"\ff\leadtone\pmoff")
     s.set("lead", [tools.octave(bar, 1) for bar in line], r"\ff", r'\switch "lead moog"')
     s.set("chip", [tools.octave(bar, 2) for bar in line], r"\f")
     s.set("bass", [tools.octave(bar, -2) for bar in line], r"\ff")
@@ -621,15 +641,23 @@ def write(work: Work) -> None:
                           + [None] * (FALL_BARS - 4)))  # fmt: skip
     # The chords become narrow and go to the low register.
     key_bars: list[str | None] = []
+    left_bars: list[str | None] = []
     pad_bars: list[str | None] = []
     for number in range(FALL_BARS):
         root = (67 if number < 7 else 55) - number
         flats = flat_root(root)
-        notes = " ".join(note_name(root + step, flats) for step in FALL_CHORDS[number])
-        key_bars.append(patterns.pitched(FALL_CHORD_RHYTHM[number], m.CLAVE, {"a": f"<{notes}>"}))
+        steps = FALL_CHORDS[number]
+        # A chord wider than a ninth is for two hands: the left hand has its two low notes.
+        low = steps[:2] if steps[-1] - steps[0] > HAND else ()
+        notes = " ".join(note_name(root + step, flats) for step in steps[len(low) :])
+        rhythm = FALL_CHORD_RHYTHM[number]
+        key_bars.append(patterns.pitched(rhythm, m.CLAVE, {"a": f"<{notes}>"}))
+        under = " ".join(note_name(root + step, flats) for step in low)
+        left_bars.append(patterns.pitched(rhythm, m.CLAVE, {"a": f"<{under}>"}) if low else None)
         high = " ".join(note_name(root + 12 + step, flats) for step in FALL_CHORDS[number])
         pad_bars.append(f"<{high}>1.." if number < 9 else None)
     s.set("keys.rh", marked(key_bars))
+    s.set("keys.lh", marked(left_bars))
     s.set("pad.rh", marked(pad_bars))
     # The lead players.
     s.set("tsax", marked([*FALL_SAX, *[None] * (FALL_BARS - len(FALL_SAX))]))

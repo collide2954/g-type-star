@@ -5,6 +5,9 @@ The checks are:
 - Each note must be in the range of the instrument.
 - A wind instrument plays one note at a time.
 - A wind player must have a rest to breathe.
+- The tongue of a wind player can start about ten notes in one second: a faster line
+  must have slurs.
+- One hand of the electric piano has a chord of a tenth or less.
 - The drummer has two hands and two feet.
 - Each note of the drums and of the drum machine must be a sound that exists.
 - A pulse is divided in 2, 3, 4, 6 or 8: the ear and the player can follow these
@@ -28,6 +31,8 @@ from ..perform.events import PerfNote, perform
 ONE_NOTE_FAMILIES = ("horns",)
 BREATH_SECONDS = 0.35  # a rest of this length or more is time to breathe
 LONGEST_BREATH = 18.0  # the longest time with no such rest, in seconds
+TONGUE_STARTS = 10  # the largest number of notes in one second that the tongue starts
+HAND_SPAN = 16  # semitones: the widest chord of one hand (a tenth)
 FEET = {35, 36, 44}  # the drums that the feet play
 HANDS = 2
 DRUM_TABLES = {"drums": drums.BY_MIDI, "eperc": drums.MACHINE_BY_MIDI,
@@ -63,6 +68,44 @@ def _breath_problems(work: Work, player: str, notes: list[PerfNote]) -> list[Pro
             text = f"more than {LONGEST_BREATH:.0f} s with no rest to breathe"
             problems.append(Problem(player, structure.bar_at(note.start).number, text))
     return problems
+
+
+def _tongue_problems(work: Work, player: str, notes: list[PerfNote]) -> list[Problem]:
+    """Find the fast passages of a wind player with no slurs."""
+    structure = work.structure
+    starts = [(structure.seconds(note.start), note.start) for note in notes
+              if not note.legato and note.grace == 0]  # fmt: skip
+    found: dict[int, int] = {}
+    first = 0
+    for last in range(len(starts)):
+        while starts[last][0] - starts[first][0] > 1.0:
+            first += 1
+        count = last - first + 1
+        if count > TONGUE_STARTS:
+            bar = structure.bar_at(starts[first][1]).number
+            found[bar] = max(found.get(bar, 0), count)
+    return [
+        Problem(player, bar, f"the tongue starts {count} notes in one second: no slurs")
+        for bar, count in sorted(found.items())
+    ]
+
+
+def _hand_problems(work: Work, player: str, notes: list[PerfNote]) -> list[Problem]:
+    """Find the chords that are too wide for one hand of a keyboard."""
+    chords: dict[tuple[Fraction, int], list[float]] = {}
+    for note in notes:
+        if note.grace == 0:
+            chords.setdefault((note.start, note.voice), []).append(note.midi)
+    found: dict[int, int] = {}
+    for (start, _voice), pitches in chords.items():
+        span = int(max(pitches) - min(pitches))
+        if span > HAND_SPAN:
+            bar = work.structure.bar_at(start).number
+            found[bar] = max(found.get(bar, 0), span)
+    return [
+        Problem(player, bar, f"a chord of {span} semitones for one hand")
+        for bar, span in sorted(found.items())
+    ]
 
 
 def _limb_problems(work: Work, player: str, notes: list[PerfNote]) -> list[Problem]:
@@ -120,6 +163,9 @@ def check(work: Work) -> list[Problem]:
         notes = sorted(perform(work, player.id), key=lambda item: item.start)
         if player.family in ONE_NOTE_FAMILIES:
             problems.extend(_breath_problems(work, player.id, notes))
+            problems.extend(_tongue_problems(work, player.id, notes))
+        if player.id.startswith("keys"):
+            problems.extend(_hand_problems(work, player.id, notes))
         if player.id == "drums":
             problems.extend(_limb_problems(work, player.id, notes))
         problems.extend(_division_problems(work, player.id, notes))

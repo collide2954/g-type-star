@@ -26,6 +26,54 @@ def test_a_phrase_moves_as_one_piece_if_its_highest_note_is_too_high():
     assert tools.fit("c''4", 77, more=("c''4", "g''4")) == "c'4"
 
 
+def test_a_line_moves_bar_by_bar_with_the_smallest_leaps_at_the_bar_lines():
+    # Bar 2 has a G5, above the range: the whole bar goes one octave lower, and its
+    # shape stays. Bar 1 has a low A-flat: it cannot go lower, and stays. Bar 3 has two
+    # possible octaves: it takes the octave next to the end of bar 2.
+    line = ["as,8 d'' e'' f''", "g''8 f'' e'' d''", "c''8 b' a' g'"]
+    assert tools.fit_bars(line, 44, 77) == ["as,8 d'' e'' f''", "g'8 f' e' d'", "c'8 b a g"]
+    # A line that is in the range stays as it is.
+    assert tools.fit_bars(line[2:], 44, 77) == line[2:]
+    # With no low note in bar 1, the three bars go down together: no leap at a bar line.
+    line[0] = "c''8 d'' e'' f''"
+    assert tools.fit_bars(line, 44, 77) == ["c'8 d' e' f'", "g'8 f' e' d'", "c'8 b a g"]
+
+
+def test_a_bar_of_the_last_line_has_one_slur_on_each_pulse():
+    from gtypestar.work import agb
+
+    bar = agb.slurred(" ".join(["c'16"] + ["d'"] * 27))
+    words = bar.split()
+    starts = [index for index, word in enumerate(words) if word.endswith("(")]
+    ends = [index for index, word in enumerate(words) if word.endswith(")")]
+    assert starts == [0, 6, 12, 16, 22] and ends == [5, 11, 15, 21, 27]
+
+
+def test_the_work_has_no_fast_line_without_slurs_and_no_chord_too_wide_for_a_hand():
+    from gtypestar.work import build
+
+    work = build()
+    problems = [str(problem) for problem in check.check(work)]
+    assert problems == []
+    # The checks find the faults: a fast line with no slur (the first bars of the work
+    # have 70 quarter notes in a minute: 16 notes in a quarter note are 18 in a second),
+    # and a chord of two octaves in one hand.
+
+    def notes(legato: bool) -> list[PerfNote]:
+        return [
+            PerfNote("tsax", "tenor saxophone", Fraction(number, 16), Fraction(1, 16), 60, 0.7,
+                     0.7, legato=legato and number > 0)
+            for number in range(40)
+        ]  # fmt: skip
+
+    assert len(check._tongue_problems(work, "tsax", notes(legato=False))) == 1
+    assert check._tongue_problems(work, "tsax", notes(legato=True)) == []
+    wide = [PerfNote("keys.rh", "electric piano", Fraction(0), Fraction(1), midi, 0.7, 0.7)
+            for midi in (60, 84)]  # fmt: skip
+    assert len(check._hand_problems(work, "keys.rh", wide)) == 1
+    assert check._hand_problems(work, "keys.rh", wide[:1]) == []
+
+
 def test_the_kick_drum_has_the_low_notes_of_the_bass():
     figure = "a__x-b ---c-e b_a_ a__x-c ---e_c"
     bars = m.drum_bars(m.MAIN, 1, "test", amount=0.0, crash=(), kicks=[figure])

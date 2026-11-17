@@ -595,7 +595,8 @@ def write(work: Work) -> None:
     for bar, music in GUITAR_TURNS.items():
         guitar_solo[bar - 1] = music
     guitar_solo[4] = tools.first(guitar_solo[4] or "", r"\leadtone\pmoff", note=True)
-    s.set("tsax", sax + [tools.within(bar, 44, SAX_TOP) for bar in m.LINE_2], r"\f")
+    # The line: the saxophone has the last two bars one octave lower (whole bars move).
+    s.set("tsax", sax + tools.fit_bars(m.LINE_2, 44, SAX_TOP), r"\f")
     s.set("gtr", guitar_solo + m.LINE_2, r"\f")
     figures, walk = _figures(F_FIGURES, symbols)
     s.set(

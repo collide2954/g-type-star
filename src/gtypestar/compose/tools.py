@@ -92,6 +92,53 @@ def fit(text: str, high: int, more: tuple[str, ...] = ()) -> str:
     return octave(text, -octaves) if octaves else text
 
 
+def fit_bars(bars: list[str], low: int, high: int) -> list[str]:
+    """Return the bars of a line for a player with a smaller range.
+
+    Each bar moves as one piece: the shape of the line inside the bar stays.
+    A bar takes an octave in which all its notes are in the range. If the
+    line has more than one possible sequence of octaves, it takes the
+    sequence with the smallest leaps at the bar lines, and the fewest bars
+    away from the written octave. A bar with no octave in which all its
+    notes are in the range moves note by note (see `within`).
+    """
+    weight = 3  # semitones: the cost of one octave away from the written octave
+    choices: list[list[tuple[int, float, float]]] = []  # for each bar: octaves, first, last
+    for index, bar in enumerate(bars):
+        notes = [note.pitches[0].pitch.midi for note in _flat(music.parse(bar).children)]
+        if not notes:
+            raise ValueError(f"bar {index + 1} of the line has no note")
+        found = [(shift, notes[0] + 12 * shift, notes[-1] + 12 * shift)
+                 for shift in (0, -1, 1, -2, 2)
+                 if min(notes) + 12 * shift >= low and max(notes) + 12 * shift <= high]  # fmt: skip
+        if not found:
+            folded = [note.pitches[0].pitch.midi
+                      for note in _flat(music.parse(within(bar, low, high)).children)]  # fmt: skip
+            found = [(99, folded[0], folded[-1])]
+        choices.append(found)
+    # The best sequence of octaves: the smallest sum of the leaps at the bar lines.
+    costs = [[weight * abs(shift) % 99 for shift, _first, _last in choices[0]]]
+    back: list[list[int]] = [[0] * len(choices[0])]
+    for index in range(1, len(choices)):
+        row, origin = [], []
+        for shift, first_note, _last in choices[index]:
+            options = [costs[-1][number] + abs(first_note - before[2])
+                       for number, before in enumerate(choices[index - 1])]  # fmt: skip
+            best = min(range(len(options)), key=options.__getitem__)
+            row.append(options[best] + weight * abs(shift) % 99)
+            origin.append(best)
+        costs.append(row)
+        back.append(origin)
+    place = min(range(len(costs[-1])), key=costs[-1].__getitem__)
+    shifts = []
+    for index in range(len(choices) - 1, -1, -1):
+        shifts.append(choices[index][place][0])
+        place = back[index][place]
+    shifts.reverse()
+    return [within(bar, low, high) if shift == 99 else (octave(bar, shift) if shift else bar)
+            for bar, shift in zip(bars, shifts, strict=True)]  # fmt: skip
+
+
 def _flat(elements: list[music.Element]) -> list[music.Note]:
     """Return all notes of a list of elements, with the notes inside groups."""
     result: list[music.Note] = []

@@ -174,11 +174,36 @@ def bass_table(root: str = "fis,,") -> dict[str, str]:
 
 
 def keys_table(root: str = "fis,,") -> dict[str, str]:
-    """Return the notes of the riff letters for the left hand of the electric piano: octaves."""
-    return {
+    """Return the notes of the riff letters for the left hand of the electric piano.
+
+    The chords of the riff are octaves. The low note between them is one
+    note, one octave above the bass guitar.
+    """
+    table = {
         letter: "<" + note + " " + tools.tr(note, 12) + ">"
         for letter, note in bass_table(root).items()
     }
+    table["a"] = tools.tr(root, 12)
+    table["b"] = tools.tr(root, 24)
+    return table
+
+
+def outline(pattern: str) -> str:
+    """Return a riff for one hand of a keyboard: the accents, and the notes on the eighth notes.
+
+    The guitar and the bass guitar play the muted sixteenth notes of the
+    riff. A hand on a keyboard cannot play the same key again and again at
+    that speed: it leaves out the muted notes on the second and the fourth
+    sixteenth note of a beat, and holds the note before them.
+    """
+    groups = []
+    for group in pattern.split():
+        chars = list(group)
+        for place in (1, 3):
+            if chars[place].islower():
+                chars[place] = "_" if chars[place - 1].isalpha() else "-"
+        groups.append("".join(chars))
+    return " ".join(groups)
 
 
 def ring(pattern: str) -> str:
@@ -527,7 +552,7 @@ def write(work: Work) -> None:
     low[16] = tools.first(low[16], r"\ff", note=True)
     s.set("bass", low, r"\f")
     octaves = [bar for root, part in zip(roots, under, strict=True)
-               for bar in riff(part, keys_table(root))]  # fmt: skip
+               for bar in riff([outline(row) for row in part], keys_table(root))]  # fmt: skip
     octaves[16] = tools.first(octaves[16], r"\f", note=True)
     s.set("keys.lh", octaves, r"\mf")
     heavy = riff(RIFF_SOLO_3, guitar_table("c,"))
@@ -627,7 +652,7 @@ def write(work: Work) -> None:
     # time it is the motto of the work: G, C, D, E), then the top of the last chord.
     s.set(
         "tsax",
-        [*[tools.within(bar, 44, 77) for bar in line], r"fis2 r2", *motto[:6],
+        [*tools.fit_bars(line, 44, 77), r"fis2 r2", *motto[:6],
          *[tools.octave(bar, -1) for bar in motto[6:]],
          r"f''1 ~", r"f''2 r2", r"g'8.-> g'8.-> g'8-> g'8.-> g'8.-> g'8->",
          *hit_bars("as'")],
