@@ -12,9 +12,12 @@ and for the mix before and after the master against the reference masters.
 Usage:
 
     uv run python tools/diagnose/mixlab.py FIRST-LAST [--stems] [--fixed] [--write NAME]
+        [--solo GROUP NAME]
 
 `--fixed`: use the levels of the groups of the full render (from the reference
 passage), not the levels that give these bars the balance of the references.
+`--solo drums NAME`: write one group of the mix alone (after its channel strips and
+its group processing) as build/audio/NAME.flac and .mp3: a comparison of drum kits.
 """
 
 from __future__ import annotations
@@ -117,6 +120,18 @@ def main() -> int:
         for name, levels, side in sorted(rows, key=lambda item: -item[1].max()):
             print(row(name, levels, side))
     groups, _sends = console.group_buses(stems, settings, kicks)
+    if "--solo" in arguments:
+        place = arguments.index("--solo")
+        group, name = arguments[place + 1], arguments[place + 2]
+        alone = groups[group] * (dsp.db(-1.0) / max(float(np.max(np.abs(groups[group]))), 1e-9))
+        target = Path("build/audio") / f"{name}.flac"
+        soundfile.write(str(target), alone, dsp.RATE, subtype="PCM_24")
+        subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", str(target), "-codec:a", "libmp3lame",
+             "-q:a", "1", str(target.with_suffix(".mp3"))],
+            check=True,
+        )  # fmt: skip
+        print(f"wrote {target.with_suffix('.mp3')}")
     for name in ("drums", "bass", "music"):
         if not np.any(groups[name]):
             continue

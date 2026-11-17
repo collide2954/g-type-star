@@ -148,7 +148,7 @@ def render_stems(
             # The recorded guitar and the string model are two different sounds.
             # (The number is in the name of the kept stems: a new level of an amplifier
             # makes the kept stems of the guitar invalid, and no other stems.)
-            name = "gtr-recorded-3" if guitar.available() else "gtr"
+            name = "gtr-recorded-4" if guitar.available() else "gtr"
             stems["gtr"] = band.cached(
                 name, events, seconds, lambda e=events: band.render_guitar(e, seconds)
             )

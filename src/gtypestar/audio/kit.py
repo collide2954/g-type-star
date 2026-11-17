@@ -80,6 +80,12 @@ class KitSpec:
     # tone of the group near the tone of the same group of the CrocellKit, because the
     # channel strips of the mixer are made for that kit.
     tone: dict[str, tuple] = field(default_factory=dict)
+    # Microphones with the opposite polarity (a microphone under a drum, against the
+    # microphone above it): the code turns their signal over.
+    inverted: tuple[str, ...] = ()
+    # Microphones (or trigger channels) whose signal comes late: the time in seconds by
+    # which the code plays them earlier, so that they are in time with the others.
+    advance: dict[str, float] = field(default_factory=dict)
 
 
 CROCELL = KitSpec(
@@ -205,8 +211,86 @@ NAKED = KitSpec(
         "room": (("high shelf", 6000.0, -4.0),),
     },
 )  # fmt: skip
+# The MuldjordKit: a Tama Superstar kit with two kick drums, recorded for a death metal
+# band ("a metal or rock kit"). Each kick drum has a microphone inside and a trigger:
+# the channel of the triggers has the click of the beater (most of its level is from
+# 2.5 to 6 kHz). With it, fast strokes of the two feet stay clear. The kit has no
+# hi-hat pedal sound and no splash cymbal: the closed hi-hat and the left crash play them.
+MULDJORD = KitSpec(
+    name="MuldjordKit",
+    folder="muldjordkit/MuldjordKit3",
+    url="https://drumgizmo.org/kits/MuldjordKit/MuldjordKit3.zip",
+    licence="CC BY 4.0",
+    credit="Drum samples: MuldjordKit, DrumGizmo.org",
+    drums={
+        36: "KdrumR", 35: "KdrumL", 38: "Snare", 40: "Snare", 37: "SnareRest",
+        42: "HihatClosed", 46: "HihatOpen", 44: "HihatClosed",
+        51: "RideR", 53: "RideRBell", 49: "CrashL", 57: "CrashR", 52: "China", 55: "CrashL",
+        50: "Tom1", 47: "Tom2", 43: "Tom3", 41: "Tom4",
+    },
+    groups={
+        "kick": {"KdrumL": 0.0, "KdrumR": 0.0, "Trigger": 0.0},
+        "snare": {"Snare_top": 0.0, "Snare_bottom": 0.0},
+        "toms": {"Tom1": -0.4, "Tom2": -0.15, "Tom3": 0.15, "Tom4": 0.5},
+        "cymbals": {"Hihat": -0.45, "RideL": -0.3, "RideR": 0.45},
+        "overheads": {"OHL": -1.0, "OHR": 1.0},
+        "room": {"AmbL": -1.0, "AmbR": 1.0},
+    },
+    longest={"RideR": 5.0, "RideRBell": 4.0, "CrashL": 5.0, "CrashR": 5.0, "China": 3.5,
+             "HihatOpen": 2.5, "KdrumR": 1.2, "KdrumL": 1.2},
+    chokes={"HihatOpen": (42, 44, 46), "KdrumR": (35, 36), "KdrumL": (35, 36)},
+    accent={},
+    gains_db={},
+    # These levels give each group almost the level that it has with the CrocellKit on
+    # bars 163 to 174 (tools/diagnose/kit_levels.py). The room of this kit is loud.
+    mics_db={"kick": 4.8, "snare": -4.8, "toms": -0.7, "cymbals": -2.1, "overheads": -0.6,
+             "room": -12.0},
+    # The microphone under the snare drum has the opposite polarity (the notes of the kit
+    # say this; with the two signals as they are, the drum has 3.7 dB less low sound).
+    inverted=("Snare_bottom",),
+)  # fmt: skip
+# The Aasimonster: the kit of a death metal record (DIE, "Rise of the Rotten"). It has
+# the most recordings of the kits here (93 strokes of the snare drum, rim shots, three
+# closed hi-hats, china cymbals of 8, 10 and 18 inches), and trigger channels: a drum
+# module that plays a kick sample at each stroke of a kick drum (it comes 12 ms after
+# the microphone), and a trigger on the snare drum. The kit has no cross-stick sound:
+# soft strokes away from the centre of the snare drum play it.
+AASIMONSTER = KitSpec(
+    name="Aasimonster",
+    folder="aasimonster/aasimonster2",
+    url="https://drumgizmo.org/kits/Aasimonster/aasimonster2_1.zip",
+    licence="CC BY 4.0",
+    credit="Drum samples: Aasimonster, DrumGizmo.org",
+    drums={
+        36: "kick_r", 35: "kick_l", 38: "snare_on_center", 40: "snare_on_center",
+        37: "snare_off_center", 42: "hihat_closed2", 46: "hihat_open", 44: "hihat_closed1",
+        51: "ride", 53: "ride_bell1", 49: "crash1", 57: "crash2", 52: "china_18_inch",
+        55: "china_10_inch", 50: "tom_1", 47: "tom_2", 43: "tom_3", 41: "tom_4",
+    },
+    groups={
+        "kick": {"Kick L": 0.0, "Kick R": 0.0, "Alesis": 0.0},
+        "snare": {"Snare top": 0.0, "Snare bottom": 0.0, "Snare trigger": 0.0},
+        "toms": {"Tom1": -0.4, "Tom2": -0.15, "Tom3": 0.15, "Tom4": 0.5},
+        "cymbals": {"Hihat": -0.45, "Ride": 0.45},
+        "overheads": {"OH L": -1.0, "OH R": 1.0},
+        "room": {"Amb L": -1.0, "Amb R": 1.0},
+    },
+    longest={"ride": 5.0, "ride_bell1": 4.0, "crash1": 5.0, "crash2": 5.0,
+             "china_18_inch": 3.5, "china_10_inch": 2.5, "hihat_open": 1.6, "kick_r": 1.2,
+             "kick_l": 1.2},
+    chokes={"hihat_open": (42, 44, 46), "kick_r": (35, 36), "kick_l": (35, 36)},
+    accent={38: "snare_rim_shot"},
+    gains_db={},
+    # These levels give each group almost the level that it has with the CrocellKit on
+    # bars 55 to 62 and 163 to 174 (tools/diagnose/kit_levels.py).
+    mics_db={"kick": 7.2, "snare": 3.5, "toms": 6.5, "cymbals": 6.5, "overheads": 1.8,
+             "room": -4.8},
+    channels_db={"Snare trigger": -8.0},
+    advance={"Alesis": 0.012},
+)  # fmt: skip
 SFZ_SWITCH = 12  # the key switch of the kit for hi-hat strokes with a fixed opening
-KITS = {"crocell": CROCELL, "drs": DRS, "naked": NAKED}
+KITS = {"crocell": CROCELL, "drs": DRS, "naked": NAKED, "muldjord": MULDJORD,
+        "aasimonster": AASIMONSTER}  # fmt: skip
 
 
 def kit() -> KitSpec:
@@ -323,7 +407,13 @@ def read_instrument(spec: KitSpec, name: str) -> list[Hit]:
         path = folder / files[0].get("file", "")
         if path.exists():
             sources = tuple(
-                Source(entry.get("channel", ""), path, int(entry.get("filechannel", "1")) - 1)
+                Source(
+                    entry.get("channel", ""),
+                    path,
+                    int(entry.get("filechannel", "1")) - 1,
+                    (-1.0 if entry.get("channel") in spec.inverted else 1.0)
+                    * dsp.db(spec.channels_db.get(entry.get("channel", ""), 0.0)),
+                )
                 for entry in files
             )
             hits.append(Hit(float(sample.get("power", "1")), sources))
@@ -438,8 +528,11 @@ def render(
                 fade = min(length, int(0.045 * RATE))
                 part[-fade:] *= np.linspace(1.0, 0.0, fade, dtype=np.float32)
             group, left, right = place
-            stems[group][first : first + length, 0] += part * left
-            stems[group][first : first + length, 1] += part * right
+            # A channel that comes late (a drum module after a trigger) plays earlier.
+            early = min(first, int(spec.advance.get(source.channel, 0.0) * RATE))
+            begin = first - early
+            stems[group][begin : begin + length, 0] += part * left
+            stems[group][begin : begin + length, 1] += part * right
     for group, level in spec.mics_db.items():
         stems[group] *= np.float32(dsp.db(level))
     if spec.tone:

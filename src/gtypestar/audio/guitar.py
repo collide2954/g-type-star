@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -39,6 +40,7 @@ from . import dsp, nam
 RATE = dsp.RATE
 SAMPLES_DIR = Path(".cache/samples/metal-gtx/UI_METAL-GTX/Samples")
 MODELS_DIR = Path(".cache/models/nam")
+CABINETS_DIR = Path(".cache/models/ir")
 LOWEST, HIGHEST = 30, 88  # F-sharp 1 to E6
 HIGHEST_MUTE = 76
 NOTE_NAMES = ["c", "c#", "d", "d#", "e", "f", "f#", "g", "g#", "a", "a#", "b"]
@@ -61,6 +63,9 @@ class Rig:
     output_db: float
     post: tuple[tuple, ...] = ()
     tone_hz: float = 0.0  # the tone control of the guitar: a low-pass filter before the amplifier
+    # The loudspeaker cabinet and its microphone, for a model of an amplifier alone: the
+    # name of an impulse response in `CABINETS_DIR`. ("" = the model has its cabinet.)
+    cabinet: str = ""
 
 
 # The captured cabinet has much level near 130 Hz and from 3 to 5 kHz, and less in the
@@ -106,11 +111,34 @@ LEGATO_LEVEL = 0.85  # the level of such a note against a note with a stroke
 OVERLAP = 0.012  # seconds: a note of a line rings on into the start of the next note
 JOIN = 0.05  # seconds: a gap shorter than this between two notes of a line is closed
 
+# The small sounds of a real player, as the program of the library plays them (its SFZ
+# files give the numbers). Without them the guitar is a row of clean notes: a machine.
+# - Each key has nine recordings, not three: the three takes of its own note, and the
+#   takes of the notes one semitone below and above it, at the pitch of the key.
+# - The noise of the pick comes a little before the string.
+# - When the hand stops a string, the string makes a short sound (a "release"). It is
+#   softer after a long note.
+# - No two strokes have the same loudness.
+NEIGHBOURS = (-1, 0, 1)
+PICK_DB = -20.5  # the level of the pick noise against a full stroke
+PICK_LEAD = 0.012  # seconds from the pick noise to the note
+PICK_FILES = 18
+PICK_CUTOFF = 2560.0  # hertz: the pick noise of a full stroke has no sound above this
+RELEASE_DB = -16.5  # the level of the release sound against a full stroke
+RELEASE_DECAY = {False: 10.0, True: 30.0}  # dB less for each second of an open, a muted note
+RELEASE_MUTE_KEY_DB = 1.0  # a muted note: the release is this much softer for each semitone
+RELEASE_ZONES = (32, 35, 40, 45, 50, 55, 60, 63, 67, 72, 77, 81, 84, 88)  # recorded pitches
+RELEASE_FILES = 8
+RELEASE_FLOOR_DB = -55.0  # a release sound under this level is left out
+LEVEL_RANDOM_DB = 3.0  # each stroke is softer by a random amount up to this
+
 
 def available() -> bool:
     """Return True if the guitar library and all amplifier models are on the computer."""
     return (SAMPLES_DIR / "Sus_Down").exists() and all(
-        (MODELS_DIR / rig.model).exists() for rig in RIGS.values()
+        (MODELS_DIR / rig.model).exists()
+        and (not rig.cabinet or (CABINETS_DIR / rig.cabinet).exists())
+        for rig in RIGS.values()
     )
 
 
@@ -137,23 +165,39 @@ class _Bank:
         self.items: OrderedDict[tuple, np.ndarray] = OrderedDict()
         self.size = 0
 
-    def get(self, kind: str, midi: int, down: bool, take: int, side: int) -> np.ndarray:
-        key = (kind, midi, down, take, side)
+    def get(
+        self, kind: str, midi: int, down: bool, take: int, side: int, shift: int = 0
+    ) -> np.ndarray:
+        """Return one recording of a note. `shift` selects the recording of a note this
+        number of semitones away, played at the pitch of `midi`."""
+        name = f"{NOTE_NAMES[(midi + shift) % 12]}{(midi + shift) // 12 - 1}"
+        stroke = "Down" if down else "Up"
+        path = f"{kind}_{stroke}/{name}_{kind}_{stroke}{take}.flac"
+        return self.file(path, side, semitones=-float(shift))
+
+    def file(self, path: str, side: int, semitones: float = 0.0, trim: bool = True) -> np.ndarray:
+        """Return one channel of a file of the library at the rate of the project.
+
+        `semitones` moves the pitch (the length changes with it). With `trim`, the
+        recording starts at its first sound.
+        """
+        key = (path, side, round(semitones, 3), trim)
         if key in self.items:
             self.items.move_to_end(key)
             return self.items[key]
-        name = f"{NOTE_NAMES[midi % 12]}{midi // 12 - 1}"
-        stroke = "Down" if down else "Up"
-        path = SAMPLES_DIR / f"{kind}_{stroke}" / f"{name}_{kind}_{stroke}{take}.flac"
-        data, rate = soundfile.read(str(path), dtype="float32", always_2d=True)
+        data, rate = soundfile.read(str(SAMPLES_DIR / path), dtype="float32", always_2d=True)
         # The two channels of a file are two recordings: one for each of the two guitars.
         sound = data[:, side % data.shape[1]]
-        if rate != RATE:
-            sound = soxr.resample(sound, rate, RATE, quality="HQ").astype(np.float32)
-        # Each recording starts at its first sound, with one millisecond before it.
-        loud = np.flatnonzero(np.abs(sound) > 0.02 * float(np.max(np.abs(sound))))
-        first = max(0, int(loud[0]) - RATE // 1000) if len(loud) else 0
-        sound = np.ascontiguousarray(sound[first:])
+        # A recording that is played slower is lower.
+        target = RATE * 2.0 ** (-semitones / 12.0)
+        if abs(rate - target) > 1e-6:
+            sound = soxr.resample(sound, rate, target, quality="HQ").astype(np.float32)
+        if trim:
+            # Each recording starts at its first sound, with one millisecond before it.
+            loud = np.flatnonzero(np.abs(sound) > 0.02 * float(np.max(np.abs(sound))))
+            first = max(0, int(loud[0]) - RATE // 1000) if len(loud) else 0
+            sound = sound[first:]
+        sound = np.ascontiguousarray(sound)
         self.items[key] = sound
         self.size += sound.nbytes
         while self.size > CACHE_BYTES and len(self.items) > 1:
@@ -173,11 +217,17 @@ def _bent(sound: np.ndarray, cents: np.ndarray) -> np.ndarray:
     return np.interp(position, np.arange(len(sound)), sound).astype(np.float32)
 
 
-def _one(stroke: Stroke, down: bool, take: int, side: int) -> np.ndarray:
+def _muted(stroke: Stroke) -> bool:
+    """Return True if the note has a recording with the palm of the hand on the strings."""
+    midi = int(np.clip(round(stroke.midi), LOWEST, HIGHEST))
+    return (stroke.mute or stroke.dead) and midi <= HIGHEST_MUTE
+
+
+def _one(stroke: Stroke, down: bool, take: int, side: int, shift: int = 0) -> np.ndarray:
     """Return the direct signal of one note."""
     midi = int(np.clip(round(stroke.midi), LOWEST, HIGHEST))
-    kind = "Mute" if (stroke.mute or stroke.dead) and midi <= HIGHEST_MUTE else "Sus"
-    sound = BANK.get(kind, midi, down, take, side)
+    kind = "Mute" if _muted(stroke) else "Sus"
+    sound = BANK.get(kind, midi, down, take, side, shift)
     length = int(min(max(stroke.seconds, 0.03), LONGEST) * RATE)
     if stroke.dead:
         length = min(length, int(0.07 * RATE))
@@ -211,9 +261,42 @@ def _one(stroke: Stroke, down: bool, take: int, side: int) -> np.ndarray:
         piece[:rise] *= np.linspace(0.0, 1.0, rise, dtype=np.float32)
     fade = min(len(piece), int(CUT * RATE))
     piece[-fade:] *= np.linspace(1.0, 0.0, fade, dtype=np.float32)
-    # A soft stroke is 14 dB under a hard stroke. (The library has one loudness.)
-    gain = 10.0 ** ((float(np.clip(stroke.level, 0.0, 1.0)) - 1.0) * 14.0 / 20.0)
-    return piece * np.float32(gain * level)
+    return piece * np.float32(_gain(stroke) * level)
+
+
+def _gain(stroke: Stroke) -> float:
+    """Return the gain of a stroke: a soft stroke is 14 dB under a hard stroke.
+
+    (The library has one loudness for each note.)
+    """
+    return 10.0 ** ((float(np.clip(stroke.level, 0.0, 1.0)) - 1.0) * 14.0 / 20.0)
+
+
+def _pick_noise(level: float, number: int, side: int) -> np.ndarray:
+    """Return the noise of the pick for one stroke: a short dull click."""
+    sound = BANK.file(f"Noise/Picking_Noise/Picking_Noise{number}_Stereo.flac", side, trim=False)
+    # A soft stroke has a duller noise (two octaves lower for half of the loudness).
+    cutoff = PICK_CUTOFF * 4.0 ** (float(np.clip(level, 0.0, 1.0)) - 1.0)
+    sos = signal.butter(2, cutoff, "lowpass", fs=RATE, output="sos")
+    return (signal.sosfilt(sos, sound) * dsp.db(PICK_DB)).astype(np.float32)
+
+
+def _release(stroke: Stroke, number: int, side: int) -> np.ndarray | None:
+    """Return the sound of the hand that stops the string of a note, or None.
+
+    The sound is softer after a long note: the string has less energy then.
+    """
+    midi = int(np.clip(round(stroke.midi), LOWEST, HIGHEST))
+    muted = _muted(stroke)
+    level_db = RELEASE_DB - RELEASE_DECAY[muted] * stroke.seconds
+    if muted:
+        level_db -= RELEASE_MUTE_KEY_DB * (midi - LOWEST)
+    if level_db < RELEASE_FLOOR_DB:
+        return None
+    zone = min(RELEASE_ZONES, key=lambda pitch: abs(pitch - midi))
+    name = f"{NOTE_NAMES[zone % 12]}{zone // 12 - 1}"
+    sound = BANK.file(f"Release1/{name}_Rel1_{number}.flac", side, semitones=float(midi - zone))
+    return sound * np.float32(dsp.db(level_db))
 
 
 def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> np.ndarray:
@@ -247,26 +330,55 @@ def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> n
         if later[0].hammer and later[0].slide_from is None:
             step = float(np.clip(now[0].midi - later[0].midi, -3.0, 3.0))
             later[0] = replace(later[0], slide_from=later[0].midi + step)
-    last_take: dict[tuple[int, bool], int] = {}
+    # A note of a line that goes on into the next note has no release sound.
+    joined = set()
+    for index in range(len(chords) - 1):
+        now, later = chords[index], chords[index + 1]
+        line = len(now) == 1 and len(later) == 1 and not now[0].mute and not now[0].dead
+        if line and later[0].start - (now[0].start + now[0].seconds) < JOIN:
+            joined.add(index)
+
+    def add(piece: np.ndarray, start: float) -> None:
+        first = int(round(start * RATE))
+        if first < 0:
+            piece, first = piece[-first:], 0
+        count = min(len(piece), len(out) - first)
+        if count > 0:
+            out[first : first + count] += piece[:count]
+
+    last_used: dict[tuple[int, bool], list[tuple[int, int]]] = {}
     previous_start = -10.0
     down = False
-    for chord in chords:
+    for index, chord in enumerate(chords):
         down = not down if chord[0].start - previous_start < FAST else True
         previous_start = chord[0].start
         # A down stroke goes from the lowest string to the highest, an up stroke back.
         strings = chord if down else chord[::-1]
+        if not all(stroke.hammer for stroke in chord):
+            # One stroke of the pick: its noise, a little before the strings.
+            loudest = max(stroke.level for stroke in chord)
+            noise = _pick_noise(loudest, int(random.integers(1, PICK_FILES + 1)), side)
+            add(noise * np.float32(_gain(replace(chord[0], level=loudest))),
+                chord[0].start - PICK_LEAD)  # fmt: skip
         for place, stroke in enumerate(strings):
             midi = int(np.clip(round(stroke.midi), LOWEST, HIGHEST))
-            take = int(random.integers(1, TAKES + 1))
-            if take == last_take.get((midi, stroke.mute)):
-                take = take % TAKES + 1
-            last_take[(midi, stroke.mute)] = take
-            piece = _one(stroke, down, take, side)
-            first = int(round((stroke.start + place * STRUM) * RATE))
-            if first < 0 or first >= len(out):
-                continue
-            count = min(len(piece), len(out) - first)
-            out[first : first + count] += piece[:count]
+            muted = _muted(stroke)
+            top = HIGHEST_MUTE if muted else HIGHEST
+            choices = [(shift, take) for shift in NEIGHBOURS if LOWEST <= midi + shift <= top
+                       for take in range(1, TAKES + 1)]  # fmt: skip
+            used = last_used.setdefault((midi, muted), [])
+            fresh = [choice for choice in choices if choice not in used] or choices
+            shift, take = fresh[int(random.integers(len(fresh)))]
+            used.append((shift, take))
+            del used[:-4]  # a recording does not come back within the next four strokes
+            softer = dsp.db(-LEVEL_RANDOM_DB * float(random.uniform()))
+            add(_one(stroke, down, take, side, shift) * np.float32(softer),
+                stroke.start + place * STRUM)  # fmt: skip
+            if index not in joined and not stroke.dead:
+                sound = _release(stroke, int(random.integers(1, RELEASE_FILES + 1)), side)
+                if sound is not None:
+                    add(sound * np.float32(_gain(stroke) * softer),
+                        stroke.start + stroke.seconds - CUT)  # fmt: skip
     return out
 
 
@@ -287,6 +399,31 @@ def _playing(dry: np.ndarray) -> list[tuple[int, int]]:
         (max(0, first - 256), min(len(dry), last + ring))
         for first, last in zip(firsts, lasts, strict=True)
     ]
+
+
+CABINET_SECONDS = 0.2  # the part of an impulse response that the code uses
+
+
+@lru_cache(maxsize=16)
+def cabinet(name: str) -> np.ndarray:
+    """Return the impulse response of a loudspeaker cabinet, at the rate of the project.
+
+    The response starts at its first sound. Its level is set so that the
+    band from 300 Hz to 3 kHz goes through with no change of the level: a
+    change of the cabinet changes the tone, not the loudness.
+    """
+    data, rate = soundfile.read(str(CABINETS_DIR / name), dtype="float32", always_2d=True)
+    sound = data[:, 0].astype(np.float64)
+    if rate != RATE:
+        sound = soxr.resample(sound, rate, RATE, quality="HQ")
+    loud = np.flatnonzero(np.abs(sound) > 1e-3 * float(np.max(np.abs(sound))))
+    sound = sound[int(loud[0]) : int(loud[0]) + int(CABINET_SECONDS * RATE)].copy()
+    fade = min(len(sound), RATE // 100)
+    sound[-fade:] *= np.linspace(1.0, 0.0, fade)
+    spectrum = np.abs(np.fft.rfft(sound, 1 << 15)) ** 2
+    frequencies = np.fft.rfftfreq(1 << 15, 1.0 / RATE)
+    middle = float(np.mean(spectrum[(frequencies >= 300.0) & (frequencies <= 3000.0)]))
+    return (sound / np.sqrt(max(middle, 1e-20))).astype(np.float32)
 
 
 def amplify(dry: np.ndarray, tone: str) -> np.ndarray:
@@ -311,6 +448,8 @@ def amplify(dry: np.ndarray, tone: str) -> np.ndarray:
         part[:size] *= ramp
         part[len(part) - size :] *= ramp[::-1]
         wet[first:last] = part
+    if rig.cabinet:
+        wet = signal.fftconvolve(wet, cabinet(rig.cabinet))[: len(wet)].astype(np.float32)
     if rig.post:
         from .console import filters as rows
 
