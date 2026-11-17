@@ -184,7 +184,20 @@ MODELS = {
         "684fc395e606ed46ab0af128189e02b0f769af872df9ec8bc7a046a340b12f95",
     "Phillipe P JVM-OD2-RD-NoDrive-Cab-ESR0,006.nam":
         "46d41f2dbde33d443ab4a2ef76d2782ea7609a778c4af0305f1f257f8cdcf4a9",
+    # The second set of rigs (`guitar.RIGS_5150`).
+    "Helga B 5150 BlockLetter - Boosted.nam":
+        "572fa9707c2b1cfea0178eaffc0cda65c36c40b0f1c5bd51d3cff2d245231260",
+    "Tim R 5152 Crunch + TS9.nam":
+        "f6ee07268192cf5a898f7995baa0153e415861672e38549dc0a4abeedcbc1157",
 }  # fmt: skip
+# The cabinet of the second set of rigs: "God's Cab 1.4" (Signals Audio, later Wilkinson
+# Audio): free ("It's free"), with no licence text. The site of the maker is gone; this
+# is the copy of the Internet Archive.
+CABINET_URL = (
+    "https://web.archive.org/web/20150302201600id_/"
+    "http://www.signalsaudio.com/free/Gods_Cab_1.4.zip"
+)
+CABINET_SHA256 = "186a39d8e980df10ee8d28217ba8e39d58848c21b74739bc3ed6556efcc5f75d"
 # The guitar library METAL-GTX of Unreal Instruments (a file on Google Drive, linked from
 # https://unreal-instruments.wixsite.com/unreal-instruments/metal-gtx).
 GUITAR_DRIVE_ID = "1FurY3_x_tog_56irX1VDNyRCUt5JD7bO"
@@ -215,6 +228,23 @@ def fetch_models() -> list[Path]:
         _verify(path, wanted, MODELS_URL)
         paths.append(path)
     return paths
+
+
+def fetch_cabinet() -> Path:
+    """Download the cabinet response of the second set of rigs, if it is not in the cache."""
+    from . import guitar
+
+    path = guitar.CABINETS_DIR / guitar.GODS_CAB
+    if path.exists():
+        return path
+    archive = guitar.CABINETS_DIR / "gods-cab.zip"
+    if not archive.exists():
+        print("fetch: God's Cab 1.4 (Internet Archive)")
+        _download(CABINET_URL, archive)
+    _verify(archive, CABINET_SHA256, CABINET_URL)
+    with zipfile.ZipFile(archive) as packed:
+        packed.extract(guitar.GODS_CAB, guitar.CABINETS_DIR)
+    return path
 
 
 def fetch_guitar() -> Path:
@@ -283,6 +313,7 @@ def fetch_all(small: bool = False) -> None:
     fetch_media()
     if not small:
         fetch_models()
+        fetch_cabinet()
         fetch_guitar()
     fetch_kit(kit.DRS if small else kit.CROCELL)
     if not small:

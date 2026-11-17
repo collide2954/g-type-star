@@ -70,7 +70,7 @@ The same riff, the two rhythm guitars alone (the last column: the mean of the la
 | With the new tone | 71 | 0.91 |
 | Real recordings | 56 to 105 | 1.0 |
 
-A model of an amplifier with no cabinet can have the response of a real cabinet (`Rig.cabinet`, a file in `.cache/models/ir`). The comparison had a Peavey 5150 with a boost pedal (capture: Helga B) and "God's Cab", the responses of a Mesa cabinet of 4 x 12 inches with a Shure SM57. For the audio model this rig is as near to the real recordings as the retuned rig (0.91 against 0.93 on the amplifier test), so the choice is for the ears of the owner.
+A model of an amplifier with no cabinet can have the response of a real cabinet (`Rig.cabinet`, a file in `.cache/models/ir`). The comparison had a Peavey 5150 with a boost pedal (capture: Helga B) and "God's Cab", the responses of a Mesa cabinet of 4 x 12 inches with a Shure SM57. For the audio model this rig is as near to the real recordings as the retuned rig (0.91 against 0.93 on the amplifier test), so the choice is for the ears of the owner. The retuned rig is the rig of the work; the environment variable `GTYPESTAR_GUITAR=5150` selects the second set (the same level in the mix).
 
 A complete SFZ player would play all of the library as its makers planned it (real hammer-on and slide samples, key switches). The package `pysfizz` is such a player; the session could not install it without the permission of the owner.
 
@@ -88,7 +88,7 @@ The owner: "The drums are acceptable" (second version), then "Look for better dr
 | D: Aasimonster | 0.89 | 0.93 |
 | E: CrocellKit with layers | 0.90 | 0.91 |
 
-- **C and D** are kits of DrumGizmo that were recorded for metal. Each kick drum has a microphone and a trigger: the MuldjordKit has the click of the trigger as a channel, the Aasimonster has a drum module that plays a kick sample (the code moves it 12 ms earlier, in time with the microphone). The Aasimonster has the most recordings (93 strokes of the snare drum, rim shots, three closed hi-hats). It has no cross-stick and no hi-hat pedal: the CrocellKit plays these two (`KitSpec.borrowed`).
+- **C and D** are kits of DrumGizmo that were recorded for metal. Each kick drum has a microphone and a trigger: the MuldjordKit has the click of the trigger as a channel, the Aasimonster has a drum module that plays a kick sample (the code moves it 10 ms earlier, in time with the microphone). The Aasimonster has the most recordings (93 strokes of the snare drum, rim shots, three closed hi-hats). It has no cross-stick and no hi-hat pedal: the CrocellKit plays these two (`KitSpec.borrowed`).
 - **E** is what a metal production does: a clean, short, processed sample under each stroke of the kick drum and of the snare drum ("sample reinforcement"). The samples are from *The Metal Kick Drum*: the kick "Fate" (0.2 seconds, little level below 60 Hz) and a snare drum of 14 x 6 inches with eight layers of loudness. A layer is about as loud as the microphones of its drum; a ghost note has no layer. E is the kit of the work now: it keeps all sounds of the kit that the mix was made for.
 - In the full mix (the flares), the new guitar with E is nearer to the reference tracks than version 3.3 (0.93 against 0.89), and so is the new guitar with D (0.92).
 

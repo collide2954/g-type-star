@@ -285,7 +285,7 @@ MULDJORD = KitSpec(
 # The Aasimonster: the kit of a death metal record (DIE, "Rise of the Rotten"). It has
 # the most recordings of the kits here (93 strokes of the snare drum, rim shots, three
 # closed hi-hats, china cymbals of 8, 10 and 18 inches), and trigger channels: a drum
-# module that plays a kick sample at each stroke of a kick drum (it comes 12 ms after
+# module that plays a kick sample at each stroke of a kick drum (it comes 10 ms after
 # the microphone), and a trigger on the snare drum. The kit has no cross-stick sound
 # and no hi-hat pedal sound: the CrocellKit plays these two.
 AASIMONSTER = KitSpec(
@@ -319,7 +319,7 @@ AASIMONSTER = KitSpec(
     mics_db={"kick": 7.2, "snare": 3.5, "toms": 6.5, "cymbals": 6.5, "overheads": 1.8,
              "room": -4.8},
     channels_db={"Snare trigger": -8.0, "Alesis": -3.0},
-    advance={"Alesis": 0.012},
+    advance={"Alesis": 0.010},
     # The cross-stick and the hi-hat pedal come from the CrocellKit.
     borrowed={37: "crocell", 44: "crocell"},
     # More level above 9 kHz than the CrocellKit in the microphones of the cymbals, the

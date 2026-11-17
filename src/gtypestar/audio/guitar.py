@@ -25,6 +25,7 @@ Amplifier models: the collection https://github.com/pelennor2170/NAM_models
 
 from __future__ import annotations
 
+import os
 from collections import OrderedDict
 from dataclasses import dataclass, replace
 from functools import lru_cache
@@ -107,6 +108,31 @@ RIGS = {
                 LEAD_POST, tone_hz=2200.0),
 }  # fmt: skip
 
+# A second set of rigs, for a comparison by ear: a Peavey 5150 ("block letter") with a
+# boost pedal for the heavy tone and an EVH 5150 III with a Tube Screamer for the crunch
+# tone (captures with no cabinet), into the response of a real cabinet: "God's Cab", a
+# Mesa cabinet of 4 x 12 inches with a Shure SM57 one inch from the edge of the cone.
+# The output levels give each tone the level of the first set from 250 Hz to 6 kHz.
+GODS_CAB = "Gods_Cab_1.4/48/SM57/NO-TS/57_1_inch_edge_pres_3.wav"
+RIGS_5150 = {
+    **RIGS,
+    "high gain": Rig("Helga_B_5150_BlockLetter_-_Boosted.nam", -14.0, 80.0, 0.0, 15.3,
+                     (("bell", 4000.0, -4.0, 1.0), ("lowpass", 5200.0, 4)), cabinet=GODS_CAB),
+    "crunch": Rig("Tim_R_5152_Crunch_+_TS9.nam", -12.0, 80.0, 0.0, -1.1,
+                  (("bell", 4000.0, -3.0, 1.0), ("lowpass", 5500.0, 4)), cabinet=GODS_CAB),
+}  # fmt: skip
+RIG_SETS = {"retuned": RIGS, "5150": RIGS_5150}
+
+
+def rigs() -> dict[str, Rig]:
+    """Return the rigs of the work.
+
+    The environment variable GTYPESTAR_GUITAR selects a set by its name
+    ("retuned": the set of the work; "5150": the second set).
+    """
+    return RIG_SETS[os.environ.get("GTYPESTAR_GUITAR", "retuned")]
+
+
 FAST = 0.22  # seconds: notes that follow faster than this get up and down strokes in turn
 STRUM = 0.006  # seconds between the strings of a chord
 CUT = 0.02  # seconds: the end of a note that the hand stops
@@ -155,7 +181,7 @@ def signature() -> str:
     """
     import hashlib
 
-    text = repr((PLAYER, sorted(RIGS.items()), PICK_DB, RELEASE_DB, LEVEL_RANDOM_DB))
+    text = repr((PLAYER, sorted(rigs().items()), PICK_DB, RELEASE_DB, LEVEL_RANDOM_DB))
     return hashlib.sha1(text.encode()).hexdigest()[:8]  # noqa: S324
 
 
@@ -164,7 +190,7 @@ def available() -> bool:
     return (SAMPLES_DIR / "Sus_Down").exists() and all(
         (MODELS_DIR / rig.model).exists()
         and (not rig.cabinet or (CABINETS_DIR / rig.cabinet).exists())
-        for rig in RIGS.values()
+        for rig in rigs().values()
     )
 
 
@@ -465,7 +491,7 @@ def cabinet(name: str) -> np.ndarray:
 
 def amplify(dry: np.ndarray, tone: str) -> np.ndarray:
     """Send the direct signal through the amplifier of a tone. Return one channel."""
-    rig = RIGS[tone]
+    rig = rigs()[tone]
     filters = [dsp.highpass(rig.low_cut, 2)]
     if rig.push_db:
         filters.append(dsp.peaking(800.0, rig.push_db, 0.7))
