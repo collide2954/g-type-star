@@ -101,8 +101,6 @@ BEND_RANGE = 2.0  # semitones: the range of the pitch wheel in the program
 # The measurement of the time from a key to its sound.
 REPEATS = 9  # the program has nine recordings for a key
 SPACING, HOLD = 0.25, 0.15  # seconds from a note to the next, and the length of a note
-WINDOW = 0.12  # seconds: the part of a note that has its start
-THRESHOLD = 0.25  # the note "sounds" when its level is this part of its largest level
 SETTLE = 0.3  # seconds of sound that the sampler makes and the code drops, between renders
 
 
@@ -238,26 +236,13 @@ def velocity(level: float) -> int:
 def _signature() -> str:
     """Return a short word that changes with the program and the measurement."""
     state = PROGRAM.stat()
-    text = repr((state.st_size, int(state.st_mtime), RATE, REPEATS, THRESHOLD, sorted(RANGES)))
+    measure = (RATE, REPEATS, guitar.ONSET, guitar.ONSET_LEVEL, sorted(RANGES))
+    text = repr((state.st_size, int(state.st_mtime), *measure))
     return hashlib.sha1(text.encode()).hexdigest()[:10]  # noqa: S324
 
 
 def _table_path() -> Path:
     return PROGRAM.parent.parent / f"latency-{_signature()}.json"
-
-
-def onset(sound: np.ndarray) -> float:
-    """Return the time in seconds at which a note "sounds".
-
-    It is the first moment at which the level is `THRESHOLD` of the largest
-    level of the first part of the note. (The noise of the pick before the
-    note is under this level.)
-    """
-    level = np.convolve(np.abs(sound), np.ones(24) / 24.0, mode="same")
-    top = float(np.max(level[: int(WINDOW * RATE)]))
-    if top <= 0.0:
-        return 0.0
-    return float(np.flatnonzero(level >= THRESHOLD * top)[0]) / RATE
 
 
 def _measure(switch: int) -> np.ndarray:
@@ -280,7 +265,7 @@ def _measure(switch: int) -> np.ndarray:
     table = np.zeros((2, 128))
     size = int((SPACING - 0.01) * RATE)
     for side in range(2):
-        times = [onset(sound[start : start + size, side]) for start in starts]
+        times = [guitar.onset(sound[start : start + size, side]) for start in starts]
         means = np.array(times).reshape(-1, REPEATS).mean(axis=1)
         table[side, low : high + 1] = means
         table[side, :low], table[side, high + 1 :] = means[0], means[-1]

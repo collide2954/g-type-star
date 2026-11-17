@@ -169,7 +169,7 @@ RELEASE_OFF = 0.1  # seconds: the next stroke stops a release sound in this time
 LEVEL_RANDOM_DB = 3.0  # each stroke is softer by a random amount up to this
 
 
-PLAYER = 3  # a change of the code that plays the recordings: a new number here
+PLAYER = 4  # a change of the code that plays the recordings: a new number here
 
 
 def signature() -> str:
@@ -210,22 +210,52 @@ class Stroke:
     vibrato: float = 0.0  # depth in cents
 
 
+ONSET_WINDOW = 0.12  # seconds: the part of a note that has its start
+ONSET_LEVEL = 0.5  # a note "sounds" at the first value that is this part of its largest value
+ONSET = 3  # a change of the measurement: a new number here
+
+
+def onset(sound: np.ndarray) -> float:
+    """Return the time in seconds at which a note "sounds".
+
+    A recording of a note does not start with the note: first the pick is on
+    the string (15 to 45 milliseconds), with a soft noise and sometimes a
+    click or a scrape of a quarter to a third of the size of the note. The
+    note sounds at the first sample that is as large as `ONSET_LEVEL` of the
+    largest value of the first part of the recording.
+
+    (A lower level takes the click for the note. A measurement of how long
+    the level stays up is wrong for the low strings: their sound is a row of
+    short pulses, one in each 15 to 22 milliseconds.)
+    """
+    size = np.abs(sound[: int(ONSET_WINDOW * RATE)])
+    if len(size) == 0 or float(np.max(size)) <= 0.0:
+        return 0.0
+    return float(np.flatnonzero(size >= ONSET_LEVEL * float(np.max(size)))[0]) / RATE
+
+
 class _Bank:
     """The recordings of the library, at the rate of the project, each from its first sound."""
 
     def __init__(self) -> None:
         self.items: OrderedDict[tuple, np.ndarray] = OrderedDict()
         self.size = 0
+        self.leads: dict[tuple, float] = {}
 
     def get(
         self, kind: str, midi: int, down: bool, take: int, side: int, shift: int = 0
-    ) -> np.ndarray:
-        """Return one recording of a note. `shift` selects the recording of a note this
-        number of semitones away, played at the pitch of `midi`."""
+    ) -> tuple[np.ndarray, float]:
+        """Return one recording of a note, and the time in seconds from its start to
+        its sound (see `onset`). `shift` selects the recording of a note this number of
+        semitones away, played at the pitch of `midi`."""
         name = f"{NOTE_NAMES[(midi + shift) % 12]}{(midi + shift) // 12 - 1}"
         stroke = "Down" if down else "Up"
         path = f"{kind}_{stroke}/{name}_{kind}_{stroke}{take}.flac"
-        return self.file(path, side, semitones=-float(shift))
+        sound = self.file(path, side, semitones=-float(shift))
+        key = (path, side, round(-float(shift), 3))
+        if key not in self.leads:
+            self.leads[key] = onset(sound)
+        return sound, self.leads[key]
 
     def file(self, path: str, side: int, semitones: float = 0.0, trim: bool = True) -> np.ndarray:
         """Return one channel of a file of the library at the rate of the project.
@@ -275,11 +305,18 @@ def _muted(stroke: Stroke) -> bool:
     return (stroke.mute or stroke.dead) and midi <= HIGHEST_MUTE
 
 
-def _one(stroke: Stroke, down: bool, take: int, side: int, shift: int = 0) -> np.ndarray:
-    """Return the direct signal of one note."""
+def _one(
+    stroke: Stroke, down: bool, take: int, side: int, shift: int = 0
+) -> tuple[np.ndarray, float]:
+    """Return the direct signal of one note, and the time from its start to its sound.
+
+    The player puts the note earlier by that time: then the note sounds at
+    its written time. (Before the fourth version of this player, each note
+    was late by 15 to 26 milliseconds.)
+    """
     midi = int(np.clip(round(stroke.midi), LOWEST, HIGHEST))
     kind = "Mute" if _muted(stroke) else "Sus"
-    sound = BANK.get(kind, midi, down, take, side, shift)
+    sound, lead = BANK.get(kind, midi, down, take, side, shift)
     length = int(min(max(stroke.seconds, 0.03), LONGEST) * RATE)
     if stroke.dead:
         length = min(length, int(0.07 * RATE))
@@ -287,6 +324,7 @@ def _one(stroke: Stroke, down: bool, take: int, side: int, shift: int = 0) -> np
     level = 1.0
     if stroke.hammer and kind == "Sus" and len(sound) > int((LEGATO_START + 0.3) * RATE):
         begin = int(LEGATO_START * RATE)
+        lead = 0.0  # the note starts inside the recording: its sound is there at once
         # The string is softer there than at its start: bring it to the level of a stroke.
         window = RATE // 10
         early = float(np.sqrt(np.mean(sound[RATE // 30 : RATE // 30 + window] ** 2)))
@@ -313,7 +351,7 @@ def _one(stroke: Stroke, down: bool, take: int, side: int, shift: int = 0) -> np
         piece[:rise] *= np.linspace(0.0, 1.0, rise, dtype=np.float32)
     fade = min(len(piece), int(CUT * RATE))
     piece[-fade:] *= np.linspace(1.0, 0.0, fade, dtype=np.float32)
-    return piece * np.float32(_gain(stroke) * level)
+    return piece * np.float32(_gain(stroke) * level), lead
 
 
 def _gain(stroke: Stroke) -> float:
@@ -412,12 +450,7 @@ def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> n
         previous_start = chord[0].start
         # A down stroke goes from the lowest string to the highest, an up stroke back.
         strings = chord if down else chord[::-1]
-        if not all(stroke.hammer for stroke in chord):
-            # One stroke of the pick: its noise, a little before the strings.
-            loudest = max(stroke.level for stroke in chord)
-            noise = _pick_noise(loudest, int(random.integers(1, PICK_FILES + 1)), side)
-            add(noise * np.float32(_gain(replace(chord[0], level=loudest))),
-                chord[0].start - PICK_LEAD)  # fmt: skip
+        picked = not all(stroke.hammer for stroke in chord)
         for place, stroke in enumerate(strings):
             midi = int(np.clip(round(stroke.midi), LOWEST, HIGHEST))
             muted = _muted(stroke)
@@ -430,8 +463,14 @@ def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> n
             used.append((shift, take))
             del used[:-4]  # a recording does not come back within the next four strokes
             softer = dsp.db(-LEVEL_RANDOM_DB * float(random.uniform()))
-            add(_one(stroke, down, take, side, shift) * np.float32(softer),
-                stroke.start + place * STRUM)  # fmt: skip
+            piece, lead = _one(stroke, down, take, side, shift)
+            add(piece * np.float32(softer), stroke.start + place * STRUM - lead)
+            if picked and place == 0:
+                # One stroke of the pick: its noise, a little before the first recording.
+                loudest = max(item.level for item in chord)
+                noise = _pick_noise(loudest, int(random.integers(1, PICK_FILES + 1)), side)
+                add(noise * np.float32(_gain(replace(chord[0], level=loudest))),
+                    stroke.start - lead - PICK_LEAD)  # fmt: skip
             if index not in joined and not stroke.dead:
                 sound = _release(stroke, int(random.integers(1, RELEASE_FILES + 1)), side)
                 if sound is not None:

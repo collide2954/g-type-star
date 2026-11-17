@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from gtypestar.audio import sfzguitar
+from gtypestar.audio import guitar, sfzguitar
 from gtypestar.audio.guitar import Stroke
 from gtypestar.audio.sfzguitar import (
     DEAD_DOWN,
@@ -194,7 +194,7 @@ def test_the_sampler_plays_a_note_near_its_written_time_and_two_different_guitar
         part = sound[first : first + int(0.3 * RATE), 0]
         # With the table of the test (35 ms for each key) the note is not exactly at
         # its time: the real time from a key to its sound is from 29 to 36 ms here.
-        assert sfzguitar.onset(part[int(0.05 * RATE) :]) + 0.05 == pytest.approx(0.1, abs=0.02)
+        assert guitar.onset(part[int(0.05 * RATE) :]) + 0.05 == pytest.approx(0.1, abs=0.02)
     # The two channels are two recordings.
     left, right = sound[:, 0], sound[:, 1]
     assert float(np.sqrt(np.mean(left**2))) > 1e-3

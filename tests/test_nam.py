@@ -87,8 +87,32 @@ def test_the_gap_between_two_muted_notes_has_the_sound_of_the_hand():
     note, gap = level(0.1, 0.2), level(0.24, 0.34)
     # The release sound is there, and it is much softer than the note.
     assert note - 45.0 < gap < note - 8.0
-    # The noise of the pick comes before the string.
+    # The pick is on the string before the note sounds.
     assert level(0.09, 0.1) > -80.0
+
+
+def test_the_sound_of_a_note_is_not_the_click_before_it():
+    sound = np.zeros(RATE // 2, dtype=np.float32)
+    sound[int(0.004 * RATE)] = 0.35  # a click, a third of the size of the note
+    # A low string: one short pulse in each 21 milliseconds, from 30 milliseconds.
+    for pulse in range(6):
+        first = int((0.030 + 0.021 * pulse) * RATE)
+        sound[first : first + 96] = 0.9**pulse
+    assert guitar.onset(sound) == pytest.approx(0.030, abs=0.0005)
+    assert guitar.onset(np.zeros(100, dtype=np.float32)) == 0.0
+
+
+@pytest.mark.skipif(not guitar.available(), reason="the guitar library is not on this computer")
+def test_a_note_sounds_at_its_written_time():
+    # A recording has the time of the pick on the string before the note (15 to 45 ms).
+    # The player puts each recording earlier by that time.
+    for mute in (False, True):
+        strokes = [guitar.Stroke(0.3 + 0.5 * n, 0.3, 33 + 4 * n, 0.9, mute=mute) for n in range(6)]
+        dry = guitar.direct(strokes, 4.0, 0, seed=0)
+        for stroke in strokes:
+            first = int((stroke.start - 0.06) * RATE)
+            part = dry[first : first + int(0.3 * RATE)]
+            assert guitar.onset(part) == pytest.approx(0.06, abs=0.004)
 
 
 @pytest.mark.skipif(not guitar.available(), reason="the guitar library is not on this computer")
