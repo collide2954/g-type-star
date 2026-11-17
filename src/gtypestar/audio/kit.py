@@ -197,7 +197,7 @@ NAKED = KitSpec(
     # 7 to 9 dB more level from 180 Hz to 1.4 kHz in the kick drum, 6 to 9 dB less below
     # 180 Hz in the snare drum, and 5 to 9 dB more above 5.6 kHz in all cymbal microphones.
     tone={
-        "kick": (("bell", 60.0, 3.0, 1.0), ("bell", 500.0, -7.0, 0.6),
+        "kick": (("low shelf", 55.0, 6.0), ("bell", 500.0, -7.0, 0.6),
                  ("high shelf", 5000.0, -6.0)),
         "snare": (("low shelf", 180.0, 5.0),),
         "cymbals": (("high shelf", 2000.0, -7.0),),
