@@ -58,8 +58,25 @@ The script `tools/diagnose/guitar_alone.py` writes the guitar part of some bars 
 4. The mixer makes the mix ([`audio/console.py`](../src/gtypestar/audio/console.py), settings in [`work/mix.py`](../src/gtypestar/work/mix.py)).
 5. The master gives the mix the tone balance and the loudness of the reference recordings.
 
-The full work is rendered in parts of about 40 seconds, three at the same time.
+The full work is rendered in parts of about 40 seconds, two at the same time.
 The levels of the groups come from one passage with all players (the second statement of the theme): all parts use the same levels.
+
+## Live processing
+
+These are the changes of step 3: what a player or an engineer does to the sound of the band with a pedal or with the recording. The score shows each of them on the staff "Recorded Sounds".
+
+| Kind | What it does | Where |
+| --- | --- | --- |
+| Echo | The sound of a passage comes again after one long pulse, some times, each time softer. | The canon of the motto (mark H): the notes of the saxophone sound together as a chord. The last note of each solo turn (mark F). |
+| Repeat ("stutter") | A short piece of the band comes again, two or more times. | The ends of the riff passages (marks D and E), and three places of the dubstep passage. |
+| Reverse | One beat plays backwards. | The end of the bridge melody (mark E), bar 12 of the dubstep passage. |
+| Filter that opens | The sound starts dull and becomes bright. | The riff of the ignition, the drums at the start of mark E, the chords of the build-up. |
+| Gate | Chords are cut into eighth notes. | The last two bars of mark E. |
+| Reverb with the octave above ("shimmer") | A long room whose sound is one octave higher than the horns and strings that go in. | The chorale (mark N). |
+| Held sound ("freeze") | One moment of a chord goes on as a sound that does not move. | The electric piano in the white dwarf. |
+| Ringing filters | Noise goes through narrow filters at the notes of the motto: the noise gets pitch. | The solar wind in the nebula. |
+| Fall of pitch, narrow, dark | The pitch of the recording falls with no change of the time, the sound moves to the centre, a filter closes. | The fall (mark V) and the white dwarf. |
+| Silence | All players stop; the recorded voice goes on. | One time: before the dubstep passage. |
 
 ## The mix
 
