@@ -419,7 +419,7 @@ def write(work: Work) -> None:
             offset=33.7,
             text="One and a half G.",
             seconds=0.9,
-            gain_db=-5.0,
+            gain_db=-3.5,
             radio=True,
             pan=-0.4,
             duck_db=4.0,
@@ -431,7 +431,7 @@ def write(work: Work) -> None:
             offset=50.25,
             text="Two G.",
             seconds=0.7,
-            gain_db=-4.0,
+            gain_db=-2.0,
             radio=True,
             pan=0.4,
             duck_db=4.0,
@@ -443,10 +443,10 @@ def write(work: Work) -> None:
             offset=73.3,
             text="Two and a half G.",
             seconds=0.85,
-            gain_db=1.0,
+            gain_db=3.0,
             radio=True,
             pan=-0.4,
-            duck_db=4.0,
+            duck_db=5.0,
         ),
         Cue(
             "mercury3-548",
@@ -455,10 +455,10 @@ def write(work: Work) -> None:
             offset=120.85,
             text="Five G.",
             seconds=1.1,
-            gain_db=3.0,
+            gain_db=5.0,
             radio=True,
             pan=0.4,
-            duck_db=4.0,
+            duck_db=5.0,
         ),
     ]
     # The countdown: "Fire three, two, one, fire". The recording has the last word 2.30
@@ -467,7 +467,8 @@ def write(work: Work) -> None:
     fire = COUNT_FIRE - COUNT_START
     beat = 1 + 8 - fire * m.GIANT / 60.0
     cues.append(Cue("mercury3-548", s.bar(9), beat, offset=COUNT_START, seconds=fire + 0.34,
-                    text="Fire three, two, one, fire.", gain_db=5.0, radio=True, fade=0.01))  # fmt: skip
+                    text="Fire three, two, one, fire.", gain_db=7.0, radio=True, fade=0.01,
+                    duck_db=2.0, duck_seconds=fire - 0.2))  # fmt: skip
     edits += [
         # The filter of the synthesizer chords opens.
         Edit("lowpass", s.bar(5), 1, length=22.0, stems=("pad",), start=220.0, end=15000.0),

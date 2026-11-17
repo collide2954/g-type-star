@@ -172,7 +172,7 @@ def write(work: Work) -> None:
             offset=50.2,
             text="Two G.",
             seconds=0.75,
-            gain_db=-7.0,
+            gain_db=-5.0,
             radio=True,
             duck_db=4.0,
         ),
