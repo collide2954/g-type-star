@@ -107,6 +107,8 @@ The writer of the code cannot hear. Each render is measured against the referenc
 - `tools/diagnose/pauses.py` and `seams.py`: the pauses and the level at each change of part.
 - `tools/diagnose/front.py`: the stems that are in front after each rehearsal mark (the level between 250 Hz and 6 kHz). `tools/diagnose/part_stems.py` makes the stems of some parts for this, with no full render.
 - `tools/diagnose/voices.py`: the level of each recorded voice against the band.
+- `tools/diagnose/silent_notes.py`: the notes of the saxophone that have no sound, or almost no sound, in the stem of MuseScore. In version 3.2 it found four notes in the canon of the motto (mark H): a G4 after another note under a slur, at a soft dynamic, is 10 to 13 dB under its level in the sound library. The stem of a solo player now gets its weak notes at the level of the others (`musestems.even`), as an engineer does by hand.
+- `tools/diagnose/pulse.py`: how clear the pulse of each part is (the autocorrelation of the onset curve), against the reference recordings.
 
 The owner of the project is the last judge: the tools only find what a number can show.
 

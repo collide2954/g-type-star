@@ -68,6 +68,70 @@ def played_key(work: Work, bars: tuple[int, int] | None, members: set[str]) -> s
     return digest.hexdigest()
 
 
+EVEN_LOW = 6.0  # dB: a note this far under its level is a weak note
+EVEN_MOST = 10.0  # dB: the largest change of one note
+EVEN_EDGE = 0.025  # seconds: the time of the change at the two ends of a note
+EVEN_NOTES = 40  # with fewer notes than this, the stem has no safe level to compare with
+
+
+def even(work: Work, bars: tuple[int, int] | None, player: str, audio: np.ndarray) -> np.ndarray:
+    """Return the stem of one solo player with its weak notes at the level of the others.
+
+    The sound library has notes that are much softer than the notes next to
+    them. In the tenor saxophone, a G4 that follows a different note under a
+    slur at a soft dynamic is 10 to 13 dB under its level: in the canon of
+    the motto, where the saxophone is alone, the line had holes. An
+    engineer makes such a note louder by hand. Here: the level of each note
+    in the stem, against the level that its written loudness and its pitch
+    give (a fit through all notes). A note more than `EVEN_LOW` dB under the
+    fit comes up to half of that distance.
+    """
+    structure = work.structure
+    origin = 0.0 if bars is None else structure.seconds(structure.bar(bars[0]).start)
+    mono = audio.mean(axis=1) if audio.ndim == 2 else audio
+    rows = []
+    for note in perform(work, player):
+        if note.grace or note.midi <= 0:
+            continue
+        if bars is not None and not bars[0] <= structure.bar_at(note.start).number <= bars[1]:
+            continue
+        start = structure.seconds(note.start) - origin
+        end = structure.seconds(note.start + note.duration) - origin
+        first, last = int((start + 0.03) * RATE), int(min(end, start + 1.0) * RATE)
+        if last - first < int(0.04 * RATE) or last > len(mono):
+            continue
+        power = float(np.mean(mono[first:last].astype(np.float64) ** 2))
+        if power < 1e-11:
+            continue  # no sound at all: a note outside the range of the library
+        rows.append((start, end, note.level, note.midi, 10.0 * np.log10(power)))
+    if len(rows) < EVEN_NOTES:
+        return audio
+    level = np.array([row[2] for row in rows])
+    midi = np.array([row[3] for row in rows])
+    measured = np.array([row[4] for row in rows])
+    terms = np.stack([np.ones_like(level), level, level**2, midi, midi**2], axis=1)
+    keep = np.ones(len(rows), dtype=bool)
+    for _turn in range(2):  # the second fit is without the weak notes
+        factors, *_rest = np.linalg.lstsq(terms[keep], measured[keep], rcond=None)
+        missing = terms @ factors - measured
+        keep = missing < EVEN_LOW
+    gain_db = np.zeros(len(mono))
+    edge = int(EVEN_EDGE * RATE)
+    for (start, end, *_values), less in zip(rows, missing, strict=True):
+        if less <= EVEN_LOW:
+            continue
+        more = min(EVEN_MOST, less - EVEN_LOW / 2.0)
+        first, last = max(0, int(start * RATE) - edge), min(len(mono), int(end * RATE))
+        if last - first < 4 * edge:
+            continue
+        shape = np.ones(last - first)
+        shape[:edge] = np.linspace(0.0, 1.0, edge)
+        shape[-edge:] = np.linspace(1.0, 0.0, edge)
+        gain_db[first:last] = np.maximum(gain_db[first:last], more * shape)
+    gain = (10.0 ** (gain_db / 20.0)).astype(np.float32)
+    return audio * (gain[:, None] if audio.ndim == 2 else gain)
+
+
 def stamp(work: Work) -> list[str]:
     """Write the key of the played music into the record of each kept stem of the full work.
 
@@ -127,6 +191,8 @@ def render(
         if kept.get("key") != key or kept.get("played") != played:
             data = {"key": key, "played": played, "parts": names}
             record.write_text(json.dumps(data), encoding="utf-8")
+        if len(members) == 1:
+            audio = even(work, bars, next(iter(members)), audio)
         out = np.zeros((total, 2), dtype=np.float32)
         length = min(total - lead, len(audio))
         out[lead : lead + length] = audio[:length]

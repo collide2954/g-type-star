@@ -202,3 +202,44 @@ def test_the_key_of_a_muse_stem_is_the_music_as_it_sounds():
     assert first == musestems.played_key(work, None, {"tsax"})
     assert first != musestems.played_key(work, None, {"tpt"})
     assert first != musestems.played_key(work, (39, 54), {"tsax"})
+
+
+def test_a_weak_note_of_a_solo_stem_comes_up_to_the_level_of_the_others():
+    from gtypestar.audio import musestems
+    from gtypestar.perform.events import perform
+    from gtypestar.work import build
+
+    work = build()
+    structure = work.structure
+    bars = (39, 70)
+    origin = structure.seconds(structure.bar(bars[0]).start)
+    end = structure.seconds(structure.bar(bars[1]).end)
+    audio = np.zeros((int((end - origin) * RATE) + RATE, 2), dtype=np.float32)
+    notes = [note for note in perform(work, "tsax")
+             if not note.grace and bars[0] <= structure.bar_at(note.start).number <= bars[1]
+             and note.duration >= 1]  # fmt: skip
+    weak, normal = notes[10], notes[20]
+
+    def place(note) -> tuple[int, int]:
+        first = int((structure.seconds(note.start) - origin) * RATE)
+        last = int((structure.seconds(note.start + note.duration) - origin) * RATE)
+        return first, last
+
+    # A stem in which each note has the level of its written loudness; one note is
+    # 12 dB too soft.
+    for note in notes:
+        first, last = place(note)
+        level_db = -40.0 + 20.0 * note.level - (12.0 if note is weak else 0.0)
+        time = np.arange(last - first) / RATE
+        audio[first:last] = (10.0 ** (level_db / 20.0) * np.sin(2 * np.pi * 440.0 * time))[:, None]
+    fixed = musestems.even(work, bars, "tsax", audio)
+
+    def gain(note) -> float:
+        first, last = place(note)
+        middle = slice(first + (last - first) // 4, last - (last - first) // 4)
+        before = float(np.sqrt(np.mean(audio[middle] ** 2)))
+        return 20.0 * np.log10(float(np.sqrt(np.mean(fixed[middle] ** 2))) / before)
+
+    # The weak note comes up to 3 dB under its level; a normal note does not change.
+    assert abs(gain(weak) - 9.0) < 1.0
+    assert abs(gain(normal)) < 0.01
