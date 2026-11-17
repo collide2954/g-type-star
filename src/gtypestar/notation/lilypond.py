@@ -1366,7 +1366,7 @@ def video_file(
             shift = emitter.interval.semitones if emitter.interval else 0
             written = [midi + shift for midi in _pitches(children)]
             clef = best_clef(emitter.clef_of(instrument), instrument, written)
-            body = f"\\clef {clef}\n" + emitter.emit(children)
+            body = f"\\clef {clef_word(clef)}\n" + emitter.emit(children)
         blocks.append(f"{identifier(player.id)} = {{\n{body}\n}}")
         tag = (
             f"\\override StaffSymbol.output-attributes = "

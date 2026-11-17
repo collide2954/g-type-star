@@ -257,3 +257,9 @@ def test_a_video_page_with_given_starts_has_line_breaks_at_these_bars_only():
     assert given.count("\\break") == 2
     # With no given starts, LilyPond can make one more break on a full screen.
     assert "line-break-permission" not in lilypond.video_file(work, 0, 10.0, mobile=True)
+    # The name of a clef with an octave is in quotes (with no quotes, LilyPond reads the
+    # octave as a number under the first note).
+    index = next(number for number in range(lilypond.chunk_count(work))
+                 if "treble_8" in lilypond.video_file(work, number, 10.0))  # fmt: skip
+    page = lilypond.video_file(work, index, 10.0)
+    assert '\\clef "treble_8"' in page and "\\clef treble_8" not in page
