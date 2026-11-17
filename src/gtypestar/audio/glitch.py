@@ -35,7 +35,7 @@ class Edit:
     """One change of the recording.
 
     `kind` is one of: stutter, tapestop, reverse, mute, gate, crush, lowpass,
-    highpass, echo, and the long kinds sink, narrow, darken. `bar` and `beat` give
+    highpass, echo, shimmer, freeze, and the long kinds sink, narrow, darken. `bar` and `beat` give
     the start (the beat is in quarter notes, 1 = start of the bar). `length`
     is the length of the changed part in quarter notes. `stems` are the first
     parts of the names of the stems that change ("" = all stems).
@@ -44,6 +44,13 @@ class Edit:
     of the part comes again after `slice` quarter notes, some times, each time softer
     (`fade` is the level of each echo relative to the one before; `share` is the level
     of the first echo). The echoes go on after the end of the part.
+
+    "shimmer" is a long reverb whose sound is one octave higher than the sound that
+    goes in: a bright cloud above held chords (`share` is its level).
+
+    "freeze" holds one moment of the sound: the first `slice` quarter notes of the part
+    go on as a sound that does not move, for the full length of the part, and fade
+    (`share` is the level, `fade` the share of the length with full level).
 
     The long kinds: "sink" moves the pitch from `pitch_start` to `pitch`
     (semitones; the time does not change). "narrow" moves the stereo width
@@ -75,7 +82,11 @@ class Edit:
         values = {4.0: "whole", 2.0: "half", 1.0: "quarter", 0.5: "eighth", 0.25: "sixteenth",
                   0.125: "thirty-second"}  # fmt: skip
         piece = values.get(float(self.slice), f"{float(self.slice):g} quarter")
-        if self.kind == "echo":
+        if self.kind == "shimmer":
+            text = "Reverb with the octave above"
+        elif self.kind == "freeze":
+            text = "The sound of this moment is held"
+        elif self.kind == "echo":
             text = f"Echoes, one {piece} note apart"
         elif self.kind == "stutter":
             text = f"Repeat one {piece} note"
@@ -237,6 +248,48 @@ def shift_pitch(sound: np.ndarray, ratio: np.ndarray, grain: int, search: int) -
     return out
 
 
+def shimmer(part: np.ndarray) -> np.ndarray:
+    """Return a reverb of the part whose sound is one octave higher (no direct sound).
+
+    The sound goes into a long room; the sound of the room is moved up one
+    octave; the result goes into a second room, which makes it smooth.
+    """
+    first = effects.reverb(part, effects.room(3.2, brightness=0.7, predelay=0.03, seed=31))
+    # The sound of a room has no clear phase: the pieces need no search for a good place.
+    high = shift_pitch(first, np.full(len(first), 2.0), 3072, 0)
+    second = effects.reverb(high, effects.room(2.6, brightness=0.55, seed=32))
+    second = effects.each(second, lambda channel: dsp.apply(channel, dsp.highpass(500.0, 2)))
+    return second * 0.5
+
+
+def freeze(moment: np.ndarray, total: int, hold: float = 0.6, seed: int = 9) -> np.ndarray:
+    """Return a sound of `total` samples that holds the sound of a short moment.
+
+    Short pieces of the moment (0.2 seconds, from places at random) follow
+    each other and overlap: the result has the tone of the moment and no
+    rhythm. It has full level for the share `hold` of its length, then it fades.
+    """
+    random = np.random.default_rng(seed)
+    grain = min(int(0.2 * RATE), max(64, len(moment) // 2))
+    hop = max(1, grain // 6)
+    window = np.hanning(grain)[:, None]
+    out = np.zeros((total + grain, 2))
+    for start in range(0, total, hop):
+        place = int(random.integers(0, max(1, len(moment) - grain)))
+        piece = moment[place : place + grain]
+        if random.uniform() < 0.5:
+            piece = piece[:, ::-1]  # the two channels change places: the sound is wide
+        out[start : start + len(piece)] += piece * window[: len(piece)]
+    out = out[:total] * (2.0 * hop / grain)
+    level = np.ones(total)
+    rise = min(total, int(0.08 * RATE))
+    level[:rise] = np.linspace(0.0, 1.0, rise)
+    fall = int(total * (1.0 - hold))
+    if fall > 0:
+        level[total - fall :] = np.linspace(1.0, 0.0, fall) ** 1.5
+    return out * level[:, None]
+
+
 def _apply_long(structure, edit: Edit, stems: dict[str, np.ndarray], offset: float) -> None:
     """Apply a long edit to the part of each stem that is inside the time of the edit.
 
@@ -304,6 +357,16 @@ def apply(
             part = stem[first:last].astype(np.float64)
             piece_seconds = structure.seconds(position + Fraction(edit.slice)) - start_seconds
             piece = max(32, int(piece_seconds * RATE))
+            if edit.kind in ("shimmer", "freeze"):
+                if not np.any(part):
+                    continue
+                if edit.kind == "shimmer":
+                    added = shimmer(part) * edit.share
+                else:
+                    added = freeze(part[:piece], len(part), edit.fade) * edit.share
+                added = added[: len(stem) - first]
+                stem[first : first + len(added)] += added.astype(np.float32)
+                continue
             if edit.kind == "echo":
                 echoes = effects.delay(part, piece / RATE, edit.fade, 0.55, repeats=7)
                 echoes = echoes[: len(stem) - first] * (edit.share / max(edit.fade, 1e-6))

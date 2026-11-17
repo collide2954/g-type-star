@@ -36,7 +36,10 @@ def write(work: Work) -> None:
     cues += [
         Cue("sun", s.bar(1), 1, seconds=66.0, gain_db=-17.0, fade=6.0, seed=1),
         Cue("sun-sonification", s.bar(1), 3, gain_db=-15.0, fade=3.0),
-        Cue("wind", s.bar(2), 1, seconds=50.0, gain_db=-20.0, fade=8.0, seed=2),
+        # The noise of the solar wind goes through narrow filters at the notes of the
+        # motto (G, C, D, E): pitch comes out of the noise before a player has a note.
+        Cue("wind", s.bar(2), 1, seconds=50.0, gain_db=-17.0, fade=8.0, seed=2,
+            ring=(55, 60, 62, 64), ring_mix=0.75),
         Cue("quindar on", s.bar(3), 1, gain_db=-20.0),
         Cue(
             "mercury3-548",
@@ -50,7 +53,8 @@ def write(work: Work) -> None:
         ),
         Cue("quindar off", s.bar(3), 3.5, gain_db=-20.0),
         Cue("static", s.bar(4), 1, seconds=2.5, gain_db=-24.0, seed=3, pan=-0.5),
-        Cue("voyager-heliosphere", s.bar(7), 1, gain_db=-17.0, fade=1.5, pan=0.4),
+        Cue("voyager-heliosphere", s.bar(7), 1, gain_db=-17.0, fade=1.5, pan=0.4,
+            ring=(55, 62), ring_mix=0.35),
         Cue("quindar on", s.bar(11), 2, gain_db=-21.0),
         Cue(
             "mercury3-548",

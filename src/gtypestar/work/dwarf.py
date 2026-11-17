@@ -67,6 +67,8 @@ def write(work: Work) -> None:
     # strokes.
     ringing = tuple(name for name in agb.BAND if name not in ("drums", "bass", "sbass"))
     edits += [
+        # The chord of the electric piano is held as a sound that does not move.
+        Edit("freeze", s.bar(3), 1, length=16.0, stems=("keys",), slice=2.0, share=0.9, fade=0.5),
         Edit("sink", first, 1, length=7, stems=ringing, pitch_start=agb.SINK, pitch=agb.SINK),
         Edit("sink", first, 1, length=24, stems=("drums",), pitch_start=agb.SINK, pitch=agb.SINK),
     ]

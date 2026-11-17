@@ -47,6 +47,10 @@ class Cue:
     fade: float = 0.05  # seconds at the start and at the end
     seed: int = 0
     text: str = ""  # the words of a voice, for the score
+    # Notes (MIDI numbers) on which the sound rings: narrow filters at these notes and at
+    # the octaves above them. With these, noise gets the pitch of the music.
+    ring: tuple[int, ...] = ()
+    ring_mix: float = 0.8  # the share of the filtered sound (the rest is the plain sound)
 
     @property
     def label(self) -> str:
@@ -211,6 +215,26 @@ def radio(sound: np.ndarray) -> np.ndarray:
     return effects.stereo(out) * 1.41
 
 
+def ring(sound: np.ndarray, notes: tuple[int, ...], mix: float = 0.8) -> np.ndarray:
+    """Make a sound ring on some notes: narrow band filters at each note and its octaves.
+
+    The level of the result is the level of the sound that goes in.
+    """
+    out = np.zeros_like(sound, dtype=np.float64)
+    for note in notes:
+        for octave in range(4):
+            frequency = 440.0 * 2.0 ** ((note + 12 * octave - 69) / 12.0)
+            if frequency > 0.4 * RATE:
+                break
+            width = frequency / 90.0
+            band = signal.butter(1, [frequency - width, frequency + width], "bandpass",
+                                 fs=RATE, output="sos")  # fmt: skip
+            out += signal.sosfilt(band, sound, axis=0) / (1.0 + 0.6 * octave)
+    before = float(np.sqrt(np.mean(np.asarray(sound, dtype=np.float64) ** 2))) + 1e-12
+    after = float(np.sqrt(np.mean(out**2))) + 1e-12
+    return mix * out * (before / after) + (1.0 - mix) * sound
+
+
 CROSS_SECONDS = 0.02  # two parts of the render change over in this time
 
 
@@ -263,6 +287,8 @@ def render(work: Work, begin: float, end: float, seconds: float, lead: float) ->
             sound = sound[::-1]
         if cue.radio:
             sound = radio(sound)
+        if cue.ring:
+            sound = ring(sound, cue.ring, cue.ring_mix)
         sound = sound.astype(np.float64).copy()
         edge = max(8, min(int(cue.fade * RATE), len(sound) // 2))
         sound[:edge] *= np.linspace(0.0, 1.0, edge)[:, None]

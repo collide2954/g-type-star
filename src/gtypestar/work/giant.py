@@ -235,6 +235,12 @@ def write(work: Work) -> None:
         r"<es, bes, es>1\mf\>\highgain\pmoff ~ | <es, bes, es>1 ~ | <es, bes, es>1\! | R1*13 |",
     )
     s.set("eperc", r"<< { f,,1\mp } \\ { es,,1\mp } >> | R1*15 |")
+    # The chorale has a reverb with the octave above: a bright cloud over the horns and
+    # the strings.
+    edits_n: list[Edit] = work.extras.setdefault("edits", [])  # type: ignore[assignment]
+    edits_n.append(Edit("shimmer", s.bar(1), 1, length=64.0, share=0.4,
+                        stems=("horns", "strings", "tpt", "asax", "tbn", "bsax", "vn", "va",
+                               "vc")))  # fmt: skip
     # One sentence of an astronaut, after the flares (the owner asked for an astronaut who
     # swears on the radio, one time). Eugene Cernan said it in the lunar module of Apollo 10,
     # 12 minutes after the module turned over and over at the separation of its two stages.
