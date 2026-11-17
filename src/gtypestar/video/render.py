@@ -28,12 +28,11 @@ PAPER = np.array([250, 247, 240], dtype=np.float32)
 INK = (38, 38, 44)
 CURSOR = np.array([36, 64, 128], dtype=np.float32)
 FAMILY_COLOURS = {
-    "woodwinds": (70, 148, 92),
-    "brass": (204, 142, 30),
-    "percussion": (142, 98, 172),
-    "plucked": (40, 146, 160),
-    "keyboards": (40, 146, 160),
+    "horns": (204, 142, 30),
+    "synths": (40, 146, 160),
+    "rhythm": (142, 98, 172),
     "strings": (188, 74, 62),
+    "media": (70, 148, 92),
 }
 TOP_BAND = 64  # pixels at 1080p
 BOTTOM_BAND = 128
@@ -136,6 +135,16 @@ def _activity(work: Work, fps: int, frames: int) -> dict[str, np.ndarray]:
             start = structure.seconds(note.start)
             end = max(structure.seconds(note.start + note.duration), start + RING_SECONDS)
             flags[int(start * fps) : int(end * fps) + 1] = True
+    # The recorded sounds have no notes: their label is lit while a cue sounds.
+    if "tape" in active:
+        for cue in work.extras.get("cues", []):
+            position = structure.bar(cue.bar).start + Fraction(cue.beat).limit_denominator(64) - 1
+            start = structure.seconds(position)
+            if cue.length is not None:
+                seconds = structure.seconds(position + Fraction(cue.length)) - start
+            else:
+                seconds = cue.seconds or 4.0
+            active["tape"][int(start * fps) : int((start + seconds) * fps) + 1] = True
     return active
 
 

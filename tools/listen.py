@@ -86,6 +86,8 @@ def embed(model, processor, parts: np.ndarray) -> np.ndarray:
 
 
 def frechet(first: np.ndarray, second: np.ndarray) -> float:
+    if len(first) < 2 or len(second) < 2:
+        return float("nan")  # one window has no spread: a short file has no distance
     mean_1, mean_2 = first.mean(axis=0), second.mean(axis=0)
     cov_1, cov_2 = np.cov(first, rowvar=False), np.cov(second, rowvar=False)
     root, _ = linalg.sqrtm(cov_1 @ cov_2, disp=False)

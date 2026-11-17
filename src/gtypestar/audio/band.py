@@ -22,11 +22,11 @@ import numpy as np
 from scipy import signal
 
 from ..perform.feel import Event
-from . import amp, banks, drumsynth, dsp, dubstep, effects, kernels, patches, synth
+from . import amp, banks, drumsynth, dsp, dubstep, effects, guitar, kernels, patches, synth
 
 RATE = dsp.RATE
 CACHE_DIR = Path(".cache/render")
-VERSION = 8  # a change of this number makes all kept stems invalid
+VERSION = 10  # a change of this number makes all kept stems invalid
 PHRASE_GAP = 0.03  # a line with a rest longer than this starts a new phrase (seconds)
 
 
@@ -350,17 +350,62 @@ def _string_notes(events: list[Event], shift: float = 0.0, seed: int = 0) -> lis
     return notes
 
 
+def _strokes(events: list[Event], seed: int = 0) -> list[guitar.Stroke]:
+    """Change events into notes of the recorded guitar. `seed` gives one performance."""
+    return [
+        guitar.Stroke(
+            start=note.start,
+            seconds=note.seconds,
+            midi=note.midi,
+            level=note.level,
+            mute=note.mute > 0.5,
+            hammer=note.hammer,
+            dead=note.dead,
+            slide_from=note.slide_from,
+            bend=note.bend,
+            vibrato=note.vibrato,
+        )
+        for note in _string_notes(events, seed=seed)
+    ]
+
+
+def _clean_level(wet: np.ndarray) -> np.ndarray:
+    """A clean guitar has large peaks: a compressor makes its level even."""
+    both = np.stack([wet, wet], axis=1)
+    return effects.compress(both, -20.0, 3.0, 0.015, 0.12)[:, 0]
+
+
 def render_guitar(events: list[Event], seconds: float) -> np.ndarray:
     """Play the guitar. The rhythm tones are played two times, left and right.
 
     Two takes of the same part, one on each side, are the usual sound of
     heavy rhythm guitars: the small differences of the takes make the width.
+
+    If the recorded guitar and the amplifier models are on the computer,
+    they play (`guitar.py`). If not, the string model plays.
     """
     canvas = Canvas(seconds)
     by_tone: dict[str, list[Event]] = {}
     for event in events:
         tone = event.note.get("tone")
         by_tone.setdefault(tone if tone in AMPS else "clean", []).append(event)
+    if guitar.available():
+        for tone, group in by_tone.items():
+            if tone in ("crunch", "high gain", "clean"):
+                # Two performances with two different recordings of each note: far left
+                # and right for the heavy tones, nearer for the clean tone.
+                side_place = 0.92 if tone != "clean" else 0.6
+                for side, seed in ((0, 11), (1, 23)):
+                    dry = guitar.direct(_strokes(group, seed), seconds, side, seed)
+                    wet = guitar.amplify(dry, tone)[: len(canvas.data)]
+                    if tone == "clean":
+                        wet = _clean_level(wet)
+                    canvas.add(0.0, effects.pan(wet, side_place * (2 * side - 1)))
+            else:
+                dry = guitar.direct(_strokes(group), seconds, 0, 5)
+                wet = guitar.amplify(dry, tone)[: len(canvas.data)]
+                canvas.add(0.0, effects.stereo(wet) * 1.41)
+        return canvas.data
     for tone, group in by_tone.items():
         settings = AMPS[tone]
         if tone in ("crunch", "high gain", "clean"):
@@ -370,10 +415,8 @@ def render_guitar(events: list[Event], seconds: float) -> np.ndarray:
                 dry = amp.play(amp.GUITAR, _string_notes(group, seed=seed), seconds, seed=seed)
                 wet = amp.amplify(dry, settings)[: len(canvas.data)]
                 if tone == "clean":
-                    # A clean guitar has large peaks: a compressor makes its level even.
-                    # The distortion of the other tones does this by itself.
-                    both = np.stack([wet, wet], axis=1)
-                    wet = effects.compress(both, -20.0, 3.0, 0.015, 0.12)[:, 0]
+                    # The distortion of the other tones is a compressor by itself.
+                    wet = _clean_level(wet)
                 canvas.add(0.0, effects.pan(wet, side_place * side))
         else:
             dry = amp.play(amp.GUITAR, _string_notes(group), seconds, seed=5)

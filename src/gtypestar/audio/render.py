@@ -98,7 +98,7 @@ def render_stems(
     (default: yes, if the computer has them). `muse_full` are the stems of
     MuseScore for the full work: the function takes the part for the bars.
     """
-    from . import kit, musestems, tape
+    from . import guitar, kit, musestems, tape
 
     begin, end = window(work, bars)
     lead = LEAD_SECONDS if begin > 0 else 0.0
@@ -140,8 +140,10 @@ def render_stems(
             )
             kicks += [event.start for event in events if int(event.midi) == 36]
         elif first == "guitar":
+            # The recorded guitar and the string model are two different sounds.
+            name = "gtr-recorded" if guitar.available() else "gtr"
             stems["gtr"] = band.cached(
-                "gtr", events, seconds, lambda e=events: band.render_guitar(e, seconds)
+                name, events, seconds, lambda e=events: band.render_guitar(e, seconds)
             )
         elif first == "bass guitar":
             stems["bass"] = band.cached(
