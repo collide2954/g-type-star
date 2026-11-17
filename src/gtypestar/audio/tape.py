@@ -13,6 +13,7 @@ sound at a place in the music. There are two kinds of sound:
 
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
@@ -178,8 +179,13 @@ def make(cue: Cue, seconds: float) -> np.ndarray:
     return wind(seconds, cue.seed)
 
 
+@functools.lru_cache(maxsize=4)
 def load(name: str) -> np.ndarray | None:
-    """Read a file of the media directory (two channels), or return None."""
+    """Read a file of the media directory (two channels), or return None.
+
+    The result stays in memory: many cues use the same long recording. Do not
+    change the returned signal.
+    """
     import soundfile
 
     for suffix in (".flac", ".wav", ".mp3", ".ogg"):
@@ -202,22 +208,38 @@ def radio(sound: np.ndarray) -> np.ndarray:
     return effects.stereo(out) * 1.41
 
 
+CROSS_SECONDS = 0.02  # two parts of the render change over in this time
+
+
 def render(work: Work, begin: float, end: float, seconds: float, lead: float) -> np.ndarray | None:
-    """Return the stem of the recorded sounds, or None if the work has no cues."""
+    """Return the stem of the recorded sounds, or None if the work has no cues.
+
+    The full work is rendered in parts (see `render.chunks`). A long sound
+    goes through some parts: each part has the piece of the sound that is
+    inside its own time, from `begin` to `end`. At the two ends, the piece
+    changes over to the piece of the adjacent part in a short time.
+    """
     cues: list[Cue] = work.extras.get("cues", [])  # type: ignore[assignment]
     if not cues:
         return None
     structure = work.structure
     out = np.zeros((int(seconds * RATE) + RATE, 2), dtype=np.float32)
+    window_first = int(round(lead * RATE))
+    window_last = int(round((end - begin + lead) * RATE))
+    cross = int(CROSS_SECONDS * RATE)
     missing = set()
     for cue in cues:
         position = structure.bar(cue.bar).start + Fraction(cue.beat) - 1
         start = structure.seconds(position)
-        if not begin - 0.01 <= start < end:
+        if start >= end:
             continue
         wanted = cue.seconds
         if cue.length is not None:
             wanted = structure.seconds(position + Fraction(cue.length)) - start
+        # A sound that ended before this part has nothing here. (A file with no given
+        # length is not longer than some minutes.)
+        if start + (wanted if wanted is not None else 600.0) <= begin:
+            continue
         if cue.sound in MADE:
             sound = make(cue, wanted or 4.0)
         else:
@@ -240,10 +262,27 @@ def render(work: Work, begin: float, end: float, seconds: float, lead: float) ->
         sound[-edge:] *= np.linspace(1.0, 0.0, edge)[:, None]
         if cue.pan:
             sound = sound * np.array([min(1.0, 1.0 - cue.pan), min(1.0, 1.0 + cue.pan)])
-        first = int((start - begin + lead) * RATE)
-        last = min(len(out), first + len(sound))
-        if last > first:
-            out[first:last] += (sound[: last - first] * dsp.db(cue.gain_db)).astype(np.float32)
+        first = int(round((start - begin + lead) * RATE))
+        if first + len(sound) <= window_first:
+            continue
+        piece = np.zeros((len(out), 2))
+        skip = max(0, -first)
+        place = max(0, first)
+        count = min(len(sound) - skip, len(out) - place)
+        if count <= 0:
+            continue
+        piece[place : place + count] = sound[skip : skip + count]
+        # The piece of this part: from the start of the part to its end, with a short
+        # change-over at each end where the sound goes on in the adjacent part.
+        if first < window_first:
+            piece[:window_first] = 0.0
+            ramp = np.linspace(0.0, 1.0, cross)[:, None]
+            piece[window_first : window_first + cross] *= ramp[: len(piece) - window_first]
+        if window_last < len(piece):
+            stop = min(len(piece), window_last + cross)
+            piece[window_last:stop] *= np.linspace(1.0, 0.0, cross)[: stop - window_last, None]
+            piece[stop:] = 0.0
+        out += (piece * dsp.db(cue.gain_db)).astype(np.float32)
     for name in sorted(missing):
         print(f"tape: the recorded sound {name!r} is not in {MEDIA_DIR}; the cue is silent")
     return out

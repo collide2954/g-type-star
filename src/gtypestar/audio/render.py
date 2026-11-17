@@ -60,15 +60,27 @@ def player_events(work: Work, player: str) -> list[feel.Event]:
     return feel.events(work.structure, notes, plan, drums=player == "drums", backbeats=backbeats)
 
 
-def _inside(events: list[feel.Event], begin: float, end: float) -> list[feel.Event]:
-    """Return the events of a time window, with times from the start of the render."""
+EARLY = 0.05  # a note that a player starts this much before a bar line is in the next part
+
+
+def _inside(
+    events: list[feel.Event], begin: float, end: float, last: bool = True
+) -> list[feel.Event]:
+    """Return the events of a time window, with times from the start of the render.
+
+    A player can start a note a little before the bar line. Such a note is
+    in the part of the render that starts at that bar line, and only there:
+    `last` says that no part comes after this window.
+    """
     from dataclasses import replace
 
     shift = LEAD_SECONDS - begin if begin > 0 else 0.0
+    lower = begin - EARLY if begin > 0 else -1e9
+    upper = end if last else end - EARLY
     return [
         replace(event, start=event.start + shift)
         for event in events
-        if begin - 0.05 <= event.start < end
+        if lower <= event.start < upper
     ]
 
 
@@ -90,6 +102,11 @@ def render_stems(
     begin, end = window(work, bars)
     lead = LEAD_SECONDS if begin > 0 else 0.0
     seconds = end - begin + TAIL_SECONDS + lead
+    # A part of the full render (`muse_full` is given) that is not the last part: the
+    # next part has the notes that start just before its first bar line.
+    last = muse_full is None or end >= work.structure.duration_seconds - 1e-6
+    if _JOB.get("work") is work:
+        last = end >= work.structure.duration_seconds - 1e-6
     if muse is None:
         muse = musestems.available()
     stems: dict[str, np.ndarray] = {}
@@ -97,7 +114,7 @@ def render_stems(
     muse_events: dict[str, list[feel.Event]] = {}
     keys_events: list[feel.Event] = []
     for player in work.orchestra.players:
-        events = _inside(player_events(work, player.id), begin, end)
+        events = _inside(player_events(work, player.id), begin, end, last)
         if not events:
             continue
         first = events[0].note.instrument
@@ -148,12 +165,28 @@ def render_stems(
     if muse_events and muse_full is not None:
         total = int(seconds * RATE) + RATE
         first_sample = int((begin - lead) * RATE)
+        # The stems of MuseScore are recordings of the full work. This part of the
+        # render gets the piece from its first bar to its last bar, with a short
+        # change-over to the pieces of the adjacent parts. (Without this, the sound
+        # after a part was in two parts of the render, and two times as loud.)
+        cross = int(CROSS_SECONDS * RATE)
+        window_first = int(round(lead * RATE))
+        window_last = int(round((end - begin + lead) * RATE))
         for name, full in muse_full.items():
             part = full[max(0, first_sample) : first_sample + total]
             if np.any(part):
                 piece = np.zeros((total, 2), dtype=np.float32)
                 piece[: len(part)] = part
-                stems[name] = piece
+                if begin > 0:
+                    piece[:window_first] = 0.0
+                    ramp = np.linspace(0.0, 1.0, cross, dtype=np.float32)[:, None]
+                    piece[window_first : window_first + cross] *= ramp
+                if not last:
+                    ramp = np.linspace(1.0, 0.0, cross, dtype=np.float32)[:, None]
+                    piece[window_last : window_last + cross] *= ramp
+                    piece[window_last + cross :] = 0.0
+                if np.any(piece):
+                    stems[name] = piece
     elif muse_events:
         stems.update(musestems.render(work, bars, list(muse_events), seconds, begin))
     recorded = tape.render(work, begin, end, seconds, lead)
@@ -194,6 +227,7 @@ def mix_bars(
 
 
 CHUNK_SECONDS = 40.0  # the full work is rendered in parts of about this length
+CROSS_SECONDS = 0.02  # two parts change over in this time (the stems of MuseScore)
 WORKERS = 3
 _JOB: dict = {}
 

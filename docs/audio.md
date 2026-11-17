@@ -69,6 +69,16 @@ The measurements in more detail found these faults, which one mean curve does no
 | The kick drum was too low | 2.7 dB more level from 20 to 45 Hz than the drum stems of the references | High-pass filter at 40 Hz; more level at 80 and 130 Hz |
 | The drums had too much low middle | 3.4 dB more from 180 to 355 Hz | Less level of the snare drum near 210 and 550 Hz |
 
+The first master also had three faults at the places where two parts of the render meet (each 40 seconds or less, at the rehearsal marks):
+
+| Fault of the first master | Change |
+| --- | --- |
+| The saxophone, the horns and the strings were two times as loud for about six seconds after each such place: their sound was in two parts of the render. | Each part gets the piece of these stems from its first bar to its last bar only. |
+| A note that a player started a little before such a place (within 0.05 seconds) sounded two times. | Such a note is in the next part only. |
+| A long recorded sound (the sound of the Sun: 66 seconds) stopped at the end of the part in which it started. | A long sound goes through all parts that it overlaps. |
+
+The tests in `tests/test_render.py` and `tests/test_tape.py` check these three items.
+
 ## Credits
 
 | Sound | Source | Licence |
