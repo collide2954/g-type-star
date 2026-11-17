@@ -10,7 +10,9 @@ Usage:
 
     uv run python tools/diagnose/silent_notes.py
 
-The stem is `build/musescore/tsax/score.wav`: run a full render first.
+The stem is `build/musescore/tsax/score.wav`: run a full render first. The
+script looks at the stem as it goes into the mix: after `musestems.even`
+made its weak notes louder.
 """
 
 from __future__ import annotations
@@ -19,14 +21,14 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import soundfile
 
+from gtypestar.audio import musescore, musestems
 from gtypestar.notation.pitch import from_midi
 from gtypestar.perform.events import perform
 from gtypestar.work import build
 
 STEM = Path("build/musescore/tsax/score.wav")
-SILENT_DB = -62.0
+SILENT_DB = -62.0  # in the file of MuseScore (before the level of its master control)
 
 
 def main() -> int:
@@ -35,7 +37,10 @@ def main() -> int:
         return 1
     work = build()
     structure = work.structure
-    audio, rate = soundfile.read(str(STEM), always_2d=True)
+    # The stem as it goes into the mix: at the sample rate of the project, and with its
+    # weak notes made louder.
+    audio = musestems.even(work, None, "tsax", musescore._load(STEM))
+    rate = musestems.RATE
     mono = audio.mean(axis=1)
     notes = [note for note in perform(work, "tsax") if not note.grace]
     silent = []
@@ -48,7 +53,7 @@ def main() -> int:
         if len(part) < 64:
             continue
         level = 10.0 * np.log10(float(np.mean(part**2)) + 1e-12)
-        if level < SILENT_DB:
+        if level < SILENT_DB - musescore.MASTER_VOLUME_DB:
             silent.append((structure.bar_at(note.start).number, from_midi(note.midi).name, level))
     print(f"{len(notes)} notes of the tenor saxophone, {len(silent)} with no sound")
     for bar, name, level in silent[:60]:
