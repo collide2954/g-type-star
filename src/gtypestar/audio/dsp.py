@@ -265,3 +265,29 @@ def third_octave_levels(samples: np.ndarray, rate: int = RATE) -> tuple[np.ndarr
         band = power[(frequencies >= low) & (frequencies < high)]
         levels.append(10.0 * np.log10(band.sum() + 1e-20))
     return centres, np.array(levels)
+
+
+ONSET_WINDOW = 0.12  # seconds: the part of a note that has its start
+ONSET_LEVEL = 0.5  # a note "sounds" at the first value that is this part of its largest value
+ONSET = 3  # a change of the measurement: a new number here
+
+
+def onset(sound: np.ndarray) -> float:
+    """Return the time in seconds at which a recorded note "sounds".
+
+    A recording of a note does not start with the note: first the pick or
+    the finger is on the string (15 to 45 milliseconds for a guitar, 26 for
+    the bass guitar), with a soft noise and sometimes a click or a scrape of
+    a quarter to a third of the size of the note. The note sounds at the
+    first sample that is as large as `ONSET_LEVEL` of the largest value of
+    the first part of the recording. A player that puts each recording at
+    the written time of its note is late by this time.
+
+    (A lower level takes the click for the note. A measurement of how long
+    the level stays up is wrong for the low strings: their sound is a row of
+    short pulses, one in each 15 to 22 milliseconds.)
+    """
+    size = np.abs(sound[: int(ONSET_WINDOW * RATE)])
+    if len(size) == 0 or float(np.max(size)) <= 0.0:
+        return 0.0
+    return float(np.flatnonzero(size >= ONSET_LEVEL * float(np.max(size)))[0]) / RATE

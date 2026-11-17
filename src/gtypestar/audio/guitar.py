@@ -210,28 +210,9 @@ class Stroke:
     vibrato: float = 0.0  # depth in cents
 
 
-ONSET_WINDOW = 0.12  # seconds: the part of a note that has its start
-ONSET_LEVEL = 0.5  # a note "sounds" at the first value that is this part of its largest value
-ONSET = 3  # a change of the measurement: a new number here
-
-
-def onset(sound: np.ndarray) -> float:
-    """Return the time in seconds at which a note "sounds".
-
-    A recording of a note does not start with the note: first the pick is on
-    the string (15 to 45 milliseconds), with a soft noise and sometimes a
-    click or a scrape of a quarter to a third of the size of the note. The
-    note sounds at the first sample that is as large as `ONSET_LEVEL` of the
-    largest value of the first part of the recording.
-
-    (A lower level takes the click for the note. A measurement of how long
-    the level stays up is wrong for the low strings: their sound is a row of
-    short pulses, one in each 15 to 22 milliseconds.)
-    """
-    size = np.abs(sound[: int(ONSET_WINDOW * RATE)])
-    if len(size) == 0 or float(np.max(size)) <= 0.0:
-        return 0.0
-    return float(np.flatnonzero(size >= ONSET_LEVEL * float(np.max(size)))[0]) / RATE
+ONSET_LEVEL = dsp.ONSET_LEVEL
+ONSET = dsp.ONSET
+onset = dsp.onset
 
 
 class _Bank:

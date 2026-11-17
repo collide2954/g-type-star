@@ -79,6 +79,28 @@ make study                        # check the tables of the style study and writ
 make test                         # run the tests
 ```
 
+## The builds
+
+Each change of the music or of the code starts the workflow [`Build`](.github/workflows/build.yml) on GitHub. It makes all files of the work and keeps them as artifacts of the workflow run (on the page of the run, under "Artifacts"):
+
+| Artifact | Files |
+| --- | --- |
+| `score-parts-midi` | The score (`g-type-star-score.pdf`), the parts (`g-type-star-parts.zip`), and the performance as a MIDI file (`g-type-star.mid`) |
+| `audio` | The master (`g-type-star.flac`, `g-type-star.mp3`) and a text that says which sounds played it (`audio.json`) |
+| `stems` | One FLAC file for each group of players |
+| `video` | The score video, 1920 x 1080 (`g-type-star.mp4`) |
+| `video-mobile` | The score video for a telephone, 1080 x 1920 (`g-type-star-mobile.mp4`) |
+
+The saxophone, the horns and the strings of the master are Muse Sounds, and a build server cannot install them. Thus the computer of the composer makes the master and the stems, and this command puts them in a draft release with the name `audio`. (A draft release is not public: only persons and builds with the right to write to the repository can read it.)
+
+```bash
+uv run gtypestar publish-audio
+```
+
+A build uses these files if they are for the music of its commit. If the music is newer, the build makes the audio itself: synthesizer patches play the wind and string parts, a string model plays the guitar, and the drum kit is a smaller kit. The file `audio.json` says which sounds a build has.
+
+A person can start a build by hand (the page "Actions", the workflow "Build", the button "Run workflow"). With the box "Put the files in the public release 'latest'", that build publishes its files as a release of the repository.
+
 ## Licence
 
 - The code is under the MIT License. See [`LICENSE`](LICENSE).

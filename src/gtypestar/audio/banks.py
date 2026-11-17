@@ -43,6 +43,14 @@ class _Cache:
     def __init__(self) -> None:
         self.size = 0
         self.items: OrderedDict[tuple[Path, int], np.ndarray] = OrderedDict()
+        self.leads: dict[tuple[Path, int], float] = {}
+
+    def lead(self, path: Path, cents: int = 0) -> float:
+        """Return the time in seconds from the start of a sample to its sound."""
+        key = (path, cents)
+        if key not in self.leads:
+            self.leads[key] = dsp.onset(self.get(path, cents))
+        return self.leads[key]
 
     def get(self, path: Path, cents: int = 0) -> np.ndarray:
         """Return one sample (one channel) at the project rate, moved by `cents`."""
@@ -121,8 +129,11 @@ class BassBank:
         self.lowest = min(midi for kind, midi, _ in self.notes if kind == "reg")
         self.highest = max(midi for kind, midi, _ in self.notes if kind == "reg")
 
-    def sample(self, kind: str, midi: float, level: float, take: int) -> tuple[np.ndarray, float]:
-        """Return a sample for a note, and the gain that gives it the wanted loudness."""
+    def sample(
+        self, kind: str, midi: float, level: float, take: int
+    ) -> tuple[np.ndarray, float, float]:
+        """Return a sample for a note, the gain that gives it the wanted loudness, and
+        the time in seconds from the start of the sample to its sound (`dsp.onset`)."""
         nearest = int(np.clip(round(midi), self.lowest, self.highest))
         cents = int(round((midi - nearest) * 100.0))
         if kind == "reg":
@@ -138,8 +149,9 @@ class BassBank:
             layer, gain = "", 0.3 + 0.9 * level
         takes = self.notes.get((kind, nearest, layer)) or self.notes.get(("reg", nearest, "mf"))
         if not takes:
-            return np.zeros(1, dtype=np.float32), 0.0
-        return CACHE.get(takes[take % len(takes)], cents), float(gain)
+            return np.zeros(1, dtype=np.float32), 0.0, 0.0
+        path = takes[take % len(takes)]
+        return CACHE.get(path, cents), float(gain), CACHE.lead(path, cents)
 
 
 class RhodesBank:

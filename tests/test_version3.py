@@ -5,7 +5,7 @@ from fractions import Fraction
 import numpy as np
 import pytest
 
-from gtypestar.audio import band, glitch, perc, tape
+from gtypestar.audio import band, banks, dsp, glitch, perc, tape
 from gtypestar.compose import check, patterns, tools
 from gtypestar.perform.events import PerfNote
 from gtypestar.perform.feel import Event
@@ -263,3 +263,28 @@ def test_a_video_page_with_given_starts_has_line_breaks_at_these_bars_only():
                  if "treble_8" in lilypond.video_file(work, number, 10.0))  # fmt: skip
     page = lilypond.video_file(work, index, 10.0)
     assert '\\clef "treble_8"' in page and "\\clef treble_8" not in page
+
+
+BASS_FOLDER = banks.SAMPLES_DIR / "basses" / "Samples" / "darkblack"
+
+
+@pytest.mark.skipif(not BASS_FOLDER.exists(), reason="the bass library is not on this computer")
+def test_a_note_of_the_bass_guitar_sounds_at_its_written_time():
+    # A recording of the bass starts 26 ms before its note sounds: the finger is on the
+    # string. To version 3.5 each note was late by this time.
+    def event(start: float, midi: int, legato: bool = False) -> Event:
+        note = PerfNote("bass", "bass guitar", Fraction(0), Fraction(1), midi, 0.8, 0.8,
+                        legato=legato)  # fmt: skip
+        return Event(note, start, 0.4, 0.8, 0.8)
+
+    events = [event(0.5 + 0.6 * number, 28 + 5 * number) for number in range(5)]
+    events.append(event(4.0, 40, legato=True))
+    dry = band._bass_samples(banks.BassBank(BASS_FOLDER), events, 6 * RATE)
+    for item in events:
+        first = int((item.start - 0.06) * RATE)
+        part = dry[first : first + int(0.2 * RATE)].astype(np.float32)
+        late = dsp.onset(part) - 0.06
+        # A note under a slur starts inside its recording, with a short rise.
+        assert late == pytest.approx(0.0, abs=0.012 if item.note.legato else 0.002)
+    # The finger is on the string before the first note.
+    assert float(np.max(np.abs(dry[int(0.48 * RATE) : int(0.5 * RATE)]))) > 0.0

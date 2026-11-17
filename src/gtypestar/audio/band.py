@@ -40,6 +40,7 @@ from . import (
 RATE = dsp.RATE
 CACHE_DIR = Path(".cache/render")
 VERSION = 13  # a change of this number makes all kept stems invalid
+BASS = 2  # a change of the code that plays the bass guitar: a new number here
 PHRASE_GAP = 0.03  # a line with a rest longer than this starts a new phrase (seconds)
 
 
@@ -521,17 +522,22 @@ def _bass_samples(bank: banks.BassBank, events: list[Event], total: int) -> np.n
             kind = "ghost"  # a note with no pitch: the left hand stops the string
         elif "staccatissimo" in marks or ("staccato" in marks and event.seconds < 0.3):
             kind = "stac"
-        sample, gain = bank.sample(kind, event.midi, level, number)
-        body = sample[: int((length + 0.05) * RATE)].astype(np.float64).copy()
+        # A recording starts 26 milliseconds before its note sounds (the finger is on the
+        # string). The recording starts earlier by this time: the note is at its written
+        # time. (To version 3.5 the notes of the bass were late by this time.)
+        sample, gain, lead = bank.sample(kind, event.midi, level, number)
+        body = sample[: int((lead + length + 0.05) * RATE)].astype(np.float64).copy()
         if len(body) < 64:
             continue
         if note.legato and kind == "reg":
-            # A hammer-on or a slide: no stroke of the finger at the start.
+            # A hammer-on or a slide: no stroke of the finger at the start. The note starts
+            # inside the recording, a moment after the start of its sound.
             skip = int(0.03 * RATE)
             body = body[skip:]
             ramp = min(len(body), int(0.012 * RATE))
             body[:ramp] *= np.linspace(0.0, 1.0, ramp)
             gain *= 0.85
+            lead = 0.0
         following = ordered[number + 1] if number + 1 < len(ordered) else None
         if note.glissando and following is not None and len(body) > 256:
             curve = np.zeros(len(body))
@@ -543,14 +549,16 @@ def _bass_samples(bank: banks.BassBank, events: list[Event], total: int) -> np.n
             body *= np.exp(-np.arange(len(body)) / (0.11 * RATE))
         fade = min(len(body), int(0.035 * RATE))
         body[-fade:] *= np.linspace(1.0, 0.0, fade)
-        first = int(round(event.start * RATE))
-        if first < 0 or first >= total:
+        first = int(round((event.start - lead) * RATE))
+        if first < 0:
+            body, first = body[-first:], 0
+        if first >= total:
             continue
         last = min(total, first + len(body))
         out[first:last] += body[: last - first] * gain
         if kind == "reg" and length > 0.18:
-            noise, noise_gain = bank.sample("rel", event.midi, level, number)
-            start = first + int(length * RATE)
+            noise, noise_gain, _lead = bank.sample("rel", event.midi, level, number)
+            start = int(round((event.start + length) * RATE))
             stop = min(total, start + len(noise))
             if stop > start:
                 out[start:stop] += noise[: stop - start] * noise_gain * 0.5

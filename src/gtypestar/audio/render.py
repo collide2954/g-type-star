@@ -156,7 +156,7 @@ def render_stems(
             )
         elif first == "bass guitar":
             stems["bass"] = band.cached(
-                "bass", events, seconds, lambda e=events: band.render_bass(e, seconds)
+                f"bass-{band.BASS}", events, seconds, lambda e=events: band.render_bass(e, seconds)
             )
         elif first in ("electric piano", "wurlitzer"):
             keys_events.extend(events)
