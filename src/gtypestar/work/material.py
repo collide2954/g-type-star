@@ -96,7 +96,6 @@ class Bars:
 # The loop of the main sequence: roots that go down by thirds, then a 2-5 to G.
 # The melody stays in the scale of G major; the chords under it change colour.
 LOOP_A = ["Gmaj9", "Ebmaj7#11", "Cmaj9#11", "Am11"]
-TURN_A = "D13sus"  # on the last two pulses of the fourth bar
 # The loop of the bridge: the flat side, with B-flat and F held as pedal notes.
 LOOP_B = ["Ebmaj9", "Bbadd9/D", "Cm11", "F9sus"]
 
@@ -313,46 +312,12 @@ THEME = [
     r"a'4. g'4. ~ g'4 ~ g'4.) r4.",
 ]
 
-# The second eight bars of the first statement: the same theme with a turn at the end
-# of the second bar and a start before the bar line into the fifth bar.
-THEME_SECOND = [
-    r"r4. g'4.( c''4 d''4. ~ d''4.",
-    r"d''4. ~ d''4.) r8 b'16( a' g'4. ~ g'4.)",
-    r"e''4.( ~ e''4. ~ e''4 d''4. b'4. ~",
-    r"b'4. a'4. ~ a'4) r4. r8 d'8( e'",
-    r"g'4.) ~ g'4. c''4( d''4. e''4. ~",
-    r"e''4.) g''4.( ~ g''4 f''4. d''4.)",
-    r"e''4.( ~ e''4. d''4 b'4. a'4. ~",
-    r"a'4. g'4. ~ g'4 ~ g'4.) r4.",
-]
-# The second statement: runs of two sixteenth notes lead into the long notes, and the
-# answer of the second bar goes up, not down.
-THEME_HIGH = [
-    r"r4 d'16( e' g'4. c''4 d''4. ~ d''4.",
-    r"d''4.) r4. r4 a'8( b' d'' e''4. ~",
-    r"e''4. ~ e''4.) g''4( fis''4. d''4. ~",
-    r"d''4. b'4. a'4) r4. r4.",
-    r"r4 d'16( e' g'4. c''4 d''4. e''4. ~",
-    r"e''4.) g''4.( ~ g''4 f''4. d''8 c'' d''",
-    r"e''4. ~ e''4. d''4 b'4. a'4. ~",
-    r"a'4. g'4.) r4 r4. r4.",
-]
 # The first line that all lead players play together (two bars of sixteenth notes), at
 # the pitch of the tenor saxophone and the guitar. It is made from the scale of G with
 # five notes, the motto (C, D, E, G), and notes that go round a goal note.
 LINE_1 = [
     r"g16( a b d' e' g' fis' e' d' b a g c' d' e' g' a' g' e' d' cis' d' b d' e' fis' a' b'",
     r"c''16 b' a' g' fis' e' dis' e' g' fis' d' b c' e' d' b bes a g a b d' e' g' a' b' d'' e'')",
-]
-# The last eight bars of the second statement: six bars of the theme, then the line.
-THEME_CLOSE = [
-    r"r4. g'4.( c''4 d''4. ~ d''4.",
-    r"d''4. ~ d''4.) r4 a'4.( g'4.)",
-    r"e''4.( ~ e''4. ~ e''4 d''4. b'4. ~",
-    r"b'4. a'4. ~ a'4) r4. r4.",
-    r"r4. g'4.( c''4 d''4. e''4. ~",
-    r"e''4.) g''4.( ~ g''4 f''4. d''4.)",
-    *LINE_1,
 ]
 
 
@@ -407,38 +372,6 @@ THEME_CLOSE_WIDE = [
     r"r4. g4.( c'4 d'4. e'4. ~",
     r"e'4.) c''4.( ~ c''4 f''4. d''4.)",
     *LINE_1,
-]
-# The quiet middle: the low register with much air in the tone. The second phrase is a
-# fourth lower (the motto from D), and the last note is the low A, near the lowest note.
-THEME_DEEP = [
-    r"r4. g4.( c'4 d'4. ~ d'4.",
-    r"d'4. ~ d'4.) r4 a4.( d4.)",
-    r"e'4.( ~ e'4. ~ e'4 d'4. b4. ~",
-    r"b4. a4. ~ a4) r4. r4.",
-    r"r4. d4.( g4 a4. b4. ~",
-    r"b4.) d'4.( ~ d'4 c'4. a4.)",
-    r"b4.( ~ b4. a4 fis4. e4. ~",
-    r"e4. d4. ~ d4 a,4. ~ a,4.)",
-]
-# The theme with the new division of the pulses: leaps between the registers. The motto
-# is low, each answer is high, the highest note is B5, and the end falls two octaves.
-THEME_LEAPS = [
-    r"r4 d16( e g4. c'4 d'4. ~ d'4.",
-    r"d'4.) r4. r4 a'8( b' d'' e''4. ~",
-    r"e''4. ~ e''4.) g''4( fis''4. d''4. ~",
-    r"d''4. b'4. a'4) r4. r4.",
-    r"r4 d16( e g4. c'4 d'4. e'4. ~",
-    r"e'4.) g''4.( ~ g''4 a''4. bes''4.)",
-    r"b''4.( ~ b''4. a''4 g''4. e''4. ~",
-    r"e''4. d''4. ~ d''4 b'4.) r4.",
-    r"r4. g'4.( c''4 d''4. ~ d''4.",
-    r"d''4. ~ d''4.) r8 b'16( a' g'4. ~ g'4.)",
-    r"e''4.( ~ e''4. ~ e''4 d''4. b'4. ~",
-    r"b'4. a'4. ~ a'4) r4. r8 d8( e",
-    r"g4.) ~ g4. c''4( d''4. e''4. ~",
-    r"e''4.) g''4.( ~ g''4 f''4. d''4.)",
-    r"e''4.( ~ e''4. d''4 b'4. a'4.",
-    r"g'4. e'4. d'4 b4. g4.)",
 ]
 
 
@@ -550,34 +483,6 @@ BRIDGE = [
     r"f''4. es''4. d''4 c''4.) r4.",
 ]
 
-# The solo of the tenor saxophone in the main sequence: 20 bars above the loop.
-# It starts with the motto and with few notes, goes to lines of sixteenth notes,
-# has its highest note in bar 14, and ends on a long G before the second line.
-SAX_SOLO = [
-    r"r4. r4. r4 d'8( e' g' a'4. ~",
-    r"a'4.) r4. g'8( a' bes'4. d''4.)",
-    r"r4 e''8( d''4. b'4 g'4. fis'4.)",
-    r"e'4.( g'4. ~ g'4) r4. r8 a'16( b' c'' d''",
-    r"e''4.) d''8( b' a' g'4) r8 b'16( d'' e''8 fis''8. e''16 d''8)",
-    r"r8 d''8( bes' g'8 a' bes' d''4 f''4.) r4.",
-    r"e''16( fis'' g'' fis'' e'' d'' b'8 d'' e'' g''4 ~ g''4. ~ g''8) r4",
-    r"r4. e''8( d'' c'' a'4 g'8 a' c'' d''8. c''16 a'8)",
-    r"g'16( a' b' d'' e'' fis'' g'' fis'' e'' d'' b' a' g'8 b' d''16 e'' fis'' a'' g''8) r4.",
-    r"r8 g''16( f'' d'' bes' a'8 g'16 a' bes' d'' f''4 ~ f''8 d''16 bes' g'8) r4.",
-    r"e'16( g' b' d'' e'' g'' fis'' e'' d'' b' g' e' fis'8 a' b'16 d'' e'' fis'' g''8 a''16 g'' "
-    r"e''8 d''8)",
-    r"c''8( e'' g'' a''4. g''8 e'' d''16 c'' a' g' a'8 c''16 d'' e'' g'' a''8)",
-    r"g''8->( e'' d'' g''8-> e'' d'' g''8-> e'' g''8-> e'' d'' b'8 d'' e'')",
-    r"g''8->( f'' d'' g''8-> f'' d'' g''8-> f'' a''4. ~ a''8) r4",
-    r"g''16( fis'' e'' d'' b' a' g' a' b' d'' e'' fis'' g''8 e'' d''16 b' a' g' fis'8 "
-    r"e'16 fis' g' a' b'8)",
-    r"c''8( e'' a' c''16 d'' e'' g'' a''8 g''8 e'' d''4.) r4.",
-    r"r4. d''8( e'' g'' a''4 g''8 e'' d'' b'4.)",
-    r"r4. bes'8( d'' f'' g''4 f''8 d'' bes' a'4.)",
-    r"r4. e''8( fis'' g'' a''4 g''8 fis'' e'' d''4.)",
-    r"c''8( d'' e'' g''4. ~ g''4 ~ g''4. ~ g''8) r4",
-]
-
 # The second line for all lead players: four bars. The motto goes up through the scale
 # (bar 1), a line falls through the scale of B-flat (bar 2), the triads of C and D take
 # turns (bar 3), and notes go round the notes of the chord of A minor (bar 4).
@@ -599,33 +504,6 @@ BASS_SOLO = [
     r"c16( g c' d' g c' d' e' g' e' d' c' b8 d' e'16 fis' g' e' d' b g8 a b)",
     r"c'8( e' g' fis'4. e'8 d' b16 a g e fis8 a16 b d' e' fis'8)",
 ]
-
-# The grooves with the new division of the pulses: five notes in each long pulse and
-# three in the short pulse. The pulses keep their lengths (see research/tables/rhythm.csv,
-# "Pulse morph").
-MORPH = Groove(
-    """
-    hh  xxxxx xxxxx xxx xxxxx xxxxx
-    sn  ----- o---g --- ----- o--g-
-    bd  x--x- ----- x-- x-x-- -----
-    """,
-    CLAVE,
-)
-MORPH_HALF = Groove(
-    """
-    hh  x-x-x x-x-x x-x x-x-x x-x-x
-    sn  ----- ----- --- x---- -----
-    bd  x---- ----- x-- ----- ---x-
-    """,
-    CLAVE,
-)
-MORPH_FILLS: dict[str, dict[str, list[str]]] = {
-    "five 1": {"sn": ["oogoo"], "bd": ["-----"]},
-    "five toms 1": {"sn": ["oo---"], "tm": ["--hmf"]},
-    "five 2": {"sn": ["o-ogo", "ooOoo"], "bd": ["-x---", "-----"]},
-    "five toms 2": {"sn": ["oog--", "-----"], "tm": ["---hh", "mmfff"], "bd": ["-----", "x-x--"]},
-}
-FILLS.update(MORPH_FILLS)
 
 
 # ----------------------------------------------------------------------------
@@ -653,8 +531,3 @@ def cycle_bars(cell: str, bars: int, close: str = "", steps: tuple[int, ...] = S
             place += length
         result.append(" ".join(groups))
     return result
-
-
-def only(pattern: str, letters: str, new: str = "x") -> str:
-    """Return a pattern with `new` at each place that has one of `letters`, and rests elsewhere."""
-    return "".join(char if char == " " else (new if char in letters else "-") for char in pattern)
