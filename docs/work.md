@@ -43,7 +43,7 @@ The Sun is a star of the type G. The form follows the life of such a star.
 | --- | --- | --- |
 | 1 | A cloud of gas and dust falls together. | No steady groove: the sound of the Sun, radio noise, chords of fourths, single high notes. The drums go faster by division, from one to eight notes in a beat. One dense chord of all players. |
 | 2 | The fusion of hydrogen starts. | The riff of the work comes in behind a filter that opens. A voice counts: "two, one, fire". On "fire", all players start. The riff has no major third yet. |
-| 3 | The star burns hydrogen in a stable state. | The theme (two times), a bridge on the flat side, a solo of the saxophone, bass and drums in turns, a quiet middle, and the theme with five notes in each long pulse. |
+| 3 | The star burns hydrogen in a stable state. | The theme; the theme again with a riff of the band against it; a drum-and-bass beat in the same bar of seven, with the bridge melody above it; the saxophone and the guitar take turns (four bars each, two, one); bass and drums in turns; a quiet middle; and the theme with five notes in each long pulse. |
 | 4 | Spots and flares. | A heavy rock groove in plain 4/4: double pedal kick drum, the low string of the guitar, a guitar solo, a line of all lead players. The key goes up by minor thirds. |
 | 5 | The star swells and becomes cooler. | The long pulse becomes the beat of a slow bar. The theme is a chorale of horns and strings. A solo of the lead synthesizer. Then ten bars of build-up on the note D. |
 | 6 | Helium starts to burn, all at one time. | The one dubstep passage of the work. |
@@ -102,6 +102,7 @@ two bars at the end of D, four bars at the end of F, the first line a semitone l
 | "heavy guitar" | Parts 4 and 7. |
 | "a really blood pumping section … that like falls apart, strong gravity from the dwarf star" | Part 7. |
 | "the saxophone would explore more of its range" | The table of the forms of the theme, above. |
+| "Everything from 2:30-4:30 is pretty boring." | These two minutes (marks D, E, F) had the theme a second time above the same chords, a soft bridge of long notes, and a solo that started slowly. Now: D has a riff of bass and guitar against the theme, answers of the horns, and new chords that go up. E is a drum-and-bass beat (the tempo of the work, 175, is the tempo of that style) with the bridge melody, a short solo of the electric piano, and a snare roll. F has the saxophone and the guitar in turns that become shorter, then the fast line of all lead players. |
 | "a nice full bodied sound from the guitar that shreds in a jazz metal way" | The solo of the guitar in part 4 (mark L): joined notes, a darker amplifier sound, one octave lower. See [`audio.md`](audio.md), "The guitar". |
 | "an audio sample of an astronaut swearing over the radio … both funny and tasteful" | The first bar of part 5 (mark N), after the flares: "That son of a bitch was wild." (Eugene Cernan, Apollo 10), then a radio tone. One time. |
 

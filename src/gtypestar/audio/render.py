@@ -337,8 +337,12 @@ def reference_gains(work: Work, muse: bool) -> dict[str, float]:
 
     bars = reference_bars(work)
     begin, end = window(work, bars)
+    from . import kit
+
     digest = hashlib.sha1(repr((band.VERSION, bars, muse)).encode())  # noqa: S324
     digest.update(repr(work.extras.get("mix")).encode())
+    if kit.kit() is not kit.CROCELL:
+        digest.update(repr(kit.kit()).encode())  # a different drum kit has different levels
     for player in work.orchestra.players:
         for event in _inside(player_events(work, player.id), begin, end):
             digest.update(

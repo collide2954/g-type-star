@@ -19,6 +19,7 @@ passage), not the levels that give these bars the balance of the references.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -85,7 +86,8 @@ def relative(levels: np.ndarray) -> np.ndarray:
 
 def load(work, bars: tuple[int, int]) -> tuple[dict[str, np.ndarray], np.ndarray]:
     """Return the stems and the kick times of the bars, from the kept file if there is one."""
-    path = KEEP / f"stems-{bars[0]}-{bars[1]}.npz"
+    name = os.environ.get("GTYPESTAR_KIT", "")  # a trial of a different drum kit
+    path = KEEP / f"stems-{bars[0]}-{bars[1]}{'-' + name if name else ''}.npz"
     if path.exists():
         kept = np.load(path)
         stems = {name: kept[name] for name in kept.files if name != "__kicks"}

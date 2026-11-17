@@ -118,11 +118,23 @@ def bass_table(symbol: str, octave: int = 0) -> dict[str, str]:
         root -= 12
     root += 12 * octave
     third = 3 if 3 in chord.intervals else 4
+    if 4 not in chord.intervals and 3 not in chord.intervals and 5 in chord.intervals:
+        third = 5  # a chord with a fourth in place of the third ("D13sus")
     seventh = 11 if 11 in chord.intervals else 10
     names = {
         "a": root, "b": root + 12, "c": root + 7, "d": root + seventh, "e": root + third,
         "f": root + 5, "g": root + 14, "h": root - 2, "i": root - 1,
     }  # fmt: skip
+    if chord.bass != chord.root:
+        # A chord above a different bass note ("Bbadd9/D"): the fifth, the seventh, the
+        # third, the fourth and the ninth are notes of the chord, in the octave above
+        # the bass note.
+        base = root + (chord.root - chord.bass) % 12
+        for letter, interval in (("c", 7), ("d", seventh), ("e", third), ("f", 5), ("g", 14)):
+            note = base + interval
+            while note > root + 12:
+                note -= 12
+            names[letter] = note
     flats = chord.symbol[1:2] == "b" or chord.symbol[0] in "FC" or third == 3
     table = {
         letter: chords.from_midi(midi, prefer_sharps=not flats).name

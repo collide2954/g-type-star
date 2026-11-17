@@ -36,14 +36,14 @@ STRIPS = {
     # The microphones of the cymbals go to the group "cymbals": no strong compression,
     # and less level above 9 kHz (the first master had 9 dB too much above 11 kHz).
     "drums.cymbals": Strip(
-        gain_db=-4.0, bus="cymbals",
+        gain_db=-8.5, bus="cymbals",
         eq=(("highpass", 450.0), ("bell", 7000.0, 3.0, 0.7), ("lowpass", 11500.0, 4)),
         width=1.8,
     ),
     "drums.overheads": Strip(
-        gain_db=0.0, bus="cymbals",
+        gain_db=4.0, bus="cymbals",
         eq=(("highpass", 550.0), ("bell", 3500.0, -1.5, 0.8), ("bell", 7000.0, 3.0, 0.7),
-            ("lowpass", 11500.0, 4)),
+            ("lowpass", 15000.0, 2)),
         width=2.0,
     ),
     "drums.room": Strip(
