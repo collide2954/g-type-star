@@ -31,7 +31,7 @@ import os
 import xml.etree.ElementTree as ElementTree
 import zlib
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import numpy as np
@@ -47,6 +47,28 @@ SAMPLES_DIR = Path(".cache/samples")
 FAST_KICK = 0.8  # the loudness of a kick stroke less than 0.16 seconds after the stroke before
 CACHE_BYTES = 1_800_000_000
 GRACE_SECONDS = 0.032  # a grace note (flam) comes this much before the main stroke
+
+
+@dataclass(frozen=True)
+class Layer:
+    """Processed recordings of one drum that play together with the microphones of the kit.
+
+    A metal production puts a clean, short sample under each stroke of the
+    kick drum and of the snare drum ("sample reinforcement"): fast strokes of
+    the two feet stay clear. `files` is the pattern of the file names, with
+    "{layer}" (the number of the loudness layer, from 1) and "{hit}" (the
+    number of the recording, from 1).
+    """
+
+    folder: str  # in the sample directory
+    files: str
+    hits: int
+    layers: int = 1
+    group: str = "kick"  # the group of microphones that gets the sound
+    gain_db: float = 0.0
+    floor: float = 0.0  # softer strokes than this have no layer (ghost notes stay natural)
+    dynamics: float = 0.0  # 0 = one level for all strokes; 1 = the level follows the loudness
+    inverted: bool = False  # turn the signal over, if it works against the microphones
 
 
 @dataclass(frozen=True)
@@ -86,6 +108,11 @@ class KitSpec:
     # Microphones (or trigger channels) whose signal comes late: the time in seconds by
     # which the code plays them earlier, so that they are in time with the others.
     advance: dict[str, float] = field(default_factory=dict)
+    # Processed recordings under the strokes of some drums: the note of the work -> layer.
+    layers: dict[int, Layer] = field(default_factory=dict)
+    # Sounds that the kit does not have: the note of the work -> the short name of the
+    # kit that plays it (if that kit is on the computer).
+    borrowed: dict[int, str] = field(default_factory=dict)
 
 
 CROCELL = KitSpec(
@@ -245,6 +272,11 @@ MULDJORD = KitSpec(
     # bars 163 to 174 (tools/diagnose/kit_levels.py). The room of this kit is loud.
     mics_db={"kick": 4.8, "snare": -4.8, "toms": -0.7, "cymbals": -2.1, "overheads": -0.6,
              "room": -12.0},
+    # The click of the trigger is 19 to 25 dB above the high part of the microphones of
+    # the kick drum: a little less of it. The microphones of the tom-toms and the
+    # overheads have more of the cymbals than those of the CrocellKit.
+    channels_db={"Trigger": -5.0},
+    tone={"toms": (("high shelf", 6000.0, -8.0),), "overheads": (("high shelf", 9000.0, -3.0),)},
     # The microphone under the snare drum has the opposite polarity (the notes of the kit
     # say this; with the two signals as they are, the drum has 3.7 dB less low sound).
     inverted=("Snare_bottom",),
@@ -253,8 +285,8 @@ MULDJORD = KitSpec(
 # the most recordings of the kits here (93 strokes of the snare drum, rim shots, three
 # closed hi-hats, china cymbals of 8, 10 and 18 inches), and trigger channels: a drum
 # module that plays a kick sample at each stroke of a kick drum (it comes 12 ms after
-# the microphone), and a trigger on the snare drum. The kit has no cross-stick sound:
-# soft strokes away from the centre of the snare drum play it.
+# the microphone), and a trigger on the snare drum. The kit has no cross-stick sound
+# and no hi-hat pedal sound: the CrocellKit plays these two.
 AASIMONSTER = KitSpec(
     name="Aasimonster",
     folder="aasimonster/aasimonster2",
@@ -285,25 +317,56 @@ AASIMONSTER = KitSpec(
     # bars 55 to 62 and 163 to 174 (tools/diagnose/kit_levels.py).
     mics_db={"kick": 7.2, "snare": 3.5, "toms": 6.5, "cymbals": 6.5, "overheads": 1.8,
              "room": -4.8},
-    channels_db={"Snare trigger": -8.0},
+    channels_db={"Snare trigger": -8.0, "Alesis": -3.0},
     advance={"Alesis": 0.012},
+    # The cross-stick and the hi-hat pedal come from the CrocellKit.
+    borrowed={37: "crocell", 44: "crocell"},
+    # More level above 9 kHz than the CrocellKit in the microphones of the cymbals, the
+    # room and the tom-toms (5 to 16 dB): the mixer has its settings for that kit.
+    tone={"toms": (("high shelf", 6000.0, -8.0),), "cymbals": (("high shelf", 9000.0, -5.0),),
+          "room": (("high shelf", 9000.0, -6.0),), "overheads": (("high shelf", 10000.0, -3.0),)},
+)  # fmt: skip
+# The samples of "The Metal Kick Drum" (Rafa Prieto): free, the maker keeps the copyright,
+# "You are allowed to use these samples for any artistic application". The kick "Fate"
+# is short (0.2 s), with little level below 60 Hz: for fast strokes of the two feet. The
+# snare (a 14 x 6 inch drum) has eight layers of loudness with six recordings each.
+TMKD_KICK = Layer(
+    folder="tmkd/TMKD_Kicks_Pack/TMKD_Kick7_Fate/WAV", files="TMKD07 - Fate_kick_{hit:02d}.wav",
+    hits=6, group="kick", gain_db=-12.5, floor=0.2, dynamics=0.35, inverted=True,
+)  # fmt: skip
+TMKD_SNARE = Layer(
+    folder="tmkd/TMKD_Snares_Pack/TMKD_Snare1_BB14x6/WAV",
+    files="TMKD_SNARE1_BB14x6_L{layer}_{hit:02d}.wav", hits=6, layers=8, group="snare",
+    gain_db=-19.5, floor=0.4, dynamics=0.5,
+)  # fmt: skip
+# The CrocellKit with these samples under its kick drums and its snare drum. A layer has
+# about the level of the microphones of its drum (tools/diagnose/kit_levels.py), and
+# the two groups are 2 dB lower: the sum has the level of the kit with no layers.
+CROCELL_LAYERS = replace(
+    CROCELL, name="CrocellKit with layers",
+    layers={35: TMKD_KICK, 36: TMKD_KICK, 38: TMKD_SNARE, 40: TMKD_SNARE},
+    mics_db={**CROCELL.mics_db, "kick": CROCELL.mics_db["kick"] - 2.0,
+             "snare": CROCELL.mics_db["snare"] - 2.0},
 )  # fmt: skip
 SFZ_SWITCH = 12  # the key switch of the kit for hi-hat strokes with a fixed opening
 KITS = {"crocell": CROCELL, "drs": DRS, "naked": NAKED, "muldjord": MULDJORD,
-        "aasimonster": AASIMONSTER}  # fmt: skip
+        "aasimonster": AASIMONSTER, "crocell-layers": CROCELL_LAYERS}  # fmt: skip
 
 
 def kit() -> KitSpec:
     """Return the kit of the work: the first kit of the list that is in the cache.
 
-    For a comparison of kits, the environment variable GTYPESTAR_KIT selects
-    a kit by its short name (crocell, drs, naked).
+    The kit of the work is the CrocellKit with the processed samples under
+    its kick drums and its snare drum; with no such samples on the computer,
+    the CrocellKit alone. For a comparison of kits, the environment variable
+    GTYPESTAR_KIT selects a kit by its short name (a key of `KITS`).
     """
     wanted = os.environ.get("GTYPESTAR_KIT", "")
     if wanted:
         return KITS[wanted]
-    for spec in (CROCELL, DRS):
-        if (SAMPLES_DIR / spec.folder).exists():
+    for spec in (CROCELL_LAYERS, CROCELL, DRS):
+        layers = all((SAMPLES_DIR / layer.folder).exists() for layer in spec.layers.values())
+        if (SAMPLES_DIR / spec.folder).exists() and layers:
             return spec
     raise FileNotFoundError(
         "No drum kit in .cache/samples. See README.md, 'Requirements', for the download."
@@ -452,6 +515,17 @@ def render(
     spec = spec or kit()
     total = int(seconds * RATE) + RATE
     stems = {group: np.zeros((total, 2), dtype=np.float32) for group in spec.groups}
+    # The sounds that this kit does not have come from other kits, into the same groups.
+    for name in sorted(set(spec.borrowed.values())):
+        other = KITS[name]
+        if not (SAMPLES_DIR / other.folder).exists():
+            continue
+        notes = {midi for midi, lender in spec.borrowed.items() if lender == name}
+        lent = [event for event in events if int(event.midi) in notes]
+        events = [event for event in events if int(event.midi) not in notes]
+        for group, sound in render(lent, seconds, other).items():
+            if group in stems:
+                stems[group] += sound[:total]
     # The place of each microphone: its group, and its weights for the left and the right.
     places = {
         channel: (group, np.float32(np.cos((position + 1.0) * np.pi / 4.0)),
@@ -533,6 +607,23 @@ def render(
             begin = first - early
             stems[group][begin : begin + length, 0] += part * left
             stems[group][begin : begin + length, 1] += part * right
+        layer = spec.layers.get(midi)
+        if layer is not None and level >= layer.floor:
+            # The processed sample under the stroke: its loudness layer, and a recording
+            # that is not the recording of the stroke before.
+            number = 1 + min(layer.layers - 1, int(level * layer.layers))
+            take = 1 + int(random.integers(layer.hits))
+            if take == last_index.get(f"layer {midi}"):
+                take = take % layer.hits + 1
+            last_index[f"layer {midi}"] = take
+            path = SAMPLES_DIR / layer.folder / layer.files.format(layer=number, hit=take)
+            data = CACHE.get(path, 1.5)
+            length = min(len(data), limit)
+            amount = dsp.db(layer.gain_db) * float(level**layer.dynamics)
+            sound = data[:length] * np.float32(-amount if layer.inverted else amount)
+            if sound.shape[1] == 1:
+                sound = np.repeat(sound, 2, axis=1) * np.float32(0.7071)
+            stems[layer.group][first : first + length] += sound[:, :2]
     for group, level in spec.mics_db.items():
         stems[group] *= np.float32(dsp.db(level))
     if spec.tone:

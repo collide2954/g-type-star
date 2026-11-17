@@ -143,6 +143,35 @@ def fetch_kit(spec: kit.KitSpec | None = None) -> Path:
     return folder
 
 
+# The processed kick and snare samples that play under the strokes of the kit (see
+# `kit.Layer`): "The Metal Kick Drum" by Rafa Prieto. Free; the maker keeps the copyright
+# and does not allow a copy of the collection in a different place; "You are allowed to
+# use these samples for any artistic application".
+LAYERS_URL = "https://www.themetalkickdrum.com/free-stuff/free-download_php-file-"
+LAYERS = {
+    "TMKD_Kicks_Pack.zip": "f452ee708e1b145ea0492cfbe1e6eee1cb574edaf58d9553bf5618a7629aeef9",
+    "TMKD_Snares_Pack.zip": "6ba99d09a2ff5ae3cbc8f1109e05e0130bd6f5d3c6fc20c310e026e25e0c8156",
+}
+
+
+def fetch_layers() -> Path:
+    """Download and unpack the samples for the layers of the drums (173 MB)."""
+    top = kit.SAMPLES_DIR / "tmkd"
+    for name, wanted in LAYERS.items():
+        folder = top / Path(name).stem
+        if folder.exists():
+            continue
+        archive = top / name
+        if not archive.exists():
+            print(f"fetch: {name}")
+            _download(LAYERS_URL + name, archive)
+        _verify(archive, wanted, LAYERS_URL)
+        with zipfile.ZipFile(archive) as packed:
+            packed.extractall(folder)
+        archive.unlink()
+    return top
+
+
 # The models of the guitar amplifiers: files of the collection of the NAM community
 # (https://github.com/pelennor2170/NAM_models, GPL 3.0). A model file has numbers only.
 MODELS_URL = "https://raw.githubusercontent.com/pelennor2170/NAM_models/main/"
@@ -256,6 +285,8 @@ def fetch_all(small: bool = False) -> None:
         fetch_models()
         fetch_guitar()
     fetch_kit(kit.DRS if small else kit.CROCELL)
+    if not small:
+        fetch_layers()
     perc.fetch()
     if banks.fetch_bass() is None:
         raise RuntimeError("the sample bank of the bass guitar did not download")

@@ -42,6 +42,11 @@ BANDS = [(60, 120), (120, 250), (250, 500), (500, 1000), (1000, 2000), (2000, 40
 
 # Rigs to try. (The rigs of the work are in `guitar.RIGS`.)
 BUGERA = "Phillipe_P_Bugera6262-Lead-NoDrive-Cab-ESR0.009.nam"
+GODS = "Gods_Cab_1.4/48/"
+ORBIT = "orbit-metal/darwinscat-guitar-cab-irs-metal-v1.1/48k/"
+EDGE = GODS + "SM57/NO-TS/57_1_inch_edge_pres_3.wav"
+CONE = GODS + "SM57/NO-TS/57_1_inch_cone_near_pres_3.wav"
+MD421 = GODS + "MD421/NO-TS/MD421_1_inch_edge_pres_3.wav"
 LAB: dict[str, Rig] = {
     # The amplifier of the third version, with no boost of the middle and no sound
     # above 5.5 kHz, and more of the low string.
@@ -62,6 +67,44 @@ LAB: dict[str, Rig] = {
                         (("highpass", 85.0, 2), ("bell", 120.0, 3.0, 1.2),
                          ("bell", 400.0, -4.0, 1.0), ("bell", 2600.0, 3.0, 1.2),
                          ("lowpass", 4800.0, 6))),
+    # Amplifiers with no cabinet (captures of the open collection of the NAM community),
+    # with the response of a real cabinet: "God's Cab" (a Mesa cabinet of 4 x 12 inches
+    # with a Shure SM57 or a Sennheiser MD421), or a response of the Orbit set.
+    "6505-57": Rig("Helga_B_6505+_Red_ch_-_MXR_Drive_V2.nam", -8.0, 80.0, 0.0, 0.0,
+                   (("lowpass", 7000.0, 2),), cabinet=EDGE),
+    "5152-57": Rig("Tim_R_5152_Lead_+_TS9.nam", -8.0, 80.0, 0.0, 0.0,
+                   (("lowpass", 7000.0, 2),), cabinet=EDGE),
+    "5150-57": Rig("Helga_B_5150_BlockLetter_-_Boosted.nam", -8.0, 80.0, 0.0, 0.0,
+                   (("lowpass", 7000.0, 2),), cabinet=EDGE),
+    "III-57": Rig("Helga_B_III_Red_-_805_Boost.nam", -8.0, 80.0, 0.0, 0.0,
+                  (("lowpass", 7000.0, 2),), cabinet=EDGE),
+    "6505-421": Rig("Helga_B_6505+_Red_ch_-_MXR_Drive_V2.nam", -8.0, 80.0, 0.0, 0.0,
+                    (("lowpass", 7000.0, 2),), cabinet=MD421),
+    "6505-cone": Rig("Helga_B_6505+_Red_ch_-_MXR_Drive_V2.nam", -8.0, 80.0, 0.0, 0.0,
+                     (("lowpass", 7000.0, 2),),
+                     cabinet=CONE),
+    "6505-orbit2": Rig("Helga_B_6505+_Red_ch_-_MXR_Drive_V2.nam", -8.0, 80.0, 0.0, 0.0,
+                       (("lowpass", 7000.0, 2),), cabinet=ORBIT + "metal-02-4x12-venom.wav"),
+    "6505-orbit3": Rig("Helga_B_6505+_Red_ch_-_MXR_Drive_V2.nam", -8.0, 80.0, 0.0, 0.0,
+                       (("lowpass", 7000.0, 2),), cabinet=ORBIT + "metal-03-4x12-anvil.wav"),
+    # The same with less level at the input of the amplifier (less distortion), and
+    # with the filters of the retuned rig after the cabinet.
+    "5150-b": Rig("Helga_B_5150_BlockLetter_-_Boosted.nam", -14.0, 80.0, 0.0, 0.0,
+                  (("bell", 4000.0, -4.0, 1.0), ("lowpass", 5200.0, 4)),
+                  cabinet=EDGE),
+    "5150-c": Rig("Helga_B_5150_BlockLetter_-_Boosted.nam", -14.0, 80.0, 0.0, 0.0,
+                  (("bell", 900.0, 3.0, 0.7), ("bell", 4000.0, -4.0, 1.0),
+                   ("lowpass", 5200.0, 4)),
+                  cabinet=CONE),
+    "6505-b": Rig("Helga_B_6505+_Red_ch_-_MXR_Drive_V2.nam", -14.0, 80.0, 0.0, 0.0,
+                  (("bell", 4000.0, -4.0, 1.0), ("lowpass", 5200.0, 4)),
+                  cabinet=CONE),
+    "5152-b": Rig("Tim_R_5152_Lead_+_TS9.nam", -14.0, 80.0, 0.0, 0.0,
+                  (("bell", 4000.0, -4.0, 1.0), ("lowpass", 5200.0, 4)),
+                  cabinet=EDGE),
+    "5150-d": Rig("Helga_B_5150_BlockLetter_-_Boosted.nam", -20.0, 80.0, 0.0, 0.0,
+                  (("bell", 4000.0, -4.0, 1.0), ("lowpass", 5200.0, 4)),
+                  cabinet=EDGE),
 }  # fmt: skip
 
 

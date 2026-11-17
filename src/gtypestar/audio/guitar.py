@@ -68,15 +68,24 @@ class Rig:
     cabinet: str = ""
 
 
-# The captured cabinet has much level near 130 Hz and from 3 to 5 kHz, and less in the
-# middle. Against the stem "other" of the reference tracks, a heavy riff had 7 dB too
-# much from 90 to 180 Hz and from 2.8 to 5.6 kHz, and 4 to 6 dB too little from 355 Hz
-# to 1.4 kHz. These filters bring the middle forward.
+# The tone of the heavy guitar against real recordings (public examples of real
+# distorted guitars through loudspeaker cabinets, `tools/diagnose/guitar_lab.py`): the
+# third version had 6 dB more level from 4 to 6 kHz and 12 dB more from 6 to 9 kHz than
+# a real double-tracked metal guitar ("fizz": a real cabinet has almost no sound
+# there), 3 dB more from 250 Hz to 1 kHz, and 7 dB less below 120 Hz (the weight of the
+# low string). These filters, and a lower filter before the amplifier, bring the tone
+# near the real recordings.
 HEAVY_POST = (
-    ("bell", 130.0, -6.0, 1.0),
-    ("bell", 800.0, 5.0, 0.6),
+    ("low shelf", 110.0, 3.0),
+    ("bell", 450.0, -3.0, 1.0),
+    ("bell", 4000.0, -7.0, 1.0),
+    ("lowpass", 5000.0, 4),
+)
+CRUNCH_POST = (
+    ("low shelf", 110.0, 2.0),
+    ("bell", 450.0, -2.0, 1.0),
     ("bell", 4000.0, -6.0, 1.0),
-    ("high shelf", 6000.0, -2.0),
+    ("lowpass", 5500.0, 4),
 )
 LEAD_POST = (
     ("bell", 500.0, 4.0, 0.6),
@@ -84,10 +93,10 @@ LEAD_POST = (
     ("lowpass", 4800.0, 4),
 )
 RIGS = {
-    "high gain": Rig("Phillipe_P_Bugera6262-Lead-NoDrive-Cab-ESR0.009.nam", -8.0, 110.0, 6.0,
-                     12.5, HEAVY_POST),
-    "crunch": Rig("Phillipe_P_Bug6262-Crunch-NoDrive-Cab-ESR0.004.nam", -8.0, 90.0, 3.0, 6.6,
-                  HEAVY_POST),
+    "high gain": Rig("Phillipe_P_Bugera6262-Lead-NoDrive-Cab-ESR0.009.nam", -8.0, 80.0, 6.0,
+                     14.5, HEAVY_POST),
+    "crunch": Rig("Phillipe_P_Bug6262-Crunch-NoDrive-Cab-ESR0.004.nam", -8.0, 80.0, 3.0, 8.0,
+                  CRUNCH_POST),
     "clean": Rig("Phillipe_P_Bug333-Clean-Cab-ESR0.007.nam", -12.0, 70.0, 0.0, 2.5,
                  (("bell", 3600.0, -4.0, 1.0),)),
     # The lead tone: full in the middle, with no sharp top. The owner: "I really just
@@ -131,6 +140,22 @@ RELEASE_ZONES = (32, 35, 40, 45, 50, 55, 60, 63, 67, 72, 77, 81, 84, 88)  # reco
 RELEASE_FILES = 8
 RELEASE_FLOOR_DB = -55.0  # a release sound under this level is left out
 LEVEL_RANDOM_DB = 3.0  # each stroke is softer by a random amount up to this
+
+
+PLAYER = 2  # a change of the code that plays the recordings: a new number here
+
+
+def signature() -> str:
+    """Return a short word that changes with the player and the settings of the rigs.
+
+    It is part of the name of the kept guitar stems: a change of an amplifier,
+    a filter or a level makes the kept stems of the guitar invalid, and no
+    other stems.
+    """
+    import hashlib
+
+    text = repr((PLAYER, sorted(RIGS.items()), PICK_DB, RELEASE_DB, LEVEL_RANDOM_DB))
+    return hashlib.sha1(text.encode()).hexdigest()[:8]  # noqa: S324
 
 
 def available() -> bool:
