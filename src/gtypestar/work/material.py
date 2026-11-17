@@ -300,14 +300,15 @@ def percussion(rows: list[str] | str, count: int, pulses: tuple = CLAVE) -> list
 
 # The theme of the main sequence, at the sounding pitch of the tenor saxophone.
 # Eight bars above the loop of four chords, two times. Few notes, long notes, all
-# in the scale of G major except one F (the ninth of the chord of E-flat).
+# in the scale of G major except one F (the ninth of the chord of E-flat). The E at
+# the end of bar 5 stops at the bar line: the chord of bar 6 has E-flat in the bass.
 THEME = [
     r"r4. g'4.( c''4 d''4. ~ d''4.",  # the motto: G, C, D
     r"d''4. ~ d''4.) r4 a'4.( g'4.)",
     r"e''4.( ~ e''4. ~ e''4 d''4. b'4. ~",  # the fourth note of the motto: E
     r"b'4. a'4. ~ a'4) r4. r4.",
-    r"r4. g'4.( c''4 d''4. e''4. ~",  # the motto in one bar: G, C, D, E
-    r"e''4.) g''4.( ~ g''4 f''4. d''4.)",
+    r"r4. g'4.( c''4 d''4. e''4.)",  # the motto in one bar: G, C, D, E
+    r"r4. g''4.( ~ g''4 f''4. d''4.)",
     r"e''4.( ~ e''4. d''4 b'4. a'4. ~",
     r"a'4. g'4. ~ g'4 ~ g'4.) r4.",
 ]
@@ -365,8 +366,8 @@ THEME_LOW = [
     r"d'4. ~ d'4.) r4 a4.( g4.)",
     r"e'4.( ~ e'4. ~ e'4 d'4. b4. ~",
     r"b4. a4. ~ a4) r4. r4.",
-    r"r4. g4.( c'4 d'4. e'4. ~",
-    r"e'4.) g'4.( ~ g'4 f'4. d'4.)",
+    r"r4. g4.( c'4 d'4. e'4.)",
+    r"r4. g'4.( ~ g'4 f'4. d'4.)",
     r"e'4.( ~ e'4. d'4 b4. a4. ~",
     r"a4. g4. ~ g4 ~ g4.) r4.",
 ]
@@ -377,8 +378,8 @@ THEME_LOW_RISE = [
     r"d'4. ~ d'4.) r8 b16( a g4. ~ g4.)",
     r"e'4.( ~ e'4. ~ e'4 d'4. b4. ~",
     r"b4. a4. ~ a4) r4. r8 d'8( e'",
-    r"g'4.) ~ g'4. c''4( d''4. e''4. ~",
-    r"e''4.) c''4.( ~ c''4 f''4. d''4.)",
+    r"g'4.) ~ g'4. c''4( d''4. e''4.)",
+    r"r4. c''4.( ~ c''4 f''4. d''4.)",
     r"e''4.( ~ e''4. d''4 b'4. a'4.",
     r"g'4. e'4. d'4 b4. g4.)",
 ]
@@ -390,8 +391,8 @@ THEME_WIDE = [
     r"d''4.) r4. r4 a'8( b' d'' e''4. ~",
     r"e''4. ~ e''4.) g4( a4. fis4. ~",
     r"fis4. d'4. b'4) r4. g8( d b,)",
-    r"r4 d16( e g4. c''4 d''4. e''4. ~",
-    r"e''4.) c''4.( ~ c''4 d''4. f''4.)",
+    r"r4 d16( e g4. c''4 d''4. e''4.)",
+    r"r4. c''4.( ~ c''4 d''4. f''4.)",
     r"e''4.( ~ e''4. d''4 b'4. a'4. ~",
     r"a'4. g'4. e'4 d'4.) r4.",
 ]
