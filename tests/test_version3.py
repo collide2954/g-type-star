@@ -243,3 +243,17 @@ def test_a_weak_note_of_a_solo_stem_comes_up_to_the_level_of_the_others():
     # The weak note comes up to 3 dB under its level; a normal note does not change.
     assert abs(gain(weak) - 9.0) < 1.0
     assert abs(gain(normal)) < 0.01
+
+
+def test_a_video_page_with_given_starts_has_line_breaks_at_these_bars_only():
+    from gtypestar.notation import lilypond
+    from gtypestar.work import build
+
+    work = build()
+    first, last = lilypond.chunk_bars(work, 0)
+    assert last - first >= 10
+    given = lilypond.video_file(work, 0, 10.0, mobile=True, starts=[first + 4, first + 9])
+    assert "line-break-permission = ##f" in given
+    assert given.count("\\break") == 2
+    # With no given starts, LilyPond can make one more break on a full screen.
+    assert "line-break-permission" not in lilypond.video_file(work, 0, 10.0, mobile=True)

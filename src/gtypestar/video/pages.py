@@ -58,26 +58,49 @@ def staff_size(staves: int, mobile: bool = False) -> float:
     return float(np.clip(215.0 / (staves + 1.5), 5.5, 15.0))
 
 
-def _compile(path: Path, dpi: float) -> None:
+def _lilypond(path: Path, *options: str) -> None:
+    result = subprocess.run(
+        ["lilypond", *options, "-dno-point-and-click", "--loglevel=ERROR", path.name],
+        cwd=path.parent,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"LilyPond failed for {path}:\n{result.stderr[-1500:]}")
+
+
+def _compile(path: Path, dpi: float, images_text) -> None:
+    """Make the vector pages and the image pages of one section.
+
+    LilyPond makes the two kinds of pages in two runs (two output formats).
+    On a full page the two runs can make different line breaks: then the
+    section has one image more or less than vector pages. Thus the vector
+    pages come first, and the run for the images gets the line breaks of
+    the vector pages: `images_text` is a function that returns the LilyPond
+    text for the bars at which the pages start.
+    """
     # Remove the pages of an earlier build: the new build can have fewer pages.
     for suffix in ("png", "svg"):
         for old in _numbered(path.parent, path.stem, suffix):
             old.unlink()
-    for backend in ([], ["-dbackend=svg"]):
-        result = subprocess.run(
-            ["lilypond", *backend, "-dno-point-and-click", "--loglevel=ERROR", path.name],
-            cwd=path.parent,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"LilyPond failed for {path}:\n{result.stderr[-1500:]}")
+    _lilypond(path, "-dbackend=svg")
+    vectors = _numbered(path.parent, path.stem, "svg")
+    copy = path.with_name(f"image-{path.name}")
+    copy.write_text(images_text(vectors), encoding="utf-8")
+    _lilypond(copy)
     subprocess.run(
-        ["pdftoppm", "-r", f"{dpi:.3f}", "-png", f"{path.stem}.pdf", path.stem],
+        ["pdftoppm", "-r", f"{dpi:.3f}", "-png", f"{copy.stem}.pdf", copy.stem],
         cwd=path.parent,
         check=True,
     )
+    images = _numbered(path.parent, copy.stem, "png")
+    if len(images) != len(vectors):
+        raise RuntimeError(f"{path.name}: {len(images)} images for {len(vectors)} vector pages")
+    for number, image in enumerate(images, start=1):
+        image.rename(path.with_name(f"{path.stem}-{number}.png"))
+    for rest in (copy, copy.with_suffix(".pdf")):
+        rest.unlink(missing_ok=True)
 
 
 def _numbered(directory: Path, stem: str, suffix: str) -> list[Path]:
@@ -159,20 +182,36 @@ def build_pages(
     page_mm = lilypond.MOBILE_PAGE_MM if mobile else lilypond.VIDEO_PAGE_MM
     dpi = width_px / (page_mm[0] / 25.4)
     files: list[tuple[Path, Fraction]] = []
-    changed: list[Path] = []
+    changed: list[tuple[Path, int, float, Fraction]] = []
     for index in range(lilypond.chunk_count(work)):
         first, _last = lilypond.chunk_bars(work, index)
         staves = len(lilypond.active_players(work, index))
         path = directory / f"section-{index + 1:03d}.ly"
-        text = lilypond.video_file(work, index, staff_size(staves, mobile), mobile=mobile)
-        # A file that did not change keeps its pages from the last build.
+        size = staff_size(staves, mobile)
+        text = lilypond.video_file(work, index, size, mobile=mobile)
+        # A file that did not change keeps its pages from the last build, if that build
+        # came to its end: it then has the same number of images and of vector pages.
         same = path.exists() and path.read_text(encoding="utf-8") == text
-        if not (same and _numbered(directory, path.stem, "png")):
+        images = len(_numbered(directory, path.stem, "png"))
+        if not (same and images and images == len(_numbered(directory, path.stem, "svg"))):
             path.write_text(text, encoding="utf-8")
-            changed.append(path)
+            changed.append((path, index, size, work.structure.bar(first).start))
         files.append((path, work.structure.bar(first).start))
+
+    def compile_one(job: tuple[Path, int, float, Fraction]) -> None:
+        path, index, size, start = job
+
+        def images_text(vectors: list[Path]) -> str:
+            # The bar at which each vector page starts.
+            pages = [_parse(svg, svg, start, width_px) for svg in vectors]
+            bars = [work.structure.bar_at(Fraction(page.start).limit_denominator(96)).number
+                    for page in pages if page is not None]  # fmt: skip
+            return lilypond.video_file(work, index, size, mobile=mobile, starts=bars[1:])
+
+        _compile(path, dpi, images_text)
+
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
-        list(pool.map(lambda path: _compile(path, dpi), changed))
+        list(pool.map(compile_one, changed))
 
     pages: list[Page] = []
     for path, start in files:

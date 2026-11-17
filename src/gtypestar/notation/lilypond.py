@@ -1289,10 +1289,22 @@ def active_players(work: Work, index: int) -> list[Player]:
     ]  # fmt: skip
 
 
-def video_file(work: Work, index: int, staff_size: float, *, mobile: bool = False) -> str:
+def video_file(
+    work: Work,
+    index: int,
+    staff_size: float,
+    *,
+    mobile: bool = False,
+    starts: list[int] | None = None,
+) -> str:
     """Return the LilyPond text of one section, as a page for the video.
 
     If `mobile` is true, the page is for the video for a telephone.
+
+    `starts` are the bars (numbers of the full work) at which the pages
+    after the first one start. With them, LilyPond makes a line break at
+    these places only. (With no `starts`, a screen has about 15 seconds of
+    music, and LilyPond makes one more break where a screen is too full.)
     """
     from .structure import Structure, global_to_lilypond
 
@@ -1318,10 +1330,15 @@ def video_file(work: Work, index: int, staff_size: float, *, mobile: bool = Fals
         if seconds >= (MOBILE_SECONDS_PER_SCREEN if mobile else VIDEO_SECONDS_PER_SCREEN):
             part.breaks.add(bar.number - first + 1)
             shown_from = bar.end
+    only = ""
+    if starts is not None:
+        # The breaks are given: a break at the end of the bar before each start.
+        part.breaks = {bar - first for bar in starts if first < bar <= last}
+        only = "\\override Score.NonMusicalPaperColumn.line-break-permission = ##f\n"
 
     blocks = [
         "global = {\n\\accidentalStyle Score.modern\n\\numericTimeSignature\n"
-        f"\\set Score.currentBarNumber = #{first}\n" + global_to_lilypond(part) + "\n}"
+        f"{only}\\set Score.currentBarNumber = #{first}\n" + global_to_lilypond(part) + "\n}"
     ]
     staves: dict[str, list[str]] = {family: [] for family in FAMILY_ORDER}
     players = work.orchestra.players
