@@ -6,7 +6,7 @@ This document says where each sound of *G-Type Star* comes from, how the mix and
 
 | Player | Source | Where it runs |
 | --- | --- | --- |
-| Drums | Samples of a real kit with all its microphones: CrocellKit (DrumGizmo). If it is not there: DRSKit. The code plays the hits ([`audio/kit.py`](../src/gtypestar/audio/kit.py)). For a comparison, the code can also play the kit *Naked Drums* (a Yamaha Recording Custom kit): set the environment variable `GTYPESTAR_KIT` to `naked`. | Each computer (the code downloads the kit) |
+| Drums | Samples of a real kit with all its microphones: CrocellKit (DrumGizmo). Under each stroke of the kick drums and of the snare drum, a processed sample plays at about the level of the microphones: *The Metal Kick Drum* (see "The drums"). If the kit is not there: DRSKit. The code plays the hits ([`audio/kit.py`](../src/gtypestar/audio/kit.py)). For a comparison, the code can also play other kits: set the environment variable `GTYPESTAR_KIT` to `crocell` (no layers), `naked`, `muldjord` or `aasimonster`. | Each computer (the code downloads the kit and the layers) |
 | Percussion (shaker, tambourine, congas) | Samples of real instruments: the *Versilian Community Sample Library*. The code plays the strokes ([`audio/perc.py`](../src/gtypestar/audio/perc.py)); the shaker takes the move away and the move back in turn. | Each computer (the code downloads the samples) |
 | Bass guitar | Samples of a five-string bass, the direct signal of the pickup: Karoryfer *Black And Blue Basses*. An amplifier model of the project comes after them. | Each computer |
 | Electric piano | Samples of a 1977 Rhodes Mark I: *jRhodes3d* by Jeff Learman | Each computer |
@@ -50,7 +50,47 @@ The lead tone is for the solo lines. The owner heard the first version and said 
 
 The script `tools/diagnose/guitar_alone.py` writes the guitar part of some bars with no other player.
 
+### After the third version: "This one sounds bad"
+
+The owner heard version 3.3 and asked for a better, more real metal guitar. Two searches gave the same answer: no free library is better than METAL-GTX for a guitar with eight strings. What was wrong was the way the project used it, and the tone. Real recordings were the measure: public examples of real distorted guitars (Wikimedia Commons; they stay in `.cache/reference/guitar`). `tools/diagnose/guitar_lab.py` shows the tone of a rig next to them, and `tools/diagnose/judge.py` shows how near a sound is to them for an audio model.
+
+| What was wrong | Measured | Change |
+| --- | --- | --- |
+| The gaps between the notes of a riff were silent: no player sounds like that. | Between two palm-muted notes the level fell by 30 to 55 dB. | The player uses what the library has for this: the noise of the pick a little before each stroke, the sound of the hand that stops a string ("release"), and nine recordings for each key (the three takes of the key and of the two keys next to it), with a random loudness. The numbers are from the SFZ program of the library. |
+| "Fizz": too much level in the high range. | 6 dB more from 4 to 6 kHz and 12 dB more from 6 to 9 kHz than a real double-tracked metal guitar. A real cabinet has almost no sound above 6 kHz. | A low-pass filter at 5 kHz and a cut at 4 kHz after the amplifier. |
+| Too little weight of the low string. | 7 dB less below 120 Hz. | The filter before the amplifier is at 80 Hz (before: 110 Hz); a low shelf after it. |
+| Too much low middle. | 3 dB more from 250 Hz to 1 kHz. | No boost at 800 Hz; a cut at 450 Hz. |
+
+The same riff, the two rhythm guitars alone (the last column: the mean of the largest similarities to the real recordings; a real recording against the others has 1.0 by definition):
+
+| Version | "real - fake", sum of five pairs | Near the real recordings |
+| --- | --- | --- |
+| Version 3.3 | 54 | 0.81 |
+| With the pick noise, the releases, nine recordings | 60 | 0.89 |
+| With the new tone | 71 | 0.91 |
+| Real recordings | 56 to 105 | 1.0 |
+
+A model of an amplifier with no cabinet can have the response of a real cabinet (`Rig.cabinet`, a file in `.cache/models/ir`). The comparison had a Peavey 5150 with a boost pedal (capture: Helga B) and "God's Cab", the responses of a Mesa cabinet of 4 x 12 inches with a Shure SM57. For the audio model this rig is as near to the real recordings as the retuned rig (0.91 against 0.93 on the amplifier test), so the choice is for the ears of the owner.
+
+A complete SFZ player would play all of the library as its makers planned it (real hammer-on and slide samples, key switches). The package `pysfizz` is such a player; the session could not install it without the permission of the owner.
+
 The distortion of an amplifier is a compressor: after it, a soft stroke is almost as loud as a hard stroke. In the third version, a held chord with the mark *mezzo forte* and a hairpin to *pianissimo* stayed at full level for six seconds, above the first notes of the horn chorale (mark N). Now a fader after the amplifier follows the written loudness (`band.fader`), as the volume control of the player or the hand of the engineer does: 24 dB between the loudness values 0 and 1 for the high gain tone, 10 dB for the crunch tone. The build-up before the helium flash and the fall at the end of part 7 have a real change of the loudness of the guitar because of this.
+
+## The drums
+
+The owner: "The drums are acceptable" (second version), then "Look for better drums". The measure here is the drum stem of each reference track (separated by a model), and the same audio model as for the guitar. The drums alone, as the mix has them, on two passages (the groove of mark D and the fast kick drums of the flares; `tools/diagnose/drums_alone.py`):
+
+| Kit | Near the reference drums: groove | Fast kick drums |
+| --- | --- | --- |
+| A: CrocellKit (versions 1 to 3.3) | 0.86 | 0.88 |
+| B: Naked Drums | 0.89 | 0.91 |
+| C: MuldjordKit | 0.87 | 0.92 |
+| D: Aasimonster | 0.89 | 0.93 |
+| E: CrocellKit with layers | 0.90 | 0.91 |
+
+- **C and D** are kits of DrumGizmo that were recorded for metal. Each kick drum has a microphone and a trigger: the MuldjordKit has the click of the trigger as a channel, the Aasimonster has a drum module that plays a kick sample (the code moves it 12 ms earlier, in time with the microphone). The Aasimonster has the most recordings (93 strokes of the snare drum, rim shots, three closed hi-hats). It has no cross-stick and no hi-hat pedal: the CrocellKit plays these two (`KitSpec.borrowed`).
+- **E** is what a metal production does: a clean, short, processed sample under each stroke of the kick drum and of the snare drum ("sample reinforcement"). The samples are from *The Metal Kick Drum*: the kick "Fate" (0.2 seconds, little level below 60 Hz) and a snare drum of 14 x 6 inches with eight layers of loudness. A layer is about as loud as the microphones of its drum; a ghost note has no layer. E is the kit of the work now: it keeps all sounds of the kit that the mix was made for.
+- In the full mix (the flares), the new guitar with E is nearer to the reference tracks than version 3.3 (0.93 against 0.89), and so is the new guitar with D (0.92).
 
 ## The steps of a render
 
@@ -109,6 +149,8 @@ The writer of the code cannot hear. Each render is measured against the referenc
 - `tools/diagnose/voices.py`: the level of each recorded voice against the band.
 - `tools/diagnose/silent_notes.py`: the notes of the saxophone that have no sound, or almost no sound, in the stem of MuseScore. In version 3.2 it found four notes in the canon of the motto (mark H): a G4 after another note under a slur, at a soft dynamic, is 10 to 13 dB under its level in the sound library. The stem of a solo player now gets its weak notes at the level of the others (`musestems.even`), as an engineer does by hand.
 - `tools/diagnose/pulse.py`: how clear the pulse of each part is (the autocorrelation of the onset curve), against the reference recordings.
+- `tools/diagnose/judge.py`: a comparison of candidates for one sound (a guitar, a drum kit): pairs of descriptions ("a real electric guitar played by a guitarist" against "a fake guitar from a keyboard"), and the similarity to real recordings of the instrument.
+- `tools/diagnose/guitar_lab.py`: settings of the guitar amplifier on one passage, with the tone of real recordings next to them. `tools/diagnose/drums_alone.py`: one drum kit on some bars, as the mix has it.
 
 The owner of the project is the last judge: the tools only find what a number can show.
 
@@ -143,6 +185,9 @@ The tests in `tests/test_render.py` and `tests/test_tape.py` check these three i
 | Sound | Source | Licence |
 | --- | --- | --- |
 | Drums | CrocellKit and DRSKit. Drum samples: DrumGizmo.org | CC BY 4.0 |
+| Layers under kick and snare | *The Metal Kick Drum* (TMKD), Rafa Prieto, https://www.themetalkickdrum.com | Free; the maker keeps the copyright; "You are allowed to use these samples for any artistic application"; no copy of the collection in a different place |
+| Drums, for a comparison | MuldjordKit and Aasimonster. Drum samples: DrumGizmo.org | CC BY 4.0 |
+| Guitar cabinet, for a comparison | "God's Cab 1.4", Signals Audio / Wilkinson Audio (a copy in the Internet Archive; the site of the maker is gone) | Free ("It's free"); no licence text |
 | Drums, for a comparison | *Naked Drums*, Wilkinson Audio (SFZ version: kinwie), https://github.com/sfzinstruments/WilkinsonAudio.NakedDrums | CC BY 4.0 |
 | Percussion | Versilian Studios, *Versilian Community Sample Library* (https://github.com/sgossner/VCSL) | CC0 1.0 |
 | Bass guitar | Karoryfer Samples, *Black And Blue Basses* | CC0 1.0 |

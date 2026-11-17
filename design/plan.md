@@ -125,9 +125,19 @@ Done:
   clef for the octave below in the score in C. Score, parts and the two videos are
   built from the music of version 3.3.
 
+- After version 3.3 the owner asked for a better guitar and better drums. The guitar
+  plays with pick noise, release sounds and nine recordings for each key, and has a
+  tone near real recordings; the kit has processed samples under its kick drums and
+  its snare drum. The owner has the guitar in four forms (A to D) and the drums in
+  five (A to E), and the flares in the full mix in three. See docs/audio.md.
+
 Open:
 
-- The owner selects the drum kit.
+- The owner selects the guitar (C: the retuned rig, now in the work; D: a Peavey 5150
+  with a real cabinet) and the drums (E: the kit with layers, now in the work; C or D:
+  a different kit).
+- A complete SFZ player (the package `pysfizz`) for the guitar library, if the owner
+  permits the installation.
 - The flares, the last burning and the nebula keep most of their notes of the second
   version (ranges, clashes, the number of layers, the electronics and the balance are
   changed). A new version of a part comes if the owner asks for it.

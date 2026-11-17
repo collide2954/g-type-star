@@ -103,3 +103,10 @@ development = "I think you could make use of motivic development better, and not
 plan = "I think everything needs basically reorganized and planned with purpose to really elevate this work."
 sounds = "Explore other samples too for sounds, other ideas for live processing of sound."
 # The plan of the third version is in design/plan.md.
+
+
+# The owner heard version 3.3 (2026-11-17).
+[version_3_3_heard]
+guitar = "Can we find better more realistic metal guitar samples or vst or something? This one sounds bad."
+drums = "Look for better drums while you're at it"
+# What the work does with them is in docs/audio.md ("The guitar", "The drums").
