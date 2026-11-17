@@ -60,28 +60,28 @@ from .material import Bars
 # The theme with all force
 # ----------------------------------------------------------------------------
 
-# The theme for the tenor saxophone, with a new shape that uses the range of the
-# instrument: accented low notes (D3, G3), leaps of a ninth and of two octaves, and the
-# notes above the usual range, to C6 in bar 6.
+# The theme for the tenor saxophone, with a shape that uses the range of the instrument
+# in the audio (to F5): accented low notes (D3, G3), leaps of a ninth and of two
+# octaves, and the highest note (F5) in bar 6. The trumpet has the notes above.
 THEME_FORCE = [
-    r"d8-> g-> r g'4.( c''4 d''4. g''4. ~",
-    r"g''4.) r4. r4 a'4.->( g4.->)",
-    r"e'4.->( e''4. ~ e''4 b''4.-> a''4. ~",
-    r"a''4. g''4. ~ g''4) r4. r8 d8->( e",
-    r"g4.->) g'4.( c''4 d''4. e''4. ~",
-    r"e''4.) g''4.( ~ g''4 c'''4.-> ~ c'''4.",
-    r"b''4. a''4. g''4 e''4. d''4.)",
+    r"d8-> g-> r g'4.( c''4 d''4. e''4. ~",
+    r"e''4.) r4. r4 a'4.->( g4.->)",
+    r"e'4.->( e''4. ~ e''4 d''4.-> b'4. ~",
+    r"b'4. a'4. ~ a'4) r4. r8 d8->( e",
+    r"g4.->) g'4.( c''4 d''4. e''4.)",
+    r"r4. c''4.( ~ c''4 f''4.-> ~ f''4.",
+    r"e''4. d''4. b'4 a'4. g'4.)",
     r"b'4.( a'4. g'4 ~ g'4.) r4.",
 ]
-# The same shape for the trumpet, with no low notes.
+# The same shape for the trumpet, with no low notes. Its highest note is B-flat 5.
 THEME_FORCE_TRUMPET = [
     r"r4. g'4.( c''4 d''4. g''4. ~",
     r"g''4.) r4. r4 a'4.->( g'4.)",
-    r"e''4.->( ~ e''4. ~ e''4 b''4.-> a''4. ~",
-    r"a''4. g''4. ~ g''4) r4. r4.",
-    r"r4. g'4.( c''4 d''4. e''4. ~",
-    r"e''4.) g''4.( ~ g''4 c'''4.-> ~ c'''4.",
-    r"b''4. a''4. g''4 e''4. d''4.)",
+    r"e''4.->( ~ e''4. ~ e''4 a''4.-> g''4. ~",
+    r"g''4. e''4. ~ e''4) r4. r4.",
+    r"r4. g'4.( c''4 d''4. e''4.)",
+    r"r4. g''4.( ~ g''4 bes''4.-> ~ bes''4.",
+    r"a''4. g''4. e''4 d''4. b'4.)",
     r"b'4.( a'4. g'4 ~ g'4.) r4.",
 ]
 
@@ -317,8 +317,8 @@ FALL_CHORD_RHYTHM = ["A A A A A", "A A A A A", "A A - A -", "A A - A -", "A A - 
 # The saxophone: the motto goes down (three steps and a fourth), each time lower, through
 # the full range. From bar 5 it holds its three lowest notes.
 FALL_SAX = [
-    r"b''4.->( a''4. g''4 d''4.) r4.",
-    r"f''4.->( es''4. des''4 as'4.) r4.",
+    r"b'4.->( a'4. g'4 d'4.) r4.",
+    r"f'4.->( es'4. des'4 as4.) r4.",
     r"d'4.->( c'4. bes4 f4.) r4.",
     r"gis4.->( fis4. e4 b,4.) r4.",
     r"bes,1..->",
@@ -333,7 +333,7 @@ FALL_TRUMPET = [
 ]
 # The strings: the note that each group holds, the bar in which it starts to fall, and
 # its lowest open string.
-FALL_STRINGS = {"vn1": (95, 1, 55), "vn2": (91, 3, 55), "va": (86, 5, 48), "vc": (69, 6, 36)}
+FALL_STRINGS = {"vn1": (95, 1, 55), "vn2": (91, 3, 55), "va": (84, 5, 48), "vc": (69, 6, 36)}
 # The low horns hold a chord of two fifths (root, fifth, ninth). It moves down with the
 # bars, and each player stops at the lowest note of the instrument, or before it.
 FALL_HORNS = {"bsax": (43, 8), "tbn": (50, 11), "asax": (69, 10)}  # the first note, the last bar
@@ -443,7 +443,8 @@ def write(work: Work) -> None:
     structure.mark(s.bar(1), "T")
     line = [bar.replace("(", "").replace(")", "") for bar in [*m.LINE_1, *m.LINE_2, *LINE_END]]
     # The saxophone player has one bar of rest to breathe.
-    s.set("tsax", [*line[:3], None, *line[4:]], r"\ff")
+    sax_line = [tools.within(bar, 44, mainseq.SAX_TOP) for bar in line]
+    s.set("tsax", [*sax_line[:3], None, *sax_line[4:]], r"\ff")
     s.set("gtr", line, r"\ff\leadtone\pmoff")
     s.set("lead", [tools.octave(bar, 1) for bar in line], r"\ff", r'\switch "lead moog"')
     s.set("chip", [tools.octave(bar, 2) for bar in line], r"\f")
@@ -491,7 +492,11 @@ def write(work: Work) -> None:
         turn_flats = turn[1:2] == "b" or flats
         stroke = note_name(top, turn_flats)
         strokes = f"{stroke}4.-> {stroke}4.-> {stroke}4-> {stroke}4.-> {stroke}4.->"
-        parts["tsax"] += [f"{low}4.-> {motto[0]}", motto[1], f"r4. r4. r4 {run}", strokes]
+        # The saxophone has each phrase in an octave that it has in the audio (to F5).
+        sax_motto = [tools.fit(bar, mainseq.SAX_TOP, tuple(motto)) for bar in motto]
+        sax_run = tools.fit(run, mainseq.SAX_TOP)
+        parts["tsax"] += [f"{low}4.-> {sax_motto[0]}", sax_motto[1], f"r4. r4. r4 {sax_run}",
+                          tools.fit(strokes, mainseq.SAX_TOP)]  # fmt: skip
         trumpet = [tools.tr(r"g'4.( c''4. ~ c''4 d''4. e''4. ~", step), motto[1]]
         trumpet_run = run if run_start >= 54 else sixteenths(scale_up(63, 12, key), flats)
         parts["tpt"] += [*trumpet, f"r4. r4. r4 {trumpet_run}", strokes]
@@ -576,6 +581,11 @@ def write(work: Work) -> None:
     # ------------------------------------------------- V: the fall
     s = Bars(work, FALL_BARS)
     structure.mark(s.bar(1), "V")
+    # In the fall the division of the pulses becomes coarse, step by step (six notes in
+    # a pulse, five, four, three, two, one), and the tempo falls: here the ear follows
+    # the fall, not a beat.
+    free: set[int] = work.extras.setdefault("free_divisions", set())  # type: ignore[assignment]
+    free.update(s.bar(number) for number in range(1, FALL_BARS + 1))
     fall_tempo(structure, s.bar(1))
     levels = FALL_LEVELS
 

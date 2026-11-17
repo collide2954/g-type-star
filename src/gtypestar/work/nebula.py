@@ -4,7 +4,7 @@ No steady groove. The real sound of the Sun (its oscillations, made faster),
 radio noise, an electric piano with chords of fourths, and single high notes
 of the chip synthesizer: the lines of the spectrum of hydrogen. A slow pulse
 starts (35 beats in a minute). Then the drums go faster by division: one,
-two, three, and so on to eight notes in a beat. The part ends on one loud,
+two, three, four, six, and eight notes in a beat. The part ends on one loud,
 dense chord of all players (a "space chord").
 
 Style profile: "Space" (see research/tables/profiles.csv).
@@ -82,12 +82,12 @@ def write(work: Work) -> None:
         r2 r4 d''''16\pp r8. | R1 | r4 es''''16 r8. r2 | r2 c''''16 r8. r4 |
         R1 | f''''16 r8. r4 r2 | r2 r4 d''''16 r8. | c''''16 r8. r2. |
         r4 r8 es''''16 r16 r2 | R1 |
-        \tuplet 11/8 { g'''16\pp( c'''' d'''' c'''' g''' d''' g''' c'''' d'''' es'''' d'''') } r2 |
-        r2 \tuplet 11/8 { d''''16( c'''' g''' f''' g''' c'''' d'''' f'''' d'''' c'''' g''') } |
-        \tuplet 11/8 { g'''16( c'''' d'''' c'''' g''' d''' g''' c'''' d'''' es'''' d'''') }
-        \tuplet 11/8 { c''''16( g''' f''' d''' f''' g''' c'''' d'''' c'''' g''' f''') } |
-        \tuplet 11/8 { g'''16\<( c'''' d'''' f'''' d'''' c'''' g''' c'''' d'''' f'''' g'''') }
-        \tuplet 11/8 { g''''16( f'''' d'''' c'''' d'''' f'''' g'''' f'''' d'''' c'''' g'''\mp) } |""",
+        g'''16\pp( c'''' d'''' c'''' g''' d''' g''' c'''') r2 |
+        r2 d''''16( c'''' g''' f''' g''' c'''' d'''' f'''') |
+        g'''16( c'''' d'''' c'''' g''' d''' g''' c'''')
+        c''''16( g''' f''' d''' f''' g''' c'''' d'''') |
+        g'''16\<( c'''' d'''' f'''' d'''' c'''' g''' c'''')
+        g''''16( f'''' d'''' c'''' d'''' f'''' g'''' g'''\mp) |""",
     )
     s.set(
         "pad.rh",
@@ -160,8 +160,8 @@ def write(work: Work) -> None:
         "tm f- f- f- f-\nbd x- -- x- --",
         "tm ff- mf- ff- mf-\nbd x-- --- x-- ---",
         "tm ffm- ffm- hmf- hmff\nbd x--- x--- x--- x---",
-        "sn o-o-- o-o-- --o--- o-----\ntm --h-m --h-f hm-mff -hmfff\nbd x---- x---- x----- x-----",
-        "sn ooooooo ooooooo oooooooo OOOOOOOO\nbd x------ x------ x---x--- x-x-x-x-",
+        "sn o-o--- o-o--- --o--- o-----\ntm --h-m- --h-f- hm-mff -hmfff\nbd x----- x----- x----- x-----",
+        "sn oooooooo oooooooo oooooooo OOOOOOOO\nbd x------- x------- x---x--- x-x-x-x-",
     ]
     s.set("drums", [drums.steps(rows, BEATS) for rows in ladder], r"\mp\<")
     # The drum machine: a low tone that falls (bars 1 and 2), and noise that rises (bars 5 and 6).

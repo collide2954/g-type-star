@@ -389,7 +389,7 @@ SOLO_2 = [
 # The saxophone uses its lowest and its highest notes.
 SAX_TURN_1 = [
     r"bes,8-> bes,-> r8 c16( es f g bes c' es' f' g' bes'",
-    r"c''16 es'' f'' g'' bes''4->) ~ bes''8 g''16( f'' es''8 c'')",
+    r"c''16 es'' f'' es'' c'' bes' g'8->) ~ g'8 f'16( es' c'8 bes)",
 ]
 GUITAR_TURN_1 = [
     r"\tuplet 6/4 { c''16( es'' f'' g'' f'' es'' } \tuplet 6/4 { c'' es'' f'' g'' bes'' g'' } "
@@ -397,8 +397,8 @@ GUITAR_TURN_1 = [
     r"es'''4->) d'''16( c''' bes'' g'' f''8 es''16 c'' bes'8 c'')",
 ]
 SAX_TURN_2 = [
-    r"g''4->( ~ g''16 f'' es'' c'' bes'8) c8-> r c->",
-    r"r16 c( es g c' es' g' c'' es'' g'' a''8 ~ a''4)",
+    r"f''4->( ~ f''16 es'' c'' bes' g'8) c8-> r c->",
+    r"r16 c( es g c' es' g' bes' c'' es'' f''8 ~ f''4)",
 ]
 # The last two bars of the guitar go down to the first note of the third line (E-flat).
 GUITAR_TURN_2 = [
@@ -488,11 +488,12 @@ def write(work: Work) -> None:
         "tsax",
         [None, None, None, None, None, r"r2 b,8.->\ff cis8.-> dis8->", None,
          r"g8-> g-> r4 e4-> c8-> c->",
-         tools.first(SAX_MELODY[0], r"\f\normaltone", note=True), *SAX_MELODY[1:],
+         tools.first(SAX_MELODY[0], r"\f\normaltone", note=True), *SAX_MELODY[1:4],
+         *[tools.octave(bar, -1) for bar in SAX_MELODY[4:]],
          None, None, r"fis8.->\ff\growl fis8.-> fis8-> r2",
          r"dis8.-> dis8.-> dis8-> cis8.-> cis8.-> b,8->",
          None, r"g8.-> g8.-> g8-> e8.-> e8.-> c8->", None,
-         r"a,16(\< b, cis e fis a b cis' e' fis' a' b' cis'' e'' fis'' a''\ff)"],
+         r"a,16(\< b, cis e fis a b cis' e' fis' a' b' cis'' dis'' e'' eis''\ff)"],
         r"\growl",
     )  # fmt: skip
     # The horns: the chords of the riff, with no third.
@@ -503,8 +504,12 @@ def write(work: Work) -> None:
                   accents(RIFF_FAST[3]), "P_-P _-P_ ---- ----", accents(RIFF_FAST[5]),
                   RIFF_FAST[6], "N_N_ N_N_ O_O_ O_O_"]  # fmt: skip
     for player, table in horn_tables(30).items():
-        s.set(player, [None if bar is None else patterns.pitched(bar, BEATS, table)
-                       for bar in horn_bars], r"\ff")  # fmt: skip
+        bars = [None if bar is None else patterns.pitched(bar, BEATS, table) for bar in horn_bars]
+        if player == "tpt":
+            # The trumpet has the rise of the melody to the high A: the saxophone of the
+            # audio stops at F5, and plays these four bars one octave lower.
+            bars[12:16] = SAX_MELODY[4:]
+        s.set(player, bars, r"\ff")
     cues.append(Cue("mercury3-548", s.bar(1), 1, offset=72.1, text="Roger. Two and a half G.",
                     seconds=1.9, gain_db=-11.0, radio=True, pan=-0.3))  # fmt: skip
     s.close()
@@ -618,9 +623,10 @@ def write(work: Work) -> None:
     # time it is the motto of the work: G, C, D, E), then the top of the last chord.
     s.set(
         "tsax",
-        [*line, r"fis2 r2", *motto,
-         r"f''1 ~", r"f''2 r2", r"g''8.-> g''8.-> g''8-> g''8.-> g''8.-> g''8->",
-         *hit_bars("as''")],
+        [*[tools.within(bar, 44, 77) for bar in line], r"fis2 r2", *motto[:6],
+         *[tools.octave(bar, -1) for bar in motto[6:]],
+         r"f''1 ~", r"f''2 r2", r"g'8.-> g'8.-> g'8-> g'8.-> g'8.-> g'8->",
+         *hit_bars("as'")],
         r"\ff\normaltone",
     )  # fmt: skip
     drums = (

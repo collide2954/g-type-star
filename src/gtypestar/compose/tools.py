@@ -70,6 +70,39 @@ def within(text: str, low: int, high: int) -> str:
     return _apply(text, change)
 
 
+def highest(text: str) -> float:
+    """Return the MIDI number of the highest note of the music (0 if it has no note)."""
+    notes = [
+        pitch.pitch.midi for element in _flat(music.parse(text).children)
+        for pitch in element.pitches
+    ]  # fmt: skip
+    return max(notes, default=0.0)
+
+
+def fit(text: str, high: int, more: tuple[str, ...] = ()) -> str:
+    """Return the music one or more octaves lower, if its highest note is above `high`.
+
+    All notes move together: the shape of the line stays. `more` are other
+    bars of the same phrase: the music moves as far as the highest of all.
+    """
+    top = max(highest(part) for part in (text, *more))
+    octaves = 0
+    while top - 12 * octaves > high:
+        octaves += 1
+    return octave(text, -octaves) if octaves else text
+
+
+def _flat(elements: list[music.Element]) -> list[music.Note]:
+    """Return all notes of a list of elements, with the notes inside groups."""
+    result: list[music.Note] = []
+    for element in elements:
+        if isinstance(element, music.Note):
+            result.append(element)
+        elif isinstance(element, music.Group):
+            result.extend(_flat(element.children))
+    return result
+
+
 def invert(text: str, axis: str) -> str:
     """Return the mirror of the music around the pitch `axis`.
 

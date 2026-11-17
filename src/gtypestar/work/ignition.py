@@ -143,6 +143,6 @@ def horns_line() -> list[str | None]:
         None, None, None, None,
         r"r4. r4. r4 d''4.->\f r4.",
         r"r4. f''4.-> ~ f''4 r4. r4.",
-        r"r4. r4. g''4-> ~ g''4. r4.",
-        r"d''4.-> f''4.-> g''4-> f''4.-> d''4.->",
+        r"r4. r4. f''4-> ~ f''4. r4.",
+        r"d''4.-> f''4.-> d''4-> f''4.-> d''4.->",
     ]  # fmt: skip
