@@ -139,10 +139,11 @@ RELEASE_MUTE_KEY_DB = 1.0  # a muted note: the release is this much softer for e
 RELEASE_ZONES = (32, 35, 40, 45, 50, 55, 60, 63, 67, 72, 77, 81, 84, 88)  # recorded pitches
 RELEASE_FILES = 8
 RELEASE_FLOOR_DB = -55.0  # a release sound under this level is left out
+RELEASE_OFF = 0.1  # seconds: the next stroke stops a release sound in this time
 LEVEL_RANDOM_DB = 3.0  # each stroke is softer by a random amount up to this
 
 
-PLAYER = 2  # a change of the code that plays the recordings: a new number here
+PLAYER = 3  # a change of the code that plays the recordings: a new number here
 
 
 def signature() -> str:
@@ -402,8 +403,19 @@ def direct(strokes: list[Stroke], seconds: float, side: int, seed: int = 0) -> n
             if index not in joined and not stroke.dead:
                 sound = _release(stroke, int(random.integers(1, RELEASE_FILES + 1)), side)
                 if sound is not None:
-                    add(sound * np.float32(_gain(stroke) * softer),
-                        stroke.start + stroke.seconds - CUT)  # fmt: skip
+                    begin = stroke.start + stroke.seconds - CUT
+                    # The next stroke stops the release sound: the hand is on the strings
+                    # again. (In a fast row of muted notes, the release sounds would
+                    # add up to a noise that never stops.)
+                    if index + 1 < len(chords):
+                        left = chords[index + 1][0].start - begin + RELEASE_OFF
+                        size = int(max(left, 0.0) * RATE)
+                        if size < len(sound):
+                            fade = min(size, int(RELEASE_OFF * RATE))
+                            sound = sound[:size].copy()
+                            if fade:
+                                sound[-fade:] *= np.linspace(1.0, 0.0, fade, dtype=np.float32)
+                    add(sound * np.float32(_gain(stroke) * softer), begin)
     return out
 
 
